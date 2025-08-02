@@ -1,0 +1,177 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.2.0' apply false
+    id 'io.spring.dependency-management' version '1.1.4'
+    id 'jacoco'
+}
+
+allprojects {
+    group = 'com.commerce.product'
+    version = '1.0.0'
+    
+    repositories {
+        mavenCentral()
+    }
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'io.spring.dependency-management'
+    apply plugin: 'jacoco'
+    
+    java {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    
+    configurations {
+        compileOnly {
+            extendsFrom annotationProcessor
+        }
+    }
+    
+    dependencyManagement {
+        imports {
+            mavenBom "org.springframework.boot:spring-boot-dependencies:3.2.0"
+            mavenBom "org.springframework.cloud:spring-cloud-dependencies:2023.0.0"
+        }
+    }
+    
+    dependencies {
+        // Lombok
+        compileOnly 'org.projectlombok:lombok'
+        annotationProcessor 'org.projectlombok:lombok'
+        
+        // Testing
+        testImplementation 'org.junit.jupiter:junit-jupiter'
+        testImplementation 'org.assertj:assertj-core'
+        testImplementation 'org.mockito:mockito-core'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    }
+    
+    test {
+        useJUnitPlatform()
+        finalizedBy jacocoTestReport
+    }
+    
+    jacocoTestReport {
+        dependsOn test
+        reports {
+            xml.required = true
+            html.required = true
+            csv.required = false
+        }
+    }
+    
+    jacocoTestCoverageVerification {
+        dependsOn jacocoTestReport
+        violationRules {
+            rule {
+                limit {
+                    minimum = 0.70
+                }
+            }
+        }
+    }
+}
+
+// Common 모듈 설정
+project(':common') {
+    dependencies {
+        implementation 'org.springframework:spring-context'
+        implementation 'org.springframework.boot:spring-boot-starter-validation'
+        implementation 'org.springframework.data:spring-data-commons'
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    }
+}
+
+// Core 모듈들 설정
+configure(subprojects.findAll { it.path.contains(':product-domain') }) {
+    dependencies {
+        implementation project(':common')
+        implementation 'org.springframework:spring-context'
+        implementation 'org.springframework:spring-tx'
+        implementation 'org.springframework.boot:spring-boot-starter-validation'
+        implementation 'org.springframework.data:spring-data-commons'
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    }
+}
+
+// Infrastructure 모듈 설정
+configure(subprojects.findAll { it.path.contains(':product-persistence') }) {
+    apply plugin: 'org.springframework.boot'
+    apply plugin: 'io.spring.dependency-management'
+    
+    dependencies {
+        implementation project(':common')
+        implementation project(':product-domain')
+        implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+        implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+        implementation 'org.flywaydb:flyway-core'
+        runtimeOnly 'com.h2database:h2'
+        runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+        testImplementation 'org.testcontainers:junit-jupiter'
+        testImplementation 'org.testcontainers:mariadb'
+    }
+}
+
+configure(subprojects.findAll { it.path.contains(':product-kafka') }) {
+    apply plugin: 'org.springframework.boot'
+    apply plugin: 'io.spring.dependency-management'
+    
+    dependencies {
+        implementation project(':common')
+        implementation project(':product-domain')
+        implementation 'org.springframework.kafka:spring-kafka'
+        implementation 'org.springframework.boot:spring-boot-starter'
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+        testImplementation 'org.springframework.kafka:spring-kafka-test'
+        testImplementation 'org.testcontainers:kafka'
+    }
+}
+
+// Bootstrap 모듈들 설정 (API 서버들)
+configure(subprojects.findAll { it.path.contains(':product-api') }) {
+    apply plugin: 'org.springframework.boot'
+    apply plugin: 'io.spring.dependency-management'
+    
+    dependencies {
+        implementation project(':common')
+        implementation project(':product-domain')
+        implementation project(':product-persistence')
+        implementation project(':product-kafka')
+        implementation 'org.springframework.boot:spring-boot-starter-web'
+        implementation 'org.springframework.boot:spring-boot-starter-actuator'
+        implementation 'org.springframework.boot:spring-boot-starter-security'
+        implementation 'org.springframework.boot:spring-boot-starter-validation'
+        implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+        implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
+        implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
+        implementation 'io.jsonwebtoken:jjwt-impl:0.12.3'
+        implementation 'io.jsonwebtoken:jjwt-jackson:0.12.3'
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+        testImplementation 'org.springframework.security:spring-security-test'
+    }
+}
+
+ext {
+    set('springCloudVersion', "2023.0.0")
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+    }
+}
+
+// 루트 프로젝트 JaCoCo 설정
+jacoco {
+    toolVersion = "0.8.8"
+}
+
+// 모든 테스트 실행
+task testAll {
+    description = 'Runs all tests in all subprojects'
+    dependsOn subprojects.test
+}
