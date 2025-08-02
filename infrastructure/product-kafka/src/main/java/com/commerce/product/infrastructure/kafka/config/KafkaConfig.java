@@ -1,9 +1,9 @@
-package com.commerce.boilerplate.infrastructure.kafka.config;
+package com.commerce.product.infrastructure.kafka.config;
 
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
@@ -18,7 +18,7 @@ import java.util.Map;
  * Kafka 설정 클래스
  */
 @Configuration
-@ConditionalOnProperty(name = "spring.kafka.bootstrap-servers")
+@ConditionalOnExpression("!T(org.springframework.util.StringUtils).isEmpty('${spring.kafka.bootstrap-servers:}')")
 public class KafkaConfig {
     
     @Value("${spring.kafka.bootstrap-servers}")

@@ -1,4 +1,4 @@
-package com.commerce.boilerplate.common.exception;
+package com.commerce.product.common.exception;
 
 /**
  * 비즈니스 로직 관련 예외의 기본 클래스

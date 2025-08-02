@@ -1,4 +1,4 @@
-package com.commerce.boilerplate.infrastructure.persistence.config;
+package com.commerce.product.infrastructure.persistence.config;
 
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Configuration;
@@ -11,10 +11,10 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
  */
 @Configuration
 @EnableJpaRepositories(
-    basePackages = "com.commerce.boilerplate.infrastructure.persistence"
+    basePackages = "com.commerce.product.infrastructure.persistence"
 )
 @EntityScan(
-    basePackages = "com.commerce.boilerplate.infrastructure.persistence"
+    basePackages = "com.commerce.product.infrastructure.persistence"
 )
 @EnableJpaAuditing
 @EnableTransactionManagement

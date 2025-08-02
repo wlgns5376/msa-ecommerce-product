@@ -4,7 +4,7 @@ services:
   # MariaDB Database
   mariadb:
     image: mariadb:10.11
-    container_name: boilerplate-mariadb
+    container_name: product-mariadb
     environment:
       MYSQL_DATABASE: commerce
       MYSQL_USER: commerce_user
@@ -15,32 +15,32 @@ services:
     volumes:
       - mariadb_data:/var/lib/mysql
     networks:
-      - boilerplate-network
+      - product-network
 
   # Redis Cache
   redis:
     image: redis:7-alpine
-    container_name: boilerplate-redis
+    container_name: product-redis
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
-      - boilerplate-network
+      - product-network
 
   # Kafka with Zookeeper
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.0
-    container_name: boilerplate-zookeeper
+    container_name: product-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     networks:
-      - boilerplate-network
+      - product-network
 
   kafka:
     image: confluentinc/cp-kafka:7.4.0
-    container_name: boilerplate-kafka
+    container_name: product-kafka
     depends_on:
       - zookeeper
     ports:
@@ -54,21 +54,23 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
     networks:
-      - boilerplate-network
+      - product-network
 
   # Eureka Service Discovery
+  # NOTE: springcloud/eureka 이미지는 deprecated되었습니다.
+  # 필요한 경우 자체 Eureka 이미지를 빌드하거나 Spring Cloud Consul 등을 고려해주세요.
   eureka:
     image: springcloud/eureka
-    container_name: boilerplate-eureka
+    container_name: product-eureka
     ports:
       - "8761:8761"
     networks:
-      - boilerplate-network
+      - product-network
 
 volumes:
   mariadb_data:
   redis_data:
 
 networks:
-  boilerplate-network:
+  product-network:
     driver: bridge

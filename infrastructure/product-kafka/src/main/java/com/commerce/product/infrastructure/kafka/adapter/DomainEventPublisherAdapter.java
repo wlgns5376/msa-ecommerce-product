@@ -1,10 +1,10 @@
-package com.commerce.boilerplate.infrastructure.kafka.adapter;
+package com.commerce.product.infrastructure.kafka.adapter;
 
-import com.commerce.boilerplate.common.event.DomainEvent;
-import com.commerce.boilerplate.common.event.DomainEventPublisher;
+import com.commerce.product.common.event.DomainEvent;
+import com.commerce.product.common.event.DomainEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-@ConditionalOnProperty(name = "spring.kafka.bootstrap-servers")
+@ConditionalOnExpression("!T(org.springframework.util.StringUtils).isEmpty('${spring.kafka.bootstrap-servers:}')")
 public class DomainEventPublisherAdapter implements DomainEventPublisher {
     
     private final KafkaTemplate<String, Object> kafkaTemplate;
@@ -41,8 +41,8 @@ public class DomainEventPublisherAdapter implements DomainEventPublisher {
      */
     private String generateTopicName(String eventType) {
         // 예: AccountCreatedEvent -> account.created
-        return eventType.replaceAll("([a-z])([A-Z])", "$1.$2")
-                .toLowerCase()
-                .replace("event", "");
+        return eventType.replaceAll("Event$", "")
+                .replaceAll("([a-z])([A-Z])", "$1.$2")
+                .toLowerCase();
     }
 }

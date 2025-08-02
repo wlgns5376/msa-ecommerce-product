@@ -1,4 +1,4 @@
-package com.commerce.boilerplate.common.event;
+package com.commerce.product.common.event;
 
 /**
  * 도메인 이벤트 발행을 위한 인터페이스

@@ -1,4 +1,4 @@
-package com.commerce.boilerplate.api.config;
+package com.commerce.product.api.config;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;

@@ -1,4 +1,4 @@
-package com.commerce.boilerplate.api.security;
+package com.commerce.product.api.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,7 +34,8 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/actuator/health",
-                                "/api/v1/auth/**"
+                                "/api/v1/auth/**",
+                                "/health/simple"
                         ).permitAll()
                         // All other endpoints require authentication
                         .anyRequest().authenticated()

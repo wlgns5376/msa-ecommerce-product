@@ -1,5 +1,6 @@
-package com.commerce.boilerplate.api.security;
+package com.commerce.product.api.security;
 
+import com.commerce.product.api.exception.ErrorResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -8,14 +9,15 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.time.LocalDateTime;
 
 /**
  * JWT 권한이 없을 때 처리하는 Handler
  */
 @Slf4j
 public class JwtAccessDeniedHandler implements AccessDeniedHandler {
+    
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     
     @Override
     public void handle(HttpServletRequest request,
@@ -27,13 +29,14 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
         response.setContentType("application/json;charset=UTF-8");
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         
-        Map<String, Object> data = new HashMap<>();
-        data.put("status", HttpServletResponse.SC_FORBIDDEN);
-        data.put("error", "Forbidden");
-        data.put("message", "접근 권한이 없습니다.");
-        data.put("path", request.getRequestURI());
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(HttpServletResponse.SC_FORBIDDEN)
+                .error("Forbidden")
+                .message("접근 권한이 없습니다.")
+                .code("ACCESS_DENIED")
+                .timestamp(LocalDateTime.now())
+                .build();
         
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.writeValue(response.getOutputStream(), data);
+        OBJECT_MAPPER.writeValue(response.getOutputStream(), errorResponse);
     }
 }

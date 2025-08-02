@@ -1,4 +1,4 @@
-package com.commerce.boilerplate.api.exception;
+package com.commerce.product.api.exception;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;

@@ -255,7 +255,7 @@ public class ProductController {
 docker-compose up -d
 
 # 특정 서비스만 실행
-docker-compose up -d postgres redis
+docker-compose up -d mariadb redis
 
 # 로그 확인
 docker-compose logs -f kafka

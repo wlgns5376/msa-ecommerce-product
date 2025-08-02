@@ -1,4 +1,4 @@
-package com.commerce.boilerplate.common.exception;
+package com.commerce.product.common.exception;
 
 /**
  * 도메인 규칙 위반 관련 예외

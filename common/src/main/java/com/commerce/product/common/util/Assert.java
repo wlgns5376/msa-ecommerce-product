@@ -1,4 +1,4 @@
-package com.commerce.boilerplate.common.util;
+package com.commerce.product.common.util;
 
 import java.util.Collection;
 

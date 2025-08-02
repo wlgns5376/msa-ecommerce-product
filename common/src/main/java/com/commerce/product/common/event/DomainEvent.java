@@ -1,4 +1,4 @@
-package com.commerce.boilerplate.common.event;
+package com.commerce.product.common.event;
 
 import java.time.LocalDateTime;
 

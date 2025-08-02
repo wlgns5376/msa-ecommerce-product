@@ -1,4 +1,4 @@
-package com.commerce.boilerplate.infrastructure.persistence.common;
+package com.commerce.product.infrastructure.persistence.common;
 
 import jakarta.persistence.*;
 import lombok.Getter;

@@ -1,6 +1,6 @@
-package com.commerce.boilerplate.infrastructure.persistence.config;
+package com.commerce.product.infrastructure.persistence.config;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -12,7 +12,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
  * Redis 설정 클래스
  */
 @Configuration
-@ConditionalOnProperty(name = "spring.data.redis.host")
+@ConditionalOnExpression("!T(org.springframework.util.StringUtils).isEmpty('${spring.data.redis.host:}')")
 public class RedisConfig {
     
     @Bean
