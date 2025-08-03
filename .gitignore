@@ -15,28 +15,66 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
+# Build
+.gradle/
+build/
+dist/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
 # IDE
 .idea/
+*.iws
+*.iml
+*.ipr
 .vscode/
 *.swp
 *.swo
+
+# Eclipse
+.classpath
+.project
+.settings/
+bin/
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Build outputs
-dist/
-build/
-
 # Test coverage
 coverage/
 .nyc_output/
+.jacoco/
+jacoco.exec
 
 # Logs
 logs/
 *.log
+*.log.*
 
-# Temporary files
+# Runtime
+*.pid
+*.tmp
+*.temp
 tmp/
 temp/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Application specific
+application-local.yml
+application-*.properties
+!application-dev.yml
+!application-prod.yml
+
+# Docker
+docker-compose.override.yml
+
+# Certificates
+*.p12
+*.jks
+*.keystore
