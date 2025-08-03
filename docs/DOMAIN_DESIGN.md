@@ -49,7 +49,7 @@ class Product {
   
   // Business Rules
   canAddOption(option: ProductOption): boolean {
-    if (this.type === ProductType.NORMAL && this.options.length > 0) {
+    if (this.type === ProductType.NORMAL) {
       // 일반 상품은 여러 옵션 가능
       return true;
     }
@@ -242,8 +242,8 @@ class Inventory {
   private readonly skuId: SkuId;
   private totalQuantity: Quantity;
   private reservedQuantity: Quantity;
-  private movements: StockMovement[] = [];
-  private reservations: Reservation[] = [];
+  // 성능 최적화: 대용량 컬렉션을 aggregate에서 제거
+  // movements와 reservations는 별도 repository로 관리
   
   // Calculated Property
   get availableQuantity(): Quantity {
@@ -264,7 +264,7 @@ class Inventory {
       timestamp: new Date()
     });
     
-    this.movements.push(movement);
+    // movement는 별도 repository로 저장
     this.totalQuantity = this.totalQuantity.add(quantity);
     
     this.raise(new StockReceivedEvent(this.skuId, quantity, reference));
@@ -284,7 +284,7 @@ class Inventory {
       status: ReservationStatus.ACTIVE
     });
     
-    this.reservations.push(reservation);
+    // reservation은 별도 repository로 저장
     this.reservedQuantity = this.reservedQuantity.add(quantity);
     
     this.raise(new StockReservedEvent(this.skuId, reservation));
@@ -402,26 +402,52 @@ class StockAvailabilityServiceImpl implements StockAvailabilityService {
   }
   
   async checkBundleAvailability(skuMappings: SkuMapping[]): Promise<BundleAvailabilityResult> {
-    const availabilities = await Promise.all(
-      skuMappings.map(async (mapping) => {
-        const inventory = await this.inventoryRepository.findBySkuId(mapping.skuId);
-        const availableSets = Math.floor(inventory.availableQuantity.value / mapping.quantity);
-        return {
-          skuId: mapping.skuId,
-          requiredQuantity: mapping.quantity,
-          availableQuantity: inventory.availableQuantity.value,
-          availableSets
-        };
-      })
-    );
+    // 분산 락을 사용하여 번들 재고 확인의 원자성 보장
+    const lockKey = `bundle-stock-check:${skuMappings.map(m => m.skuId).sort().join(':')}`;
+    const lock = await this.distributedLock.acquire(lockKey, 5000); // 5초 타임아웃
     
-    const minAvailableSets = Math.min(...availabilities.map(a => a.availableSets));
+    try {
+      const availabilities = await Promise.all(
+        skuMappings.map(async (mapping) => {
+          const inventory = await this.inventoryRepository.findBySkuId(mapping.skuId);
+          const availableSets = Math.floor(inventory.availableQuantity.value / mapping.quantity);
+          return {
+            skuId: mapping.skuId,
+            requiredQuantity: mapping.quantity,
+            availableQuantity: inventory.availableQuantity.value,
+            availableSets
+          };
+        })
+      );
+      
+      const minAvailableSets = Math.min(...availabilities.map(a => a.availableSets));
+      
+      return {
+        isAvailable: minAvailableSets > 0,
+        availableSets: minAvailableSets,
+        details: availabilities
+      };
+    } finally {
+      await lock.release();
+    }
+  }
+  
+  // 번들 재고 예약을 위한 Saga 패턴 구현
+  async reserveBundleStock(skuMappings: SkuMapping[], reservationId: string): Promise<void> {
+    const saga = new BundleReservationSaga(this.eventBus, this.inventoryRepository);
     
-    return {
-      isAvailable: minAvailableSets > 0,
-      availableSets: minAvailableSets,
-      details: availabilities
-    };
+    try {
+      // Saga를 통한 분산 트랜잭션 관리
+      await saga.execute({
+        reservationId,
+        skuMappings,
+        compensations: []
+      });
+    } catch (error) {
+      // 실패 시 보상 트랜잭션 실행
+      await saga.compensate();
+      throw error;
+    }
   }
 }
 ```
@@ -658,4 +684,30 @@ describe('Inventory Aggregate', () => {
     expect(reservation.status).toBe(ReservationStatus.ACTIVE);
   });
 });
+```
+
+### 3.3 Repository 인터페이스
+
+#### 3.3.1 성능 최적화를 위한 분리된 Repository
+```typescript
+// Inventory Repository
+interface InventoryRepository {
+  findBySkuId(skuId: SkuId): Promise<Inventory>;
+  save(inventory: Inventory): Promise<void>;
+}
+
+// StockMovement Repository (성능 최적화)
+interface StockMovementRepository {
+  findBySkuId(skuId: SkuId, limit?: number, offset?: number): Promise<StockMovement[]>;
+  save(movement: StockMovement): Promise<void>;
+  countBySkuId(skuId: SkuId): Promise<number>;
+}
+
+// Reservation Repository (성능 최적화)
+interface ReservationRepository {
+  findBySkuId(skuId: SkuId, status?: ReservationStatus): Promise<Reservation[]>;
+  findById(id: ReservationId): Promise<Reservation>;
+  save(reservation: Reservation): Promise<void>;
+  deleteExpired(): Promise<number>;
+}
 ```

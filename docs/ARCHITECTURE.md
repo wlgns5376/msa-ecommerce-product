@@ -187,8 +187,8 @@ CREATE TABLE products (
   description TEXT,
   type VARCHAR(50) NOT NULL,
   status VARCHAR(50) NOT NULL,
-  created_at TIMESTAMP,
-  updated_at TIMESTAMP
+  created_at TIMESTAMP WITH TIME ZONE,
+  updated_at TIMESTAMP WITH TIME ZONE
 );
 
 -- Product Options Table
@@ -198,7 +198,7 @@ CREATE TABLE product_options (
   name VARCHAR(255) NOT NULL,
   price DECIMAL(10,2),
   status VARCHAR(50),
-  created_at TIMESTAMP
+  created_at TIMESTAMP WITH TIME ZONE
 );
 
 -- SKU Mappings Table
@@ -239,7 +239,7 @@ CREATE TABLE skus (
   description TEXT,
   weight DECIMAL(10,3),
   volume DECIMAL(10,3),
-  created_at TIMESTAMP
+  created_at TIMESTAMP WITH TIME ZONE
 );
 
 -- Inventory Table
@@ -247,7 +247,7 @@ CREATE TABLE inventory (
   sku_id VARCHAR(100) PRIMARY KEY REFERENCES skus(id),
   total_quantity INTEGER NOT NULL DEFAULT 0,
   reserved_quantity INTEGER NOT NULL DEFAULT 0,
-  last_updated TIMESTAMP
+  last_updated TIMESTAMP WITH TIME ZONE
 );
 
 -- Stock Movements Table
@@ -257,7 +257,7 @@ CREATE TABLE stock_movements (
   type VARCHAR(50) NOT NULL,
   quantity INTEGER NOT NULL,
   reference VARCHAR(255),
-  created_at TIMESTAMP
+  created_at TIMESTAMP WITH TIME ZONE
 );
 
 -- Reservations Table
@@ -266,9 +266,9 @@ CREATE TABLE reservations (
   sku_id VARCHAR(100) REFERENCES skus(id),
   quantity INTEGER NOT NULL,
   order_id VARCHAR(100),
-  expires_at TIMESTAMP,
+  expires_at TIMESTAMP WITH TIME ZONE,
   status VARCHAR(50),
-  created_at TIMESTAMP
+  created_at TIMESTAMP WITH TIME ZONE
 );
 ```
 
@@ -297,8 +297,8 @@ Response:
 GET /api/products
 Query:
   categoryId?: string
-  page: number
-  size: number
+  cursor?: string
+  limit: number
   sort: string
 ```
 
@@ -358,34 +358,32 @@ Request:
 ### 6.1 이벤트 스키마
 
 ```typescript
-interface DomainEvent {
+interface DomainEvent<T> {
   eventId: string
   eventType: string
   aggregateId: string
   timestamp: Date
-  payload: any
+  payload: T
 }
 
 // 재고 업데이트 이벤트
-interface StockUpdatedEvent extends DomainEvent {
+interface StockUpdatedEvent extends DomainEvent<{
+  skuId: string
+  previousQuantity: number
+  currentQuantity: number
+  movementType: string
+}> {
   eventType: 'inventory.stock.updated'
-  payload: {
-    skuId: string
-    previousQuantity: number
-    currentQuantity: number
-    movementType: string
-  }
 }
 
 // 재고 선점 이벤트
-interface StockReservedEvent extends DomainEvent {
+interface StockReservedEvent extends DomainEvent<{
+  reservationId: string
+  skuId: string
+  quantity: number
+  orderId: string
+}> {
   eventType: 'inventory.stock.reserved'
-  payload: {
-    reservationId: string
-    skuId: string
-    quantity: number
-    orderId: string
-  }
 }
 ```
 
@@ -458,6 +456,7 @@ interface StockReservedEvent extends DomainEvent {
 - **데이터베이스**: 일일 전체 백업, 시간별 증분 백업
 - **설정 파일**: Git 버전 관리
 - **복구 시간 목표(RTO)**: 1시간
+- **복구 시점 목표(RPO)**: 15분
 
 ### 11.2 고가용성
 - **서비스**: 최소 3개 레플리카

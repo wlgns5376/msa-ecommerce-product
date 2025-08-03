@@ -254,7 +254,7 @@ sequenceDiagram
     alt 결제 성공
         OS->>IS: POST /reservations/{id}/confirm
         IS->>DB: 선점 상태 → 확정
-        IS->>DB: 총 재고 차감
+        IS->>DB: 총 재고 및 선점 재고 차감
         IS->>MB: StockConfirmed 이벤트
         IS-->>OS: 200 OK
     else 결제 실패
