@@ -5,19 +5,41 @@
 ### 1.1 Bounded Context
 마이크로서비스 아키텍처에서 각 서비스는 독립적인 Bounded Context를 형성합니다.
 
-```
-┌─────────────────────────┐     ┌─────────────────────────┐
-│   Product Context       │     │   Inventory Context     │
-│                         │     │                         │
-│  - Product Aggregate    │     │  - SKU Aggregate       │
-│  - Category Aggregate   │     │  - Inventory Aggregate  │
-│  - Option Value Object  │     │  - Movement Entity     │
-│                         │     │  - Reservation Entity   │
-└─────────────────────────┘     └─────────────────────────┘
-           │                                 │
-           └─────────────┬───────────────────┘
-                         │
-                   Domain Events
+```mermaid
+graph TB
+    subgraph "Product Context"
+        PA[Product Aggregate]
+        CA[Category Aggregate]
+        OV[Option Value Object]
+    end
+    
+    subgraph "Inventory Context"
+        SA[SKU Aggregate]
+        IA[Inventory Aggregate]
+        ME[Movement Entity]
+        RE[Reservation Entity]
+    end
+    
+    subgraph "Communication Layer"
+        DE[Domain Events]
+    end
+    
+    PA -.-> DE
+    CA -.-> DE
+    SA -.-> DE
+    IA -.-> DE
+    DE -.-> PA
+    DE -.-> SA
+    DE -.-> IA
+    
+    style PA fill:#e8eaf6,stroke:#3f51b5,stroke-width:2px
+    style CA fill:#e8eaf6,stroke:#3f51b5,stroke-width:2px
+    style OV fill:#e8eaf6,stroke:#3f51b5,stroke-width:2px
+    style SA fill:#e0f2f1,stroke:#009688,stroke-width:2px
+    style IA fill:#e0f2f1,stroke:#009688,stroke-width:2px
+    style ME fill:#e0f2f1,stroke:#009688,stroke-width:2px
+    style RE fill:#e0f2f1,stroke:#009688,stroke-width:2px
+    style DE fill:#fff9c4,stroke:#f57f17,stroke-width:3px
 ```
 
 ### 1.2 도메인 설계 원칙
@@ -27,6 +49,62 @@
 - **Value Object**: 불변성을 가진 값 객체 활용
 
 ## 2. Product Bounded Context
+
+```mermaid
+classDiagram
+    class Product {
+        -ProductId id
+        -ProductName name
+        -string description
+        -ProductType type
+        -ProductStatus status
+        -ProductImage[] images
+        -ProductOption[] options
+        -CategoryAssociation[] categoryAssociations
+        +canAddOption(option: ProductOption) boolean
+        +addOption(option: ProductOption) void
+    }
+    
+    class ProductOption {
+        -string id
+        -string name
+        -Money price
+        -SkuMapping[] skuMappings
+        +hasMultipleSkus() boolean
+        +getTotalSkuQuantity(skuId: string) number
+    }
+    
+    class SkuMapping {
+        -string skuId
+        -number quantity
+    }
+    
+    class Money {
+        -number amount
+        -Currency currency
+        +add(other: Money) Money
+        +multiply(factor: number) Money
+    }
+    
+    class Category {
+        -CategoryId id
+        -CategoryName name
+        -CategoryId parentId
+        -number level
+        -number sortOrder
+        -boolean isActive
+        -Category[] children
+        +addChild(child: Category) void
+        +activate() void
+        +deactivate() void
+    }
+    
+    Product "1" *-- "0..*" ProductOption : contains
+    ProductOption "1" *-- "1..*" SkuMapping : contains
+    ProductOption "1" *-- "1" Money : has price
+    Product "1" o-- "0..5" Category : belongsTo
+    Category "1" o-- "0..*" Category : hasChildren
+```
 
 ### 2.1 Product Aggregate
 
@@ -194,6 +272,68 @@ class Category {
 ```
 
 ## 3. Inventory Bounded Context
+
+```mermaid
+classDiagram
+    class SKU {
+        -SkuId id
+        -SkuCode code
+        -string name
+        -string description
+        -Weight weight
+        -Volume volume
+        -Date createdAt
+        +update(params: UpdateSkuParams) void
+    }
+    
+    class Inventory {
+        -SkuId skuId
+        -Quantity totalQuantity
+        -Quantity reservedQuantity
+        +availableQuantity() Quantity
+        +canReserve(quantity: Quantity) boolean
+        +receive(quantity: Quantity, reference: string) void
+        +reserve(quantity: Quantity, orderId: string, ttl: number) Reservation
+        +releaseReservation(reservationId: ReservationId) void
+    }
+    
+    class StockMovement {
+        -MovementId id
+        -MovementType type
+        -Quantity quantity
+        -string reference
+        -Date timestamp
+        +isInbound() boolean
+        +isOutbound() boolean
+    }
+    
+    class Reservation {
+        -ReservationId id
+        -SkuId skuId
+        -Quantity quantity
+        -string orderId
+        -Date expiresAt
+        -ReservationStatus status
+        +isExpired() boolean
+        +isActive() boolean
+        +release() void
+        +confirm() void
+    }
+    
+    class Quantity {
+        -number value
+        +add(other: Quantity) Quantity
+        +subtract(other: Quantity) Quantity
+        +isGreaterThanOrEqual(other: Quantity) boolean
+    }
+    
+    SKU "1" -- "1" Inventory : tracks
+    Inventory "1" -- "0..*" StockMovement : records
+    Inventory "1" -- "0..*" Reservation : manages
+    StockMovement "1" *-- "1" Quantity : has
+    Reservation "1" *-- "1" Quantity : reserves
+    Inventory "1" *-- "2" Quantity : has total/reserved
+```
 
 ### 3.1 SKU Aggregate
 
@@ -462,6 +602,37 @@ interface CategoryService {
 ```
 
 ## 5. Domain Events
+
+```mermaid
+sequenceDiagram
+    participant PS as Product Service
+    participant MB as Message Broker
+    participant IS as Inventory Service
+    participant Cache as Cache Layer
+    
+    Note over PS: Product Created
+    PS->>MB: ProductCreatedEvent
+    MB->>IS: Event Notification
+    IS->>IS: Update Product Mapping
+    
+    Note over PS: Option Added
+    PS->>MB: ProductOptionAddedEvent
+    MB->>IS: Event Notification
+    IS->>IS: Validate SKU Mappings
+    IS->>Cache: Invalidate Cache
+    
+    Note over IS: Stock Reserved
+    IS->>MB: StockReservedEvent
+    MB->>PS: Event Notification
+    PS->>PS: Update Product Status
+    PS->>Cache: Update Cache
+    
+    Note over IS: Stock Depleted
+    IS->>MB: StockDepletedEvent
+    MB->>PS: Event Notification
+    PS->>PS: Mark Product as Out of Stock
+    PS->>Cache: Update Cache
+```
 
 ### 5.1 Event Base Class
 ```typescript

@@ -19,6 +19,31 @@
 
 ## 2. 용어 정의
 
+```mermaid
+graph LR
+    subgraph "판매 영역"
+        P[Product<br/>판매 상품]
+        PO[Product Option<br/>상품 옵션]
+        C[Category<br/>카테고리]
+    end
+    
+    subgraph "재고 영역"
+        S[SKU<br/>재고 상품]
+        I[Inventory<br/>재고 수량]
+        M[Movement<br/>입출고 이력]
+    end
+    
+    P --> PO
+    P --> C
+    PO --> S
+    S --> I
+    I --> M
+    
+    style P fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    style PO fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+    style S fill:#fff3e0,stroke:#e65100,stroke-width:2px
+```
+
 | 용어 | 영문명 | 설명 |
 |------|--------|------|
 | **재고 상품** | SKU (Stock Keeping Unit) | 실물 재고 단위, 수량을 보유하며 입출고 대상 |
@@ -28,6 +53,26 @@
 | **묶음 상품** | Bundle Product | 여러 SKU를 조합하여 판매하는 상품 |
 
 ## 3. 사용자 스토리
+
+```mermaid
+journey
+    title 관리자의 상품 등록 여정
+    section SKU 등록
+      SKU 정보 입력: 5: Admin
+      SKU 코드 중복 확인: 3: System
+      초기 재고 설정: 5: Admin
+    section 상품 생성
+      상품 정보 입력: 5: Admin
+      카테고리 선택: 4: Admin
+      이미지 업로드: 4: Admin
+    section 옵션 구성
+      SKU 매핑 설정: 3: Admin
+      가격 설정: 5: Admin
+      옵션 검증: 5: System
+    section 상품 활성화
+      최종 검토: 5: Admin
+      상품 공개: 5: System
+```
 
 ### 3.1 관리자 (Admin)
 - **AS-001**: 관리자는 신규 SKU를 등록하고 초기 재고를 설정할 수 있다

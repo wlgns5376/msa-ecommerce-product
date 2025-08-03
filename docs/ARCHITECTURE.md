@@ -20,32 +20,41 @@
 
 ### 2.1 서비스 구성
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        API Gateway                           │
-│                          (Kong)                              │
-└─────────────────┬───────────────────────┬───────────────────┘
-                  │                       │
-        ┌─────────▼──────────┐  ┌────────▼──────────┐
-        │  Product Service   │  │ Inventory Service │
-        │                    │  │                   │
-        │  - Products        │  │  - SKUs           │
-        │  - Options         │  │  - Stock          │
-        │  - Categories      │  │  - Reservations   │
-        │                    │  │  - Movements      │
-        └─────────┬──────────┘  └────────┬──────────┘
-                  │                       │
-        ┌─────────▼──────────┐  ┌────────▼──────────┐
-        │   PostgreSQL       │  │   PostgreSQL      │
-        │   (Product DB)     │  │  (Inventory DB)   │
-        └────────────────────┘  └───────────────────┘
-                  │                       │
-                  └───────────┬───────────┘
-                              │
-                    ┌─────────▼──────────┐
-                    │   Message Broker   │
-                    │      (Kafka)       │
-                    └────────────────────┘
+```mermaid
+graph TB
+    subgraph "API Layer"
+        GW[API Gateway<br/>Kong]
+    end
+    
+    subgraph "Service Layer"
+        PS[Product Service<br/>- Products<br/>- Options<br/>- Categories]
+        IS[Inventory Service<br/>- SKUs<br/>- Stock<br/>- Reservations<br/>- Movements]
+    end
+    
+    subgraph "Data Layer"
+        PDB[(PostgreSQL<br/>Product DB)]
+        IDB[(PostgreSQL<br/>Inventory DB)]
+    end
+    
+    subgraph "Messaging Layer"
+        MB[Message Broker<br/>Kafka]
+    end
+    
+    GW --> PS
+    GW --> IS
+    PS --> PDB
+    IS --> IDB
+    PS -.-> MB
+    IS -.-> MB
+    MB -.-> PS
+    MB -.-> IS
+    
+    style GW fill:#f9f,stroke:#333,stroke-width:2px
+    style PS fill:#bbf,stroke:#333,stroke-width:2px
+    style IS fill:#bbf,stroke:#333,stroke-width:2px
+    style PDB fill:#f96,stroke:#333,stroke-width:2px
+    style IDB fill:#f96,stroke:#333,stroke-width:2px
+    style MB fill:#9f9,stroke:#333,stroke-width:2px
 ```
 
 ### 2.2 서비스 책임
@@ -389,12 +398,22 @@ interface StockReservedEvent extends DomainEvent<{
 
 ### 6.2 이벤트 흐름
 
-```
-주문 생성 → 재고 확인 → 재고 선점 → 선점 이벤트 발행
-         ↓
-    재고 부족 시
-         ↓
-    품절 처리
+```mermaid
+flowchart TD
+    A[주문 생성] --> B[재고 확인]
+    B --> C{재고 충분?}
+    C -->|Yes| D[재고 선점]
+    C -->|No| E[품절 처리]
+    D --> F[선점 이벤트 발행]
+    F --> G[주문 진행]
+    E --> H[주문 실패]
+    
+    style A fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    style B fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    style C fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    style D fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+    style E fill:#ffebee,stroke:#b71c1c,stroke-width:2px
+    style F fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
 ```
 
 ## 7. 성능 최적화 전략
@@ -451,6 +470,43 @@ interface StockReservedEvent extends DomainEvent<{
 - **운영**: Multi-AZ EKS
 
 ## 11. 재해 복구
+
+```mermaid
+graph TB
+    subgraph "Primary Region"
+        PS1[Product Service]
+        IS1[Inventory Service]
+        PDB1[(Product DB Master)]
+        IDB1[(Inventory DB Master)]
+        K1[Kafka Primary]
+    end
+    
+    subgraph "Secondary Region"
+        PS2[Product Service Standby]
+        IS2[Inventory Service Standby]
+        PDB2[(Product DB Replica)]
+        IDB2[(Inventory DB Replica)]
+        K2[Kafka Mirror]
+    end
+    
+    subgraph "Backup Storage"
+        S3[S3 Backup Storage]
+        SNAP[DB Snapshots]
+    end
+    
+    PDB1 -.->|Replication| PDB2
+    IDB1 -.->|Replication| IDB2
+    K1 -.->|Mirror| K2
+    PDB1 -->|Daily Backup| S3
+    IDB1 -->|Daily Backup| S3
+    PDB1 -->|Hourly Snapshot| SNAP
+    IDB1 -->|Hourly Snapshot| SNAP
+    
+    style PS1 fill:#bbf,stroke:#333,stroke-width:2px
+    style IS1 fill:#bbf,stroke:#333,stroke-width:2px
+    style PS2 fill:#ddd,stroke:#666,stroke-width:1px
+    style IS2 fill:#ddd,stroke:#666,stroke-width:1px
+```
 
 ### 11.1 백업 전략
 - **데이터베이스**: 일일 전체 백업, 시간별 증분 백업
