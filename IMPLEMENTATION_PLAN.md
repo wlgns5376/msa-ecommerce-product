@@ -83,8 +83,10 @@ msa-ecommerce-product/
 - [ ] DeleteProductUseCase 구현
 
 #### 4.2 Category 관련 Use Cases
-- [ ] ManageCategoryUseCase 테스트 작성
-- [ ] ManageCategoryUseCase 구현
+- [ ] CreateCategoryUseCase 테스트 작성 및 구현
+- [ ] ListCategoriesUseCase 테스트 작성 및 구현
+- [ ] UpdateCategoryUseCase 테스트 작성 및 구현
+- [ ] DeleteCategoryUseCase 테스트 작성 및 구현
 
 #### 4.3 재고 관리 Use Cases
 - [ ] UpdateStockUseCase 테스트 작성
@@ -108,13 +110,14 @@ msa-ecommerce-product/
 - [ ] DELETE /categories/:id - 카테고리 삭제
 
 #### 5.3 Stock API
-- [ ] PUT /products/:id/stock - 재고 업데이트
+- [ ] PATCH /products/:id/stock - 재고 업데이트
 - [ ] GET /products/:id/stock - 재고 조회
 
 ### Phase 6: 데이터베이스 연동 (우선순위: 중간)
 
 #### 6.1 데이터베이스 설정
-- [ ] PostgreSQL 또는 MongoDB 설정
+- [ ] 데이터베이스 기술 스택 분석 및 선정 (PostgreSQL vs. MongoDB)
+- [ ] 선택한 데이터베이스 설정
 - [ ] TypeORM 또는 Mongoose 설정
 - [ ] 마이그레이션 설정
 
@@ -211,6 +214,6 @@ msa-ecommerce-product/
 ## 성공 지표
 
 - 테스트 커버리지 80% 이상
-- 모든 API 응답 시간 200ms 이내
+- 모든 API 응답 시간 200ms 이내 (p99 기준)
 - 99.9% 가용성
 - 린트 및 타입 에러 0개
