@@ -4,10 +4,10 @@
 # PR 리뷰 피드백을 처리합니다
 
 ## 작업 정보
-- **작업 ID**: PVTI_lAHOAJ39a84A91F1zgdPGZY
+- **작업 ID**: PVTI_lAHOAJ39a84A91F1zgdOdv8
 - **저장소**: wlgns5376/msa-ecommerce-product
-- **이슈 번호**: #4
-- **피드백 수**: 총 10개의 코멘트
+- **이슈 번호**: #1
+- **피드백 수**: 총 30개의 코멘트
 
 ## 받은 피드백
 
