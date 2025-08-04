@@ -16,18 +16,17 @@ PRD 문서와 설계 문서를 기반으로 수립한 구현 작업 계획입니
 재고 관리는 이커머스의 핵심이므로 최우선으로 구현
 
 #### 1.1 SKU Aggregate 구현
-- [ ] SKU 값 객체 구현 (SkuId, SkuCode, Weight, Volume)
-- [ ] SKU Entity 구현 및 테스트
+- [ ] SKU Aggregate Root 구현 (ID, Code, 및 Weight/Volume 등 값 객체 포함) 및 테스트
 - [ ] SKU 생성/수정 비즈니스 규칙 검증
 
-#### 1.2 Inventory Aggregate 구현
+#### 1.2 Inventory Entity 구현 (SKU Aggregate 내부)
 - [ ] Quantity 값 객체 구현
 - [ ] Inventory Entity 구현
 - [ ] 재고 수량 관리 로직 (receive, reserve, release)
 - [ ] 가용 재고 계산 로직
 
 #### 1.3 StockMovement & Reservation Entity 구현
-- [ ] StockMovement Entity 및 타입 정의
+- [ ] StockMovement 값 객체(Value Object) 및 타입 정의
 - [ ] Reservation Entity 및 상태 관리
 - [ ] 재고 이동 이력 추적 로직
 - [ ] 선점 만료 처리 로직
@@ -86,6 +85,7 @@ PRD 문서와 설계 문서를 기반으로 수립한 구현 작업 계획입니
 - [ ] CreateSkuUseCase
 - [ ] ReceiveStockUseCase
 - [ ] ReserveStockUseCase
+- [ ] ReserveBundleStockUseCase (Saga 패턴 기반)
 - [ ] ReleaseReservationUseCase
 - [ ] GetInventoryUseCase
 
@@ -185,7 +185,7 @@ Redis 기반 캐싱
 - [ ] POST /api/categories
 - [ ] GET /api/categories/tree
 - [ ] GET /api/categories/{id}/products
-- [ ] POST /api/products/{id}/categories
+- [ ] PATCH /api/products/{id} (카테고리 할당을 위한 부분 업데이트)
 
 ### 11. API 공통 기능 구현 ⭐⭐
 
