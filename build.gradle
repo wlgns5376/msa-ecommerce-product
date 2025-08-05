@@ -86,7 +86,7 @@ project(':common') {
 }
 
 // Core 모듈들 설정
-configure(subprojects.findAll { it.path.contains(':product-domain') }) {
+configure(subprojects.findAll { it.path.contains(':product-domain') || it.path.contains(':inventory-domain') }) {
     dependencies {
         implementation project(':common')
         implementation 'org.springframework:spring-context'

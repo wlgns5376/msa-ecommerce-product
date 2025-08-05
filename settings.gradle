@@ -7,6 +7,9 @@ include 'common'
 include 'product-domain'
 project(':product-domain').projectDir = file('core/product-domain')
 
+include 'inventory-domain'
+project(':inventory-domain').projectDir = file('core/inventory-domain')
+
 // Infrastructure modules
 include 'product-persistence'
 project(':product-persistence').projectDir = file('infrastructure/product-persistence')
