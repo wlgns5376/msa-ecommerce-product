@@ -16,20 +16,20 @@ PRD 문서와 설계 문서를 기반으로 수립한 구현 작업 계획입니
 재고 관리는 이커머스의 핵심이므로 최우선으로 구현
 
 #### 1.1 SKU Aggregate 구현
-- [ ] SKU Aggregate Root 구현 (ID, Code, 및 Weight/Volume 등 값 객체 포함) 및 테스트
-- [ ] SKU 생성/수정 비즈니스 규칙 검증
+- [x] SKU Aggregate Root 구현 (ID, Code, 및 Weight/Volume 등 값 객체 포함) 및 테스트
+- [x] SKU 생성/수정 비즈니스 규칙 검증
 
 #### 1.2 Inventory Entity 구현 (SKU Aggregate 내부)
-- [ ] Quantity 값 객체 구현
-- [ ] Inventory Entity 구현
-- [ ] 재고 수량 관리 로직 (receive, reserve, release)
-- [ ] 가용 재고 계산 로직
+- [x] Quantity 값 객체 구현
+- [x] Inventory Entity 구현
+- [x] 재고 수량 관리 로직 (receive, reserve, release)
+- [x] 가용 재고 계산 로직
 
 #### 1.3 StockMovement & Reservation Entity 구현
-- [ ] StockMovement 값 객체(Value Object) 및 타입 정의
-- [ ] Reservation Entity 및 상태 관리
-- [ ] 재고 이동 이력 추적 로직
-- [ ] 선점 만료 처리 로직
+- [x] StockMovement 값 객체(Value Object) 및 타입 정의
+- [x] Reservation Entity 및 상태 관리
+- [x] 재고 이동 이력 추적 로직
+- [x] 선점 만료 처리 로직
 
 ### 2. Product 도메인 구현 ⭐⭐⭐⭐⭐
 상품 관리는 재고와 함께 핵심 도메인
@@ -70,9 +70,10 @@ PRD 문서와 설계 문서를 기반으로 수립한 구현 작업 계획입니
 도메인과 인프라의 경계 정의
 
 #### 4.1 Inventory Repository
-- [ ] InventoryRepository 인터페이스
-- [ ] StockMovementRepository 인터페이스
-- [ ] ReservationRepository 인터페이스
+- [x] InventoryRepository 인터페이스
+- [x] StockMovementRepository 인터페이스
+- [x] ReservationRepository 인터페이스
+- [x] SkuRepository 인터페이스
 
 #### 4.2 Product Repository
 - [ ] ProductRepository 인터페이스
