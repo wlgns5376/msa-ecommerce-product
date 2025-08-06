@@ -41,7 +41,7 @@ public class Inventory extends AggregateRoot<SkuId> {
     }
     
     public void receive(Quantity quantity, String reference) {
-        if (quantity == null || quantity.getValue() == 0) {
+        if (quantity == null || quantity.value() == 0) {
             throw new InvalidInventoryException("입고 수량은 0보다 커야 합니다");
         }
         
@@ -55,7 +55,7 @@ public class Inventory extends AggregateRoot<SkuId> {
         if (!canReserve(quantity)) {
             throw new InsufficientStockException(
                 String.format("재고가 부족합니다. 가용 재고: %d, 요청 수량: %d", 
-                    getAvailableQuantity().getValue(), quantity.getValue())
+                    getAvailableQuantity().value(), quantity.value())
             );
         }
         
@@ -69,14 +69,14 @@ public class Inventory extends AggregateRoot<SkuId> {
     }
     
     public void releaseReservedQuantity(Quantity quantity) {
-        if (quantity == null || quantity.getValue() == 0) {
+        if (quantity == null || quantity.value() == 0) {
             throw new InvalidInventoryException("해제할 수량은 0보다 커야 합니다");
         }
         
-        if (reservedQuantity.getValue() < quantity.getValue()) {
+        if (reservedQuantity.value() < quantity.value()) {
             throw new InvalidInventoryException(
                 String.format("해제할 예약 수량이 부족합니다. 현재 예약: %d, 해제 요청: %d",
-                    reservedQuantity.getValue(), quantity.getValue())
+                    reservedQuantity.value(), quantity.value())
             );
         }
         
@@ -87,14 +87,14 @@ public class Inventory extends AggregateRoot<SkuId> {
     }
     
     public void confirmReservedQuantity(Quantity quantity) {
-        if (quantity == null || quantity.getValue() == 0) {
+        if (quantity == null || quantity.value() == 0) {
             throw new InvalidInventoryException("확정할 수량은 0보다 커야 합니다");
         }
         
-        if (reservedQuantity.getValue() < quantity.getValue()) {
+        if (reservedQuantity.value() < quantity.value()) {
             throw new InvalidInventoryException(
                 String.format("확정할 예약 수량이 부족합니다. 현재 예약: %d, 확정 요청: %d",
-                    reservedQuantity.getValue(), quantity.getValue())
+                    reservedQuantity.value(), quantity.value())
             );
         }
         
@@ -106,10 +106,10 @@ public class Inventory extends AggregateRoot<SkuId> {
     }
     
     public void deduct(Quantity quantity, String reference) {
-        if (totalQuantity.getValue() < quantity.getValue()) {
+        if (totalQuantity.value() < quantity.value()) {
             throw new InsufficientStockException(
                 String.format("재고가 부족합니다. 총 재고: %d, 차감 요청: %d", 
-                    totalQuantity.getValue(), quantity.getValue())
+                    totalQuantity.value(), quantity.value())
             );
         }
         
@@ -132,7 +132,7 @@ public class Inventory extends AggregateRoot<SkuId> {
             throw new InvalidInventoryException("예약 수량은 필수입니다");
         }
         
-        if (reservedQuantity.getValue() > totalQuantity.getValue()) {
+        if (reservedQuantity.value() > totalQuantity.value()) {
             throw new InvalidInventoryException("예약 수량은 총 수량을 초과할 수 없습니다");
         }
     }

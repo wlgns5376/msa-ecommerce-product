@@ -113,7 +113,7 @@ public class Reservation extends BaseEntity<ReservationId> {
             throw new InvalidReservationException("SKU ID는 필수입니다");
         }
         
-        if (quantity == null || quantity.getValue() == 0) {
+        if (quantity == null || quantity.value() == 0) {
             throw new InvalidReservationException("수량은 0보다 커야 합니다");
         }
         

@@ -23,8 +23,8 @@ class VolumeTest {
         Volume volume = new Volume(value, unit);
 
         // then
-        assertThat(volume.getValue()).isEqualTo(value);
-        assertThat(volume.getUnit()).isEqualTo(unit);
+        assertThat(volume.value()).isEqualTo(value);
+        assertThat(volume.unit()).isEqualTo(unit);
     }
 
     @ParameterizedTest
@@ -54,7 +54,7 @@ class VolumeTest {
         Volume volume = new Volume(100.0, unit);
 
         // then
-        assertThat(volume.getUnit()).isEqualTo(unit);
+        assertThat(volume.unit()).isEqualTo(unit);
     }
 
     @Test

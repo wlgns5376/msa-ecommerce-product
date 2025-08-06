@@ -21,7 +21,7 @@ class QuantityTest {
         Quantity quantity = new Quantity(value);
 
         // then
-        assertThat(quantity.getValue()).isEqualTo(value);
+        assertThat(quantity.value()).isEqualTo(value);
     }
 
     @ParameterizedTest
@@ -41,7 +41,7 @@ class QuantityTest {
         Quantity quantity = new Quantity(0);
 
         // then
-        assertThat(quantity.getValue()).isZero();
+        assertThat(quantity.value()).isZero();
     }
 
     @Test
@@ -55,7 +55,7 @@ class QuantityTest {
         Quantity result = quantity1.add(quantity2);
 
         // then
-        assertThat(result.getValue()).isEqualTo(80);
+        assertThat(result.value()).isEqualTo(80);
     }
 
     @Test
@@ -69,7 +69,7 @@ class QuantityTest {
         Quantity result = quantity1.subtract(quantity2);
 
         // then
-        assertThat(result.getValue()).isEqualTo(70);
+        assertThat(result.value()).isEqualTo(70);
     }
 
     @Test

@@ -23,8 +23,8 @@ class WeightTest {
         Weight weight = new Weight(value, unit);
 
         // then
-        assertThat(weight.getValue()).isEqualTo(value);
-        assertThat(weight.getUnit()).isEqualTo(unit);
+        assertThat(weight.value()).isEqualTo(value);
+        assertThat(weight.unit()).isEqualTo(unit);
     }
 
     @ParameterizedTest
@@ -54,7 +54,7 @@ class WeightTest {
         Weight weight = new Weight(100.0, unit);
 
         // then
-        assertThat(weight.getUnit()).isEqualTo(unit);
+        assertThat(weight.unit()).isEqualTo(unit);
     }
 
     @Test

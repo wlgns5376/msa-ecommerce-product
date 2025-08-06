@@ -105,7 +105,7 @@ public class StockMovement extends BaseEntity<MovementId> {
             throw new InvalidStockMovementException("Movement 타입은 필수입니다");
         }
         
-        if (quantity == null || quantity.getValue() == 0) {
+        if (quantity == null || quantity.value() == 0) {
             throw new InvalidStockMovementException("수량은 0보다 커야 합니다");
         }
         

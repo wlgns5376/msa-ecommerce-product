@@ -22,7 +22,7 @@ class SkuIdTest {
         SkuId skuId = new SkuId(value);
 
         // then
-        assertThat(skuId.getValue()).isEqualTo(value);
+        assertThat(skuId.value()).isEqualTo(value);
     }
 
     @ParameterizedTest

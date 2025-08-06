@@ -22,7 +22,7 @@ class SkuCodeTest {
         SkuCode skuCode = new SkuCode(value);
 
         // then
-        assertThat(skuCode.getValue()).isEqualTo(value);
+        assertThat(skuCode.value()).isEqualTo(value);
     }
 
     @ParameterizedTest
