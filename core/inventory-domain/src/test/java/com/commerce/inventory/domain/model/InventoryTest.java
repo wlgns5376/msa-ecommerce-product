@@ -174,7 +174,7 @@ class InventoryTest {
         ReservationId reservationId = inventory.reserve(new Quantity(30), "ORDER-2024-001", 3600);
 
         // when
-        inventory.releaseReservation(reservationId, new Quantity(30));
+        inventory.releaseReservedQuantity(new Quantity(30));
 
         // then
         assertThat(inventory.getReservedQuantity()).isEqualTo(new Quantity(0));
@@ -189,7 +189,7 @@ class InventoryTest {
         ReservationId reservationId = inventory.reserve(new Quantity(30), "ORDER-2024-001", 3600);
 
         // when
-        inventory.confirmReservation(reservationId, new Quantity(30));
+        inventory.confirmReservedQuantity(new Quantity(30));
 
         // then
         assertThat(inventory.getTotalQuantity()).isEqualTo(new Quantity(70));
@@ -224,5 +224,57 @@ class InventoryTest {
         assertThatThrownBy(() -> inventory.deduct(deductQuantity, "RETURN-2024-001"))
                 .isInstanceOf(InsufficientStockException.class)
                 .hasMessage("재고가 부족합니다. 총 재고: 50, 차감 요청: 100");
+    }
+    
+    @Test
+    @DisplayName("예약 해제 시 해제할 수량이 0이면 예외가 발생한다")
+    void shouldThrowExceptionWhenReleaseQuantityIsZero() {
+        // given
+        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), new Quantity(100));
+        inventory.reserve(new Quantity(30), "ORDER-2024-001", 3600);
+        
+        // when & then
+        assertThatThrownBy(() -> inventory.releaseReservedQuantity(new Quantity(0)))
+                .isInstanceOf(InvalidInventoryException.class)
+                .hasMessage("해제할 수량은 0보다 커야 합니다");
+    }
+    
+    @Test
+    @DisplayName("예약 해제 시 예약된 수량보다 많은 수량을 해제하면 예외가 발생한다")
+    void shouldThrowExceptionWhenReleaseQuantityExceedsReserved() {
+        // given
+        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), new Quantity(100));
+        inventory.reserve(new Quantity(30), "ORDER-2024-001", 3600);
+        
+        // when & then
+        assertThatThrownBy(() -> inventory.releaseReservedQuantity(new Quantity(50)))
+                .isInstanceOf(InvalidInventoryException.class)
+                .hasMessage("해제할 예약 수량이 부족합니다. 현재 예약: 30, 해제 요청: 50");
+    }
+    
+    @Test
+    @DisplayName("예약 확정 시 확정할 수량이 0이면 예외가 발생한다")
+    void shouldThrowExceptionWhenConfirmQuantityIsZero() {
+        // given
+        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), new Quantity(100));
+        inventory.reserve(new Quantity(30), "ORDER-2024-001", 3600);
+        
+        // when & then
+        assertThatThrownBy(() -> inventory.confirmReservedQuantity(new Quantity(0)))
+                .isInstanceOf(InvalidInventoryException.class)
+                .hasMessage("확정할 수량은 0보다 커야 합니다");
+    }
+    
+    @Test
+    @DisplayName("예약 확정 시 예약된 수량보다 많은 수량을 확정하면 예외가 발생한다")
+    void shouldThrowExceptionWhenConfirmQuantityExceedsReserved() {
+        // given
+        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), new Quantity(100));
+        inventory.reserve(new Quantity(30), "ORDER-2024-001", 3600);
+        
+        // when & then
+        assertThatThrownBy(() -> inventory.confirmReservedQuantity(new Quantity(50)))
+                .isInstanceOf(InvalidInventoryException.class)
+                .hasMessage("확정할 예약 수량이 부족합니다. 현재 예약: 30, 확정 요청: 50");
     }
 }

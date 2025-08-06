@@ -31,7 +31,7 @@ public class StockMovement extends BaseEntity<MovementId> {
         this.type = type;
         this.quantity = quantity;
         this.reference = reference;
-        this.timestamp = timestamp != null ? timestamp : LocalDateTime.now();
+        this.timestamp = timestamp;
     }
     
     public static StockMovement create(
@@ -45,36 +45,36 @@ public class StockMovement extends BaseEntity<MovementId> {
         return new StockMovement(id, skuId, type, quantity, reference, timestamp);
     }
     
-    public static StockMovement createInbound(SkuId skuId, Quantity quantity, String reference) {
+    public static StockMovement createInbound(SkuId skuId, Quantity quantity, String reference, LocalDateTime currentTime) {
         return new StockMovement(
                 MovementId.generate(),
                 skuId,
                 MovementType.INBOUND,
                 quantity,
                 reference,
-                LocalDateTime.now()
+                currentTime
         );
     }
     
-    public static StockMovement createOutbound(SkuId skuId, Quantity quantity, String reference) {
+    public static StockMovement createOutbound(SkuId skuId, Quantity quantity, String reference, LocalDateTime currentTime) {
         return new StockMovement(
                 MovementId.generate(),
                 skuId,
                 MovementType.OUTBOUND,
                 quantity,
                 reference,
-                LocalDateTime.now()
+                currentTime
         );
     }
     
-    public static StockMovement createAdjustment(SkuId skuId, Quantity quantity, String reference) {
+    public static StockMovement createAdjustment(SkuId skuId, Quantity quantity, String reference, LocalDateTime currentTime) {
         return new StockMovement(
                 MovementId.generate(),
                 skuId,
                 MovementType.ADJUSTMENT,
                 quantity,
                 reference,
-                LocalDateTime.now()
+                currentTime
         );
     }
     
@@ -112,5 +112,10 @@ public class StockMovement extends BaseEntity<MovementId> {
         if (reference == null || reference.trim().isEmpty()) {
             throw new InvalidStockMovementException("참조 번호는 필수입니다");
         }
+    }
+    
+    @Override
+    public MovementId getId() {
+        return id;
     }
 }

@@ -68,19 +68,41 @@ public class Inventory extends AggregateRoot<SkuId> {
         return reservationId;
     }
     
-    public void releaseReservation(ReservationId reservationId, Quantity quantity) {
+    public void releaseReservedQuantity(Quantity quantity) {
+        if (quantity == null || quantity.getValue() == 0) {
+            throw new InvalidInventoryException("해제할 수량은 0보다 커야 합니다");
+        }
+        
+        if (reservedQuantity.getValue() < quantity.getValue()) {
+            throw new InvalidInventoryException(
+                String.format("해제할 예약 수량이 부족합니다. 현재 예약: %d, 해제 요청: %d",
+                    reservedQuantity.getValue(), quantity.getValue())
+            );
+        }
+        
         this.reservedQuantity = this.reservedQuantity.subtract(quantity);
         
         // 도메인 이벤트 발생 (추후 구현)
-        // this.raise(new ReservationReleasedEvent(this.skuId, reservationId));
+        // this.raise(new ReservationReleasedEvent(this.skuId, quantity));
     }
     
-    public void confirmReservation(ReservationId reservationId, Quantity quantity) {
+    public void confirmReservedQuantity(Quantity quantity) {
+        if (quantity == null || quantity.getValue() == 0) {
+            throw new InvalidInventoryException("확정할 수량은 0보다 커야 합니다");
+        }
+        
+        if (reservedQuantity.getValue() < quantity.getValue()) {
+            throw new InvalidInventoryException(
+                String.format("확정할 예약 수량이 부족합니다. 현재 예약: %d, 확정 요청: %d",
+                    reservedQuantity.getValue(), quantity.getValue())
+            );
+        }
+        
         this.totalQuantity = this.totalQuantity.subtract(quantity);
         this.reservedQuantity = this.reservedQuantity.subtract(quantity);
         
         // 도메인 이벤트 발생 (추후 구현)
-        // this.raise(new ReservationConfirmedEvent(this.skuId, reservationId));
+        // this.raise(new ReservationConfirmedEvent(this.skuId, quantity));
     }
     
     public void deduct(Quantity quantity, String reference) {

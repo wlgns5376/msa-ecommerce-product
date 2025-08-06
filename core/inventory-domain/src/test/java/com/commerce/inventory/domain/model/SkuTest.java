@@ -12,6 +12,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class SkuTest {
+    
+    private static final LocalDateTime FIXED_TIME = LocalDateTime.of(2025, 1, 1, 12, 0);
 
     @Test
     @DisplayName("유효한 값으로 SKU를 생성할 수 있다")
@@ -33,7 +35,8 @@ class SkuTest {
                 .description(description)
                 .weight(weight)
                 .volume(volume)
-                .build()
+                .build(),
+            FIXED_TIME
         );
 
         // then
@@ -61,7 +64,8 @@ class SkuTest {
                 .id(id)
                 .code(code)
                 .name(name)
-                .build()
+                .build(),
+            FIXED_TIME
         );
 
         // then
@@ -85,7 +89,8 @@ class SkuTest {
             CreateSkuCommand.builder()
                 .code(code)
                 .name(name)
-                .build()
+                .build(),
+            FIXED_TIME
         ))
             .isInstanceOf(InvalidSkuException.class)
             .hasMessage("SKU ID는 필수입니다");
@@ -103,7 +108,8 @@ class SkuTest {
             CreateSkuCommand.builder()
                 .id(id)
                 .name(name)
-                .build()
+                .build(),
+            FIXED_TIME
         ))
             .isInstanceOf(InvalidSkuException.class)
             .hasMessage("SKU 코드는 필수입니다");
@@ -123,7 +129,8 @@ class SkuTest {
                 .id(id)
                 .code(code)
                 .name(invalidName)
-                .build()
+                .build(),
+            FIXED_TIME
         ))
             .isInstanceOf(InvalidSkuException.class)
             .hasMessage("SKU 이름은 필수입니다");
@@ -139,6 +146,7 @@ class SkuTest {
         Weight newWeight = new Weight(300.0, WeightUnit.GRAM);
         Volume newVolume = new Volume(1200.0, VolumeUnit.CUBIC_CM);
         LocalDateTime beforeUpdate = sku.getUpdatedAt();
+        LocalDateTime updateTime = FIXED_TIME.plusHours(1);
 
         // when
         sku.update(
@@ -147,7 +155,8 @@ class SkuTest {
                 .description(newDescription)
                 .weight(newWeight)
                 .volume(newVolume)
-                .build()
+                .build(),
+            updateTime
         );
 
         // then
@@ -169,7 +178,7 @@ class SkuTest {
         Volume originalVolume = sku.getVolume();
 
         // when
-        sku.update(UpdateSkuCommand.builder().build());
+        sku.update(UpdateSkuCommand.builder().build(), FIXED_TIME);
 
         // then
         assertThat(sku.getName()).isEqualTo(originalName);
@@ -188,7 +197,8 @@ class SkuTest {
         assertThatThrownBy(() -> sku.update(
             UpdateSkuCommand.builder()
                 .name("")
-                .build()
+                .build(),
+            FIXED_TIME
         ))
             .isInstanceOf(InvalidSkuException.class)
             .hasMessage("SKU 이름은 필수입니다");
@@ -203,7 +213,8 @@ class SkuTest {
                 .description("블랙 색상 티셔츠 L 사이즈")
                 .weight(new Weight(250.0, WeightUnit.GRAM))
                 .volume(new Volume(1000.0, VolumeUnit.CUBIC_CM))
-                .build()
+                .build(),
+            FIXED_TIME
         );
     }
 }

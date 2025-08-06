@@ -18,7 +18,7 @@ public class Sku extends AggregateRoot<SkuId> {
     private final LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     
-    private Sku(CreateSkuCommand command) {
+    private Sku(CreateSkuCommand command, LocalDateTime currentTime) {
         validateCreate(command);
         
         this.id = command.getId();
@@ -27,15 +27,15 @@ public class Sku extends AggregateRoot<SkuId> {
         this.description = command.getDescription();
         this.weight = command.getWeight();
         this.volume = command.getVolume();
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = this.createdAt;
+        this.createdAt = currentTime;
+        this.updatedAt = currentTime;
     }
     
-    public static Sku create(CreateSkuCommand command) {
-        return new Sku(command);
+    public static Sku create(CreateSkuCommand command, LocalDateTime currentTime) {
+        return new Sku(command, currentTime);
     }
     
-    public void update(UpdateSkuCommand command) {
+    public void update(UpdateSkuCommand command, LocalDateTime currentTime) {
         if (command.getName() != null) {
             if (command.getName().trim().isEmpty()) {
                 throw new InvalidSkuException("SKU 이름은 필수입니다");
@@ -55,7 +55,7 @@ public class Sku extends AggregateRoot<SkuId> {
             this.volume = command.getVolume();
         }
         
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = currentTime;
     }
     
     private void validateCreate(CreateSkuCommand command) {
@@ -70,5 +70,10 @@ public class Sku extends AggregateRoot<SkuId> {
         if (command.getName() == null || command.getName().trim().isEmpty()) {
             throw new InvalidSkuException("SKU 이름은 필수입니다");
         }
+    }
+    
+    @Override
+    public SkuId getId() {
+        return id;
     }
 }

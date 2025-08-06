@@ -23,9 +23,10 @@ public class Reservation extends BaseEntity<ReservationId> {
             SkuId skuId,
             Quantity quantity,
             String orderId,
-            LocalDateTime expiresAt
+            LocalDateTime expiresAt,
+            LocalDateTime createdAt
     ) {
-        validateCreate(id, skuId, quantity, orderId, expiresAt);
+        validateCreate(id, skuId, quantity, orderId, expiresAt, createdAt);
         
         this.id = id;
         this.skuId = skuId;
@@ -33,7 +34,7 @@ public class Reservation extends BaseEntity<ReservationId> {
         this.orderId = orderId;
         this.expiresAt = expiresAt;
         this.status = ReservationStatus.ACTIVE;
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = createdAt;
     }
     
     public static Reservation create(
@@ -41,32 +42,35 @@ public class Reservation extends BaseEntity<ReservationId> {
             SkuId skuId,
             Quantity quantity,
             String orderId,
-            LocalDateTime expiresAt
+            LocalDateTime expiresAt,
+            LocalDateTime currentTime
     ) {
-        return new Reservation(id, skuId, quantity, orderId, expiresAt);
+        return new Reservation(id, skuId, quantity, orderId, expiresAt, currentTime);
     }
     
     public static Reservation createWithTTL(
             SkuId skuId,
             Quantity quantity,
             String orderId,
-            int ttlSeconds
+            int ttlSeconds,
+            LocalDateTime currentTime
     ) {
         return new Reservation(
                 ReservationId.generate(),
                 skuId,
                 quantity,
                 orderId,
-                LocalDateTime.now().plusSeconds(ttlSeconds)
+                currentTime.plusSeconds(ttlSeconds),
+                currentTime
         );
     }
     
-    public boolean isExpired() {
-        return LocalDateTime.now().isAfter(expiresAt);
+    public boolean isExpired(LocalDateTime currentTime) {
+        return currentTime.isAfter(expiresAt);
     }
     
-    public boolean isActive() {
-        return status == ReservationStatus.ACTIVE && !isExpired();
+    public boolean isActive(LocalDateTime currentTime) {
+        return status == ReservationStatus.ACTIVE && !isExpired(currentTime);
     }
     
     public void release() {
@@ -77,8 +81,8 @@ public class Reservation extends BaseEntity<ReservationId> {
         this.status = ReservationStatus.RELEASED;
     }
     
-    public void confirm() {
-        if (isExpired()) {
+    public void confirm(LocalDateTime currentTime) {
+        if (isExpired(currentTime)) {
             throw new InvalidReservationStateException("만료된 예약은 확정할 수 없습니다");
         }
         
@@ -98,7 +102,8 @@ public class Reservation extends BaseEntity<ReservationId> {
             SkuId skuId,
             Quantity quantity,
             String orderId,
-            LocalDateTime expiresAt
+            LocalDateTime expiresAt,
+            LocalDateTime currentTime
     ) {
         if (id == null) {
             throw new InvalidReservationException("Reservation ID는 필수입니다");
@@ -120,8 +125,13 @@ public class Reservation extends BaseEntity<ReservationId> {
             throw new InvalidReservationException("만료 시간은 필수입니다");
         }
         
-        if (expiresAt.isBefore(LocalDateTime.now())) {
+        if (expiresAt.isBefore(currentTime)) {
             throw new InvalidReservationException("만료 시간은 현재 시간 이후여야 합니다");
         }
+    }
+    
+    @Override
+    public ReservationId getId() {
+        return id;
     }
 }

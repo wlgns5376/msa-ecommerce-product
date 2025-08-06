@@ -13,6 +13,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ReservationTest {
+    
+    private static final LocalDateTime FIXED_TIME = LocalDateTime.of(2025, 1, 1, 12, 0);
 
     @Test
     @DisplayName("유효한 값으로 Reservation을 생성할 수 있다")
@@ -22,10 +24,10 @@ class ReservationTest {
         SkuId skuId = SkuId.generate();
         Quantity quantity = new Quantity(10);
         String orderId = "ORDER-2024-001";
-        LocalDateTime expiresAt = LocalDateTime.now().plusHours(1);
+        LocalDateTime expiresAt = FIXED_TIME.plusHours(1);
 
         // when
-        Reservation reservation = Reservation.create(id, skuId, quantity, orderId, expiresAt);
+        Reservation reservation = Reservation.create(id, skuId, quantity, orderId, expiresAt, FIXED_TIME);
 
         // then
         assertThat(reservation.getId()).isEqualTo(id);
@@ -47,13 +49,12 @@ class ReservationTest {
         int ttlSeconds = 3600; // 1시간
 
         // when
-        Reservation reservation = Reservation.createWithTTL(skuId, quantity, orderId, ttlSeconds);
+        Reservation reservation = Reservation.createWithTTL(skuId, quantity, orderId, ttlSeconds, FIXED_TIME);
 
         // then
         assertThat(reservation.getId()).isNotNull();
-        assertThat(reservation.getExpiresAt()).isAfter(LocalDateTime.now());
-        assertThat(reservation.getExpiresAt()).isBefore(LocalDateTime.now().plusSeconds(ttlSeconds + 1));
-        assertThat(reservation.isActive()).isTrue();
+        assertThat(reservation.getExpiresAt()).isEqualTo(FIXED_TIME.plusSeconds(ttlSeconds));
+        assertThat(reservation.isActive(FIXED_TIME)).isTrue();
     }
 
     @Test
@@ -63,10 +64,10 @@ class ReservationTest {
         SkuId skuId = SkuId.generate();
         Quantity quantity = new Quantity(10);
         String orderId = "ORDER-2024-001";
-        LocalDateTime expiresAt = LocalDateTime.now().plusHours(1);
+        LocalDateTime expiresAt = FIXED_TIME.plusHours(1);
 
         // when & then
-        assertThatThrownBy(() -> Reservation.create(null, skuId, quantity, orderId, expiresAt))
+        assertThatThrownBy(() -> Reservation.create(null, skuId, quantity, orderId, expiresAt, FIXED_TIME))
                 .isInstanceOf(InvalidReservationException.class)
                 .hasMessage("Reservation ID는 필수입니다");
     }
@@ -78,10 +79,10 @@ class ReservationTest {
         ReservationId id = ReservationId.generate();
         Quantity quantity = new Quantity(10);
         String orderId = "ORDER-2024-001";
-        LocalDateTime expiresAt = LocalDateTime.now().plusHours(1);
+        LocalDateTime expiresAt = FIXED_TIME.plusHours(1);
 
         // when & then
-        assertThatThrownBy(() -> Reservation.create(id, null, quantity, orderId, expiresAt))
+        assertThatThrownBy(() -> Reservation.create(id, null, quantity, orderId, expiresAt, FIXED_TIME))
                 .isInstanceOf(InvalidReservationException.class)
                 .hasMessage("SKU ID는 필수입니다");
     }
@@ -93,14 +94,14 @@ class ReservationTest {
         ReservationId id = ReservationId.generate();
         SkuId skuId = SkuId.generate();
         String orderId = "ORDER-2024-001";
-        LocalDateTime expiresAt = LocalDateTime.now().plusHours(1);
+        LocalDateTime expiresAt = FIXED_TIME.plusHours(1);
 
         // when & then
-        assertThatThrownBy(() -> Reservation.create(id, skuId, null, orderId, expiresAt))
+        assertThatThrownBy(() -> Reservation.create(id, skuId, null, orderId, expiresAt, FIXED_TIME))
                 .isInstanceOf(InvalidReservationException.class)
                 .hasMessage("수량은 0보다 커야 합니다");
 
-        assertThatThrownBy(() -> Reservation.create(id, skuId, new Quantity(0), orderId, expiresAt))
+        assertThatThrownBy(() -> Reservation.create(id, skuId, new Quantity(0), orderId, expiresAt, FIXED_TIME))
                 .isInstanceOf(InvalidReservationException.class)
                 .hasMessage("수량은 0보다 커야 합니다");
     }
@@ -113,10 +114,10 @@ class ReservationTest {
         ReservationId id = ReservationId.generate();
         SkuId skuId = SkuId.generate();
         Quantity quantity = new Quantity(10);
-        LocalDateTime expiresAt = LocalDateTime.now().plusHours(1);
+        LocalDateTime expiresAt = FIXED_TIME.plusHours(1);
 
         // when & then
-        assertThatThrownBy(() -> Reservation.create(id, skuId, quantity, invalidOrderId, expiresAt))
+        assertThatThrownBy(() -> Reservation.create(id, skuId, quantity, invalidOrderId, expiresAt, FIXED_TIME))
                 .isInstanceOf(InvalidReservationException.class)
                 .hasMessage("주문 ID는 필수입니다");
     }
@@ -129,10 +130,10 @@ class ReservationTest {
         SkuId skuId = SkuId.generate();
         Quantity quantity = new Quantity(10);
         String orderId = "ORDER-2024-001";
-        LocalDateTime expiresAt = LocalDateTime.now().minusHours(1);
+        LocalDateTime expiresAt = FIXED_TIME.minusHours(1);
 
         // when & then
-        assertThatThrownBy(() -> Reservation.create(id, skuId, quantity, orderId, expiresAt))
+        assertThatThrownBy(() -> Reservation.create(id, skuId, quantity, orderId, expiresAt, FIXED_TIME))
                 .isInstanceOf(InvalidReservationException.class)
                 .hasMessage("만료 시간은 현재 시간 이후여야 합니다");
     }
@@ -142,7 +143,7 @@ class ReservationTest {
     void shouldCheckIfReservationIsActive() {
         // given
         Reservation activeReservation = Reservation.createWithTTL(
-                SkuId.generate(), new Quantity(10), "ORDER-2024-001", 3600
+                SkuId.generate(), new Quantity(10), "ORDER-2024-001", 3600, FIXED_TIME
         );
         
         Reservation expiredReservation = Reservation.create(
@@ -150,21 +151,14 @@ class ReservationTest {
                 SkuId.generate(),
                 new Quantity(10),
                 "ORDER-2024-002",
-                LocalDateTime.now().plusSeconds(1)
+                FIXED_TIME.minusHours(1),
+                FIXED_TIME.minusHours(2)  // 생성 시점을 만료 시간보다 이전으로 설정
         );
 
         // when & then
-        assertThat(activeReservation.isActive()).isTrue();
-        
-        // 만료 시간까지 대기
-        try {
-            Thread.sleep(1100);
-        } catch (InterruptedException e) {
-            // ignore
-        }
-        
-        assertThat(expiredReservation.isExpired()).isTrue();
-        assertThat(expiredReservation.isActive()).isFalse();
+        assertThat(activeReservation.isActive(FIXED_TIME)).isTrue();
+        assertThat(expiredReservation.isExpired(FIXED_TIME)).isTrue();
+        assertThat(expiredReservation.isActive(FIXED_TIME)).isFalse();
     }
 
     @Test
@@ -172,7 +166,7 @@ class ReservationTest {
     void shouldReleaseReservation() {
         // given
         Reservation reservation = Reservation.createWithTTL(
-                SkuId.generate(), new Quantity(10), "ORDER-2024-001", 3600
+                SkuId.generate(), new Quantity(10), "ORDER-2024-001", 3600, FIXED_TIME
         );
 
         // when
@@ -180,7 +174,7 @@ class ReservationTest {
 
         // then
         assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.RELEASED);
-        assertThat(reservation.isActive()).isFalse();
+        assertThat(reservation.isActive(FIXED_TIME)).isFalse();
     }
 
     @Test
@@ -188,7 +182,7 @@ class ReservationTest {
     void shouldThrowExceptionWhenReleaseAlreadyReleasedReservation() {
         // given
         Reservation reservation = Reservation.createWithTTL(
-                SkuId.generate(), new Quantity(10), "ORDER-2024-001", 3600
+                SkuId.generate(), new Quantity(10), "ORDER-2024-001", 3600, FIXED_TIME
         );
         reservation.release();
 
@@ -203,15 +197,15 @@ class ReservationTest {
     void shouldConfirmReservation() {
         // given
         Reservation reservation = Reservation.createWithTTL(
-                SkuId.generate(), new Quantity(10), "ORDER-2024-001", 3600
+                SkuId.generate(), new Quantity(10), "ORDER-2024-001", 3600, FIXED_TIME
         );
 
         // when
-        reservation.confirm();
+        reservation.confirm(FIXED_TIME);
 
         // then
         assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
-        assertThat(reservation.isActive()).isFalse();
+        assertThat(reservation.isActive(FIXED_TIME)).isFalse();
     }
 
     @Test
@@ -223,18 +217,12 @@ class ReservationTest {
                 SkuId.generate(),
                 new Quantity(10),
                 "ORDER-2024-001",
-                LocalDateTime.now().plusNanos(100_000_000)
+                FIXED_TIME.minusHours(1),  // 이미 만료된 시간
+                FIXED_TIME.minusHours(2)  // 생성 시점을 만료 시간보다 이전으로 설정
         );
-        
-        // 만료 시간까지 대기
-        try {
-            Thread.sleep(200);
-        } catch (InterruptedException e) {
-            // ignore
-        }
 
         // when & then
-        assertThatThrownBy(() -> reservation.confirm())
+        assertThatThrownBy(() -> reservation.confirm(FIXED_TIME))
                 .isInstanceOf(InvalidReservationStateException.class)
                 .hasMessage("만료된 예약은 확정할 수 없습니다");
     }
@@ -244,12 +232,12 @@ class ReservationTest {
     void shouldThrowExceptionWhenConfirmAlreadyConfirmedReservation() {
         // given
         Reservation reservation = Reservation.createWithTTL(
-                SkuId.generate(), new Quantity(10), "ORDER-2024-001", 3600
+                SkuId.generate(), new Quantity(10), "ORDER-2024-001", 3600, FIXED_TIME
         );
-        reservation.confirm();
+        reservation.confirm(FIXED_TIME);
 
         // when & then
-        assertThatThrownBy(() -> reservation.confirm())
+        assertThatThrownBy(() -> reservation.confirm(FIXED_TIME))
                 .isInstanceOf(InvalidReservationStateException.class)
                 .hasMessage("이미 확정된 예약입니다");
     }
@@ -259,12 +247,12 @@ class ReservationTest {
     void shouldThrowExceptionWhenConfirmReleasedReservation() {
         // given
         Reservation reservation = Reservation.createWithTTL(
-                SkuId.generate(), new Quantity(10), "ORDER-2024-001", 3600
+                SkuId.generate(), new Quantity(10), "ORDER-2024-001", 3600, FIXED_TIME
         );
         reservation.release();
 
         // when & then
-        assertThatThrownBy(() -> reservation.confirm())
+        assertThatThrownBy(() -> reservation.confirm(FIXED_TIME))
                 .isInstanceOf(InvalidReservationStateException.class)
                 .hasMessage("해제된 예약은 확정할 수 없습니다");
     }

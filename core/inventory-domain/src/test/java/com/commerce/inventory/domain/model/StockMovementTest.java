@@ -13,6 +13,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class StockMovementTest {
+    
+    private static final LocalDateTime FIXED_TIME = LocalDateTime.of(2025, 1, 1, 12, 0);
 
     @Test
     @DisplayName("유효한 값으로 StockMovement를 생성할 수 있다")
@@ -48,7 +50,7 @@ class StockMovementTest {
         String reference = "PO-2024-001";
 
         // when
-        StockMovement movement = StockMovement.createInbound(skuId, quantity, reference);
+        StockMovement movement = StockMovement.createInbound(skuId, quantity, reference, FIXED_TIME);
 
         // then
         assertThat(movement.getId()).isNotNull();
@@ -66,7 +68,7 @@ class StockMovementTest {
         String reference = "ORDER-2024-001";
 
         // when
-        StockMovement movement = StockMovement.createOutbound(skuId, quantity, reference);
+        StockMovement movement = StockMovement.createOutbound(skuId, quantity, reference, FIXED_TIME);
 
         // then
         assertThat(movement.getId()).isNotNull();
@@ -194,7 +196,7 @@ class StockMovementTest {
         String reference = "ADJ-2024-001";
 
         // when
-        StockMovement movement = StockMovement.createAdjustment(skuId, quantity, reference);
+        StockMovement movement = StockMovement.createAdjustment(skuId, quantity, reference, FIXED_TIME);
 
         // then
         assertThat(movement.getType()).isEqualTo(MovementType.ADJUSTMENT);
