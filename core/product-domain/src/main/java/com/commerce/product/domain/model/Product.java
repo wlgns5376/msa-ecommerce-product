@@ -5,6 +5,7 @@ import com.commerce.product.domain.exception.*;
 import lombok.Getter;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Getter
@@ -18,7 +19,7 @@ public class Product extends AggregateRoot<ProductId> {
     private final List<CategoryId> categoryIds;
     private boolean outOfStock;
 
-    private Product(ProductId id, ProductName name, String description, ProductType type) {
+    public Product(ProductId id, ProductName name, String description, ProductType type) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -60,8 +61,8 @@ public class Product extends AggregateRoot<ProductId> {
             throw new InvalidProductException("Cannot add option to deleted product");
         }
         
-        if (type == ProductType.BUNDLE && !option.hasMultipleSkus()) {
-            throw new InvalidOptionException("Bundle product must have options with multiple SKUs");
+        if (type == ProductType.BUNDLE && !option.isBundle()) {
+            throw new InvalidOptionException("Bundle product must have bundle options");
         }
         
         if (options.contains(option)) {
@@ -115,5 +116,26 @@ public class Product extends AggregateRoot<ProductId> {
     public void markAsInStock() {
         this.outOfStock = false;
         addDomainEvent(new ProductInStockEvent(id));
+    }
+
+    public List<ProductOption> getOptions() {
+        return Collections.unmodifiableList(options);
+    }
+
+    public List<CategoryId> getCategoryIds() {
+        return Collections.unmodifiableList(categoryIds);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Product product = (Product) o;
+        return id.equals(product.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return id.hashCode();
     }
 }

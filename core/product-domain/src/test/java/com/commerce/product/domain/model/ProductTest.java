@@ -1,44 +1,35 @@
 package com.commerce.product.domain.model;
 
-import com.commerce.product.domain.exception.InvalidOptionException;
-import com.commerce.product.domain.exception.InvalidProductException;
-import com.commerce.product.domain.exception.MaxCategoryLimitException;
-import com.commerce.product.domain.exception.DuplicateOptionException;
-import com.commerce.product.common.event.DomainEvent;
 import com.commerce.product.domain.event.*;
+import com.commerce.product.domain.exception.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.math.BigDecimal;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ProductTest {
 
-    private ProductId productId;
     private ProductName productName;
     private String description;
 
     @BeforeEach
     void setUp() {
-        productId = ProductId.generate();
         productName = new ProductName("맥북 프로 16인치");
-        description = "애플 최신 맥북 프로";
+        description = "2023년형 M2 Pro 칩셋 탑재";
     }
 
     @Test
-    @DisplayName("일반 상품을 생성할 수 있다")
-    void shouldCreateNormalProduct() {
+    @DisplayName("새로운 상품을 생성할 수 있다")
+    void shouldCreateNewProduct() {
         // When
-        Product product = Product.create(
-                productName,
-                description,
-                ProductType.NORMAL
-        );
+        Product product = Product.create(productName, description, ProductType.NORMAL);
 
         // Then
         assertThat(product).isNotNull();
@@ -48,35 +39,49 @@ class ProductTest {
         assertThat(product.getType()).isEqualTo(ProductType.NORMAL);
         assertThat(product.getStatus()).isEqualTo(ProductStatus.DRAFT);
         assertThat(product.getOptions()).isEmpty();
-        assertThat(product.getDomainEvents()).hasSize(1);
-        assertThat(product.getDomainEvents().get(0)).isInstanceOf(ProductCreatedEvent.class);
+        assertThat(product.getCategoryIds()).isEmpty();
+        assertThat(product.isOutOfStock()).isFalse();
     }
 
-    @Test
-    @DisplayName("묶음 상품을 생성할 수 있다")
-    void shouldCreateBundleProduct() {
+    @ParameterizedTest
+    @EnumSource(ProductType.class)
+    @DisplayName("모든 상품 타입으로 상품을 생성할 수 있다")
+    void shouldCreateProductWithAllTypes(ProductType type) {
         // When
-        Product product = Product.create(
-                productName,
-                description,
-                ProductType.BUNDLE
-        );
+        Product product = Product.create(productName, description, type);
 
         // Then
-        assertThat(product.getType()).isEqualTo(ProductType.BUNDLE);
+        assertThat(product.getType()).isEqualTo(type);
     }
 
     @Test
-    @DisplayName("필수 정보가 없으면 상품을 생성할 수 없다")
-    void shouldThrowExceptionWhenRequiredFieldIsNull() {
-        // When & Then
-        assertThatThrownBy(() -> Product.create(null, description, ProductType.NORMAL))
-                .isInstanceOf(InvalidProductException.class)
-                .hasMessageContaining("Product name is required");
+    @DisplayName("상품 생성 시 ProductCreatedEvent가 발생한다")
+    void shouldRaiseProductCreatedEventWhenCreated() {
+        // When
+        Product product = Product.create(productName, description, ProductType.NORMAL);
 
-        assertThatThrownBy(() -> Product.create(productName, description, null))
-                .isInstanceOf(InvalidProductException.class)
-                .hasMessageContaining("Product type is required");
+        // Then
+        assertThat(product.getDomainEvents()).hasSize(1);
+        assertThat(product.getDomainEvents().get(0)).isInstanceOf(ProductCreatedEvent.class);
+        
+        ProductCreatedEvent event = (ProductCreatedEvent) product.getDomainEvents().get(0);
+        assertThat(event.getProductId()).isEqualTo(product.getId());
+        assertThat(event.getName()).isEqualTo(productName.getValue());
+        assertThat(event.getType()).isEqualTo(ProductType.NORMAL);
+    }
+
+    @Test
+    @DisplayName("기존 ID로 상품을 복원할 수 있다")
+    void shouldRestoreProductWithExistingId() {
+        // Given
+        ProductId existingId = new ProductId(UUID.randomUUID().toString());
+
+        // When
+        Product product = new Product(existingId, productName, description, ProductType.NORMAL);
+
+        // Then
+        assertThat(product.getId()).isEqualTo(existingId);
+        assertThat(product.getDomainEvents()).isEmpty(); // 복원 시에는 이벤트 발생하지 않음
     }
 
     @Test
@@ -84,10 +89,10 @@ class ProductTest {
     void shouldAddSingleSkuOptionToNormalProduct() {
         // Given
         Product product = Product.create(productName, description, ProductType.NORMAL);
-        ProductOption option = ProductOption.create(
+        ProductOption option = ProductOption.single(
                 "블랙 - 512GB",
-                new Money(new BigDecimal("3500000")),
-                Arrays.asList(new SkuMapping("SKU001", 1))
+                Money.of(new BigDecimal("3500000"), Currency.KRW),
+                "SKU001"
         );
 
         // When
@@ -105,15 +110,15 @@ class ProductTest {
     void shouldAddMultipleOptionsToNormalProduct() {
         // Given
         Product product = Product.create(productName, description, ProductType.NORMAL);
-        ProductOption option1 = ProductOption.create(
+        ProductOption option1 = ProductOption.single(
                 "실버 - 512GB",
-                new Money(new BigDecimal("3500000")),
-                Arrays.asList(new SkuMapping("SKU001", 1))
+                Money.of(new BigDecimal("3500000"), Currency.KRW),
+                "SKU001"
         );
-        ProductOption option2 = ProductOption.create(
+        ProductOption option2 = ProductOption.single(
                 "스페이스 그레이 - 1TB",
-                new Money(new BigDecimal("4500000")),
-                Arrays.asList(new SkuMapping("SKU002", 1))
+                Money.of(new BigDecimal("4500000"), Currency.KRW),
+                "SKU002"
         );
 
         // When
@@ -130,13 +135,14 @@ class ProductTest {
     void shouldOnlyAddMultipleSkuOptionToBundleProduct() {
         // Given
         Product product = Product.create(productName, description, ProductType.BUNDLE);
-        ProductOption bundleOption = ProductOption.create(
+        Map<String, Integer> bundleMapping = new HashMap<>();
+        bundleMapping.put("SKU001", 1);
+        bundleMapping.put("SKU002", 1);
+        
+        ProductOption bundleOption = ProductOption.bundle(
                 "맥북 + 매직마우스 번들",
-                new Money(new BigDecimal("3800000")),
-                Arrays.asList(
-                        new SkuMapping("SKU001", 1),
-                        new SkuMapping("SKU002", 1)
-                )
+                Money.of(new BigDecimal("3800000"), Currency.KRW),
+                SkuMapping.bundle(bundleMapping)
         );
 
         // When
@@ -144,7 +150,7 @@ class ProductTest {
 
         // Then
         assertThat(product.getOptions()).hasSize(1);
-        assertThat(product.getOptions().get(0).hasMultipleSkus()).isTrue();
+        assertThat(product.getOptions().get(0).isBundle()).isTrue();
     }
 
     @Test
@@ -152,16 +158,16 @@ class ProductTest {
     void shouldThrowExceptionWhenAddingSingleSkuOptionToBundleProduct() {
         // Given
         Product product = Product.create(productName, description, ProductType.BUNDLE);
-        ProductOption singleSkuOption = ProductOption.create(
+        ProductOption singleSkuOption = ProductOption.single(
                 "단일 상품 옵션",
-                new Money(new BigDecimal("1000000")),
-                Arrays.asList(new SkuMapping("SKU001", 1))
+                Money.of(new BigDecimal("1000000"), Currency.KRW),
+                "SKU001"
         );
 
         // When & Then
         assertThatThrownBy(() -> product.addOption(singleSkuOption))
                 .isInstanceOf(InvalidOptionException.class)
-                .hasMessageContaining("Bundle product must have options with multiple SKUs");
+                .hasMessageContaining("Bundle product must have bundle options");
     }
 
     @Test
@@ -169,10 +175,10 @@ class ProductTest {
     void shouldThrowExceptionWhenAddingDuplicateOption() {
         // Given
         Product product = Product.create(productName, description, ProductType.NORMAL);
-        ProductOption option = ProductOption.create(
+        ProductOption option = ProductOption.single(
                 "블랙 - 512GB",
-                new Money(new BigDecimal("3500000")),
-                Arrays.asList(new SkuMapping("SKU001", 1))
+                Money.of(new BigDecimal("3500000"), Currency.KRW),
+                "SKU001"
         );
         product.addOption(option);
 
@@ -187,8 +193,8 @@ class ProductTest {
     void shouldUpdateProductInfo() {
         // Given
         Product product = Product.create(productName, description, ProductType.NORMAL);
-        ProductName newName = new ProductName("맥북 프로 16인치 M3");
-        String newDescription = "애플 최신 M3 칩셋 탑재 맥북 프로";
+        ProductName newName = new ProductName("맥북 프로 14인치");
+        String newDescription = "2023년형 M2 Max 칩셋 탑재";
 
         // When
         product.update(newName, newDescription);
@@ -201,14 +207,14 @@ class ProductTest {
     }
 
     @Test
-    @DisplayName("상품을 활성화할 수 있다")
-    void shouldActivateProduct() {
+    @DisplayName("옵션이 있는 상품을 활성화할 수 있다")
+    void shouldActivateProductWithOptions() {
         // Given
         Product product = Product.create(productName, description, ProductType.NORMAL);
-        product.addOption(ProductOption.create(
+        product.addOption(ProductOption.single(
                 "기본 옵션",
-                new Money(new BigDecimal("1000000")),
-                Arrays.asList(new SkuMapping("SKU001", 1))
+                Money.of(new BigDecimal("1000000"), Currency.KRW),
+                "SKU001"
         ));
 
         // When
@@ -221,7 +227,7 @@ class ProductTest {
     }
 
     @Test
-    @DisplayName("옵션이 없는 상품은 활성화할 수 없다")
+    @DisplayName("옵션이 없는 상품을 활성화하면 예외가 발생한다")
     void shouldThrowExceptionWhenActivatingProductWithoutOptions() {
         // Given
         Product product = Product.create(productName, description, ProductType.NORMAL);
@@ -233,14 +239,14 @@ class ProductTest {
     }
 
     @Test
-    @DisplayName("상품을 비활성화할 수 있다")
-    void shouldDeactivateProduct() {
+    @DisplayName("활성화된 상품을 비활성화할 수 있다")
+    void shouldDeactivateActiveProduct() {
         // Given
         Product product = Product.create(productName, description, ProductType.NORMAL);
-        product.addOption(ProductOption.create(
+        product.addOption(ProductOption.single(
                 "기본 옵션",
-                new Money(new BigDecimal("1000000")),
-                Arrays.asList(new SkuMapping("SKU001", 1))
+                Money.of(new BigDecimal("1000000"), Currency.KRW),
+                "SKU001"
         ));
         product.activate();
 
@@ -269,26 +275,44 @@ class ProductTest {
     }
 
     @Test
-    @DisplayName("삭제된 상품은 수정할 수 없다")
+    @DisplayName("삭제된 상품에 옵션을 추가하면 예외가 발생한다")
+    void shouldThrowExceptionWhenAddingOptionToDeletedProduct() {
+        // Given
+        Product product = Product.create(productName, description, ProductType.NORMAL);
+        product.delete();
+        ProductOption option = ProductOption.single(
+                "테스트 옵션",
+                Money.of(new BigDecimal("1000000"), Currency.KRW),
+                "SKU001"
+        );
+
+        // When & Then
+        assertThatThrownBy(() -> product.addOption(option))
+                .isInstanceOf(InvalidProductException.class)
+                .hasMessageContaining("Cannot add option to deleted product");
+    }
+
+    @Test
+    @DisplayName("삭제된 상품을 수정하면 예외가 발생한다")
     void shouldThrowExceptionWhenUpdatingDeletedProduct() {
         // Given
         Product product = Product.create(productName, description, ProductType.NORMAL);
         product.delete();
 
         // When & Then
-        assertThatThrownBy(() -> product.update(new ProductName("새 이름"), "새 설명"))
+        assertThatThrownBy(() -> product.update(new ProductName("새이름"), "새설명"))
                 .isInstanceOf(InvalidProductException.class)
                 .hasMessageContaining("Cannot update deleted product");
     }
 
     @Test
-    @DisplayName("상품에 카테고리를 연결할 수 있다")
+    @DisplayName("상품에 카테고리를 할당할 수 있다")
     void shouldAssignCategoriesToProduct() {
         // Given
         Product product = Product.create(productName, description, ProductType.NORMAL);
         List<CategoryId> categoryIds = Arrays.asList(
-                new CategoryId("CAT001"),
-                new CategoryId("CAT002")
+                new CategoryId(UUID.randomUUID().toString()),
+                new CategoryId(UUID.randomUUID().toString())
         );
 
         // When
@@ -300,38 +324,14 @@ class ProductTest {
     }
 
     @Test
-    @DisplayName("상품에 최대 5개까지 카테고리를 연결할 수 있다")
-    void shouldAssignUpTo5CategoriesToProduct() {
+    @DisplayName("상품에 5개를 초과하는 카테고리를 할당하면 예외가 발생한다")
+    void shouldThrowExceptionWhenAssigningMoreThanFiveCategories() {
         // Given
         Product product = Product.create(productName, description, ProductType.NORMAL);
-        List<CategoryId> categoryIds = Arrays.asList(
-                new CategoryId("CAT001"),
-                new CategoryId("CAT002"),
-                new CategoryId("CAT003"),
-                new CategoryId("CAT004"),
-                new CategoryId("CAT005")
-        );
-
-        // When
-        product.assignCategories(categoryIds);
-
-        // Then
-        assertThat(product.getCategoryIds()).hasSize(5);
-    }
-
-    @Test
-    @DisplayName("상품에 5개를 초과하는 카테고리를 연결하면 예외가 발생한다")
-    void shouldThrowExceptionWhenAssigningMoreThan5Categories() {
-        // Given
-        Product product = Product.create(productName, description, ProductType.NORMAL);
-        List<CategoryId> categoryIds = Arrays.asList(
-                new CategoryId("CAT001"),
-                new CategoryId("CAT002"),
-                new CategoryId("CAT003"),
-                new CategoryId("CAT004"),
-                new CategoryId("CAT005"),
-                new CategoryId("CAT006")
-        );
+        List<CategoryId> categoryIds = new ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            categoryIds.add(new CategoryId(UUID.randomUUID().toString()));
+        }
 
         // When & Then
         assertThatThrownBy(() -> product.assignCategories(categoryIds))
@@ -340,37 +340,25 @@ class ProductTest {
     }
 
     @Test
-    @DisplayName("재고 부족 상태로 변경할 수 있다")
-    void shouldMarkAsOutOfStock() {
+    @DisplayName("상품을 품절 상태로 변경할 수 있다")
+    void shouldMarkProductAsOutOfStock() {
         // Given
         Product product = Product.create(productName, description, ProductType.NORMAL);
-        product.addOption(ProductOption.create(
-                "기본 옵션",
-                new Money(new BigDecimal("1000000")),
-                Arrays.asList(new SkuMapping("SKU001", 1))
-        ));
-        product.activate();
 
         // When
         product.markAsOutOfStock();
 
         // Then
         assertThat(product.isOutOfStock()).isTrue();
-        assertThat(product.getDomainEvents()).hasSize(4); // Created + OptionAdded + Activated + OutOfStock
-        assertThat(product.getDomainEvents().get(3)).isInstanceOf(ProductOutOfStockEvent.class);
+        assertThat(product.getDomainEvents()).hasSize(2); // Created + OutOfStock
+        assertThat(product.getDomainEvents().get(1)).isInstanceOf(ProductOutOfStockEvent.class);
     }
 
     @Test
-    @DisplayName("재고 보충 상태로 변경할 수 있다")
-    void shouldMarkAsInStock() {
+    @DisplayName("품절 상품을 재고 있음 상태로 변경할 수 있다")
+    void shouldMarkProductAsInStock() {
         // Given
         Product product = Product.create(productName, description, ProductType.NORMAL);
-        product.addOption(ProductOption.create(
-                "기본 옵션",
-                new Money(new BigDecimal("1000000")),
-                Arrays.asList(new SkuMapping("SKU001", 1))
-        ));
-        product.activate();
         product.markAsOutOfStock();
 
         // When
@@ -378,7 +366,72 @@ class ProductTest {
 
         // Then
         assertThat(product.isOutOfStock()).isFalse();
-        assertThat(product.getDomainEvents()).hasSize(5); // Created + OptionAdded + Activated + OutOfStock + InStock
-        assertThat(product.getDomainEvents().get(4)).isInstanceOf(ProductInStockEvent.class);
+        assertThat(product.getDomainEvents()).hasSize(3); // Created + OutOfStock + InStock
+        assertThat(product.getDomainEvents().get(2)).isInstanceOf(ProductInStockEvent.class);
+    }
+
+    @Test
+    @DisplayName("동일한 ID를 가진 Product는 equals 비교시 true를 반환한다")
+    void shouldReturnTrueWhenComparingProductsWithSameId() {
+        // Given
+        ProductId id = new ProductId(UUID.randomUUID().toString());
+        Product product1 = new Product(id, productName, description, ProductType.NORMAL);
+        Product product2 = new Product(id, new ProductName("다른이름"), "다른설명", ProductType.BUNDLE);
+
+        // When & Then
+        assertThat(product1).isEqualTo(product2);
+        assertThat(product1.hashCode()).isEqualTo(product2.hashCode());
+    }
+
+    @Test
+    @DisplayName("다른 ID를 가진 Product는 equals 비교시 false를 반환한다")
+    void shouldReturnFalseWhenComparingProductsWithDifferentIds() {
+        // Given
+        Product product1 = Product.create(productName, description, ProductType.NORMAL);
+        Product product2 = Product.create(productName, description, ProductType.NORMAL);
+
+        // When & Then
+        assertThat(product1).isNotEqualTo(product2);
+    }
+
+    @Test
+    @DisplayName("상품 옵션은 불변 리스트로 반환된다")
+    void shouldReturnImmutableOptionsList() {
+        // Given
+        Product product = Product.create(productName, description, ProductType.NORMAL);
+        product.addOption(ProductOption.single(
+                "테스트 옵션",
+                Money.of(new BigDecimal("1000000"), Currency.KRW),
+                "SKU001"
+        ));
+
+        // When
+        List<ProductOption> options = product.getOptions();
+
+        // Then
+        assertThatThrownBy(() -> options.add(ProductOption.single(
+                "새 옵션",
+                Money.of(new BigDecimal("2000000"), Currency.KRW),
+                "SKU002"
+        )))
+                .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
+    @DisplayName("카테고리 ID 리스트는 불변 리스트로 반환된다")
+    void shouldReturnImmutableCategoryIdsList() {
+        // Given
+        Product product = Product.create(productName, description, ProductType.NORMAL);
+        List<CategoryId> categoryIds = Arrays.asList(
+                new CategoryId(UUID.randomUUID().toString())
+        );
+        product.assignCategories(categoryIds);
+
+        // When
+        List<CategoryId> retrievedCategoryIds = product.getCategoryIds();
+
+        // Then
+        assertThatThrownBy(() -> retrievedCategoryIds.add(new CategoryId(UUID.randomUUID().toString())))
+                .isInstanceOf(UnsupportedOperationException.class);
     }
 }

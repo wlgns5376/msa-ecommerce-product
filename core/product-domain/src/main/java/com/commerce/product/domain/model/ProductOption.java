@@ -4,8 +4,6 @@ import com.commerce.product.domain.exception.InvalidProductOptionException;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
-import java.util.Collections;
-import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -14,21 +12,50 @@ public class ProductOption implements ValueObject {
     private final String id;
     private final String name;
     private final Money price;
-    private final List<SkuMapping> skuMappings;
+    private final SkuMapping skuMapping;
 
-    public ProductOption(String id, String name, Money price, List<SkuMapping> skuMappings) {
-        validate(id, name, price, skuMappings);
+    private ProductOption(String id, String name, Money price, SkuMapping skuMapping) {
+        validate(id, name, price, skuMapping);
         this.id = id;
         this.name = name;
         this.price = price;
-        this.skuMappings = Collections.unmodifiableList(skuMappings);
+        this.skuMapping = skuMapping;
     }
 
-    public static ProductOption create(String name, Money price, List<SkuMapping> skuMappings) {
-        return new ProductOption(UUID.randomUUID().toString(), name, price, skuMappings);
+    public static ProductOption single(String name, Money price, String skuId) {
+        return new ProductOption(
+                UUID.randomUUID().toString(),
+                name,
+                price,
+                SkuMapping.single(skuId)
+        );
     }
 
-    private void validate(String id, String name, Money price, List<SkuMapping> skuMappings) {
+    public static ProductOption single(String name, Money price, SkuMapping skuMapping) {
+        if (skuMapping.isBundle()) {
+            throw new InvalidProductOptionException("Single option cannot have bundle SKU mapping");
+        }
+        return new ProductOption(
+                UUID.randomUUID().toString(),
+                name,
+                price,
+                skuMapping
+        );
+    }
+
+    public static ProductOption bundle(String name, Money price, SkuMapping skuMapping) {
+        if (!skuMapping.isBundle()) {
+            throw new InvalidProductOptionException("Bundle option must have bundle SKU mapping");
+        }
+        return new ProductOption(
+                UUID.randomUUID().toString(),
+                name,
+                price,
+                skuMapping
+        );
+    }
+
+    private void validate(String id, String name, Money price, SkuMapping skuMapping) {
         if (id == null || id.trim().isEmpty()) {
             throw new InvalidProductOptionException("Option ID cannot be null or empty");
         }
@@ -38,19 +65,30 @@ public class ProductOption implements ValueObject {
         if (price == null) {
             throw new InvalidProductOptionException("Price cannot be null");
         }
-        if (skuMappings == null || skuMappings.isEmpty()) {
-            throw new InvalidProductOptionException("Option must have at least one SKU mapping");
+        if (skuMapping == null) {
+            throw new InvalidProductOptionException("SKU mapping cannot be null");
         }
     }
 
-    public boolean hasMultipleSkus() {
-        return skuMappings.size() > 1;
+    public boolean isBundle() {
+        return skuMapping.isBundle();
     }
 
-    public int getTotalSkuQuantity(String skuId) {
-        return skuMappings.stream()
-                .filter(mapping -> mapping.getSkuId().equals(skuId))
-                .mapToInt(SkuMapping::getQuantity)
-                .sum();
+    public String getSingleSkuId() {
+        return skuMapping.getSingleSkuId();
+    }
+
+    public int getSkuQuantity(String skuId) {
+        return skuMapping.getQuantityForSku(skuId);
+    }
+
+    @Override
+    public String toString() {
+        return "ProductOption{" +
+                "id='" + id + '\'' +
+                ", name='" + name + '\'' +
+                ", price=" + price +
+                ", skuMapping=" + skuMapping +
+                '}';
     }
 }

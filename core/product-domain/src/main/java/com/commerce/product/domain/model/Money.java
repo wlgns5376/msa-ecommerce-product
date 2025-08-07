@@ -27,6 +27,10 @@ public class Money implements ValueObject {
         return new Money(BigDecimal.ZERO);
     }
 
+    public static Money of(BigDecimal amount, Currency currency) {
+        return new Money(amount, currency);
+    }
+
     private void validate(BigDecimal amount) {
         if (amount == null) {
             throw new InvalidMoneyException("Amount cannot be null");
