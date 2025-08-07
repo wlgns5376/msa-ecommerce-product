@@ -1,0 +1,25 @@
+package com.commerce.product.domain.event;
+
+
+import com.commerce.product.domain.model.ProductId;
+import lombok.Getter;
+
+@Getter
+public class ProductOutOfStockEvent extends AbstractDomainEvent {
+    private final ProductId productId;
+
+    public ProductOutOfStockEvent(ProductId productId) {
+        super();
+        this.productId = productId;
+    }
+
+    @Override
+    public String getAggregateId() {
+        return productId.getValue();
+    }
+
+    @Override
+    public String getEventType() {
+        return "product.out.of.stock";
+    }
+}
