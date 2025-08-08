@@ -111,11 +111,11 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
     public CompletableFuture<Boolean> reserveBundleStock(
             ProductOption bundleOption, int quantity, String orderId) {
         
+        if (!bundleOption.isBundle()) {
+            return reserveStock(bundleOption.getSingleSkuId(), quantity, orderId);
+        }
+        
         return CompletableFuture.supplyAsync(() -> {
-            if (!bundleOption.isBundle()) {
-                return reserveStock(bundleOption.getSingleSkuId(), quantity, orderId)
-                        .join();
-            }
             
             Map<String, Integer> requiredQuantities = new HashMap<>();
             List<String> skuIds = new ArrayList<>();

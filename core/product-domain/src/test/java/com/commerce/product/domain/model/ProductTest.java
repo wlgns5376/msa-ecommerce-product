@@ -171,21 +171,26 @@ class ProductTest {
     }
 
     @Test
-    @DisplayName("중복된 옵션을 추가하면 예외가 발생한다")
-    void shouldThrowExceptionWhenAddingDuplicateOption() {
+    @DisplayName("이름이 동일한 옵션을 추가하면 예외가 발생한다")
+    void shouldThrowExceptionWhenAddingOptionWithDuplicateName() {
         // Given
         Product product = Product.create(productName, description, ProductType.NORMAL);
-        ProductOption option = ProductOption.single(
+        ProductOption option1 = ProductOption.single(
                 "블랙 - 512GB",
                 Money.of(new BigDecimal("3500000"), Currency.KRW),
                 "SKU001"
         );
-        product.addOption(option);
+        ProductOption option2 = ProductOption.single(
+                "블랙 - 512GB", // 동일한 이름
+                Money.of(new BigDecimal("3600000"), Currency.KRW), // 다른 가격
+                "SKU002" // 다른 SKU
+        );
+        product.addOption(option1);
 
         // When & Then
-        assertThatThrownBy(() -> product.addOption(option))
+        assertThatThrownBy(() -> product.addOption(option2))
                 .isInstanceOf(DuplicateOptionException.class)
-                .hasMessageContaining("Option already exists");
+                .hasMessageContaining("An option with the same name already exists.");
     }
 
     @Test

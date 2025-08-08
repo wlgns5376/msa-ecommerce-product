@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Getter
@@ -97,5 +98,9 @@ public class Category extends AggregateRoot<CategoryId> {
             return name.getValue();
         }
         return parent.getFullPath() + " > " + name.getValue();
+    }
+    
+    public List<Category> getChildren() {
+        return Collections.unmodifiableList(children);
     }
 }

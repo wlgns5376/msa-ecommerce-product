@@ -65,8 +65,8 @@ public class Product extends AggregateRoot<ProductId> {
             throw new InvalidOptionException("Bundle product must have bundle options");
         }
         
-        if (options.contains(option)) {
-            throw new DuplicateOptionException("Option already exists");
+        if (options.stream().anyMatch(o -> o.getName().equals(option.getName()))) {
+            throw new DuplicateOptionException("An option with the same name already exists.");
         }
     }
 

@@ -154,8 +154,8 @@ class ProductOptionTest {
     }
 
     @Test
-    @DisplayName("동일한 값을 가진 ProductOption은 equals 비교시 true를 반환한다")
-    void shouldReturnTrueWhenComparingEqualOptions() {
+    @DisplayName("id를 제외한 동일한 값을 가진 ProductOption은 equals 비교시 true를 반환한다")
+    void shouldReturnTrueWhenComparingEqualOptionsExcludingId() {
         // Given
         String name = "옵션1";
         Money price = Money.of(new BigDecimal("10000"), Currency.KRW);
@@ -164,8 +164,20 @@ class ProductOptionTest {
         ProductOption option1 = ProductOption.single(name, price, skuId);
         ProductOption option2 = ProductOption.single(name, price, skuId);
 
-        // When & Then - ID가 다르므로 equals는 false
-        assertThat(option1).isNotEqualTo(option2);
+        // When & Then - id를 제외한 나머지 필드가 같으면 equals는 true
+        assertThat(option1).isEqualTo(option2);
+        
+        // 다른 이름을 가진 옵션은 다르다
+        ProductOption option3 = ProductOption.single("다른옵션", price, skuId);
+        assertThat(option1).isNotEqualTo(option3);
+        
+        // 다른 가격을 가진 옵션은 다르다
+        ProductOption option4 = ProductOption.single(name, Money.of(new BigDecimal("20000"), Currency.KRW), skuId);
+        assertThat(option1).isNotEqualTo(option4);
+        
+        // 다른 SKU를 가진 옵션은 다르다
+        ProductOption option5 = ProductOption.single(name, price, "SKU002");
+        assertThat(option1).isNotEqualTo(option5);
     }
 
     @Test

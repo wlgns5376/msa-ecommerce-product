@@ -302,4 +302,26 @@ class CategoryTest {
                 .isInstanceOf(InvalidCategoryHierarchyException.class)
                 .hasMessageContaining("Category cannot be its own parent");
     }
+    
+    @Test
+    @DisplayName("하위 카테고리 리스트는 불변으로 반환된다")
+    void shouldReturnUnmodifiableChildrenList() {
+        // Given
+        Category parent = Category.createRoot(categoryId, categoryName, 1);
+        Category child = Category.createChild(
+                new CategoryId("CAT002"),
+                new CategoryName("노트북"),
+                categoryId,
+                2,
+                1
+        );
+        parent.addChild(child);
+        
+        // When & Then
+        assertThatThrownBy(() -> parent.getChildren().add(child))
+                .isInstanceOf(UnsupportedOperationException.class);
+                
+        assertThatThrownBy(() -> parent.getChildren().clear())
+                .isInstanceOf(UnsupportedOperationException.class);
+    }
 }

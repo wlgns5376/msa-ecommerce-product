@@ -7,7 +7,7 @@ import lombok.Getter;
 import java.util.UUID;
 
 @Getter
-@EqualsAndHashCode
+@EqualsAndHashCode(exclude = "id")
 public class ProductOption implements ValueObject {
     private final String id;
     private final String name;

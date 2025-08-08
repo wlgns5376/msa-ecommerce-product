@@ -9,7 +9,9 @@ import com.commerce.product.domain.repository.ProductRepository;
 import com.commerce.product.domain.service.CategoryService;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -27,18 +29,34 @@ public class CategoryServiceImpl implements CategoryService {
     
     @Override
     public CategoryTree buildCategoryTree() {
-        List<Category> rootCategories = categoryRepository.findRootCategories();
+        // 모든 카테고리를 한 번에 조회하여 N+1 문제 해결
+        List<Category> allCategories = categoryRepository.findAll();
+        
+        // 부모 ID별로 카테고리를 그룹화
+        Map<CategoryId, List<Category>> categoryByParentId = new HashMap<>();
+        List<Category> rootCategories = new ArrayList<>();
+        
+        for (Category category : allCategories) {
+            if (category.getParentId() == null) {
+                rootCategories.add(category);
+            } else {
+                categoryByParentId.computeIfAbsent(category.getParentId(), k -> new ArrayList<>())
+                        .add(category);
+            }
+        }
+        
+        // 루트 카테고리부터 트리 구성
         List<CategoryNode> rootNodes = rootCategories.stream()
-                .map(this::buildCategoryNode)
+                .map(category -> buildCategoryNode(category, categoryByParentId))
                 .collect(Collectors.toList());
         
         return new CategoryTree(rootNodes);
     }
     
-    private CategoryNode buildCategoryNode(Category category) {
-        List<Category> children = categoryRepository.findByParentId(category.getId());
+    private CategoryNode buildCategoryNode(Category category, Map<CategoryId, List<Category>> categoryByParentId) {
+        List<Category> children = categoryByParentId.getOrDefault(category.getId(), new ArrayList<>());
         List<CategoryNode> childNodes = children.stream()
-                .map(this::buildCategoryNode)
+                .map(child -> buildCategoryNode(child, categoryByParentId))
                 .collect(Collectors.toList());
         
         return new CategoryNode(category, childNodes);
@@ -47,11 +65,11 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     public List<Category> getProductCategories(ProductId productId) {
         return productRepository.findById(productId)
-                .map(product -> product.getCategoryIds().stream()
-                        .map(categoryRepository::findById)
-                        .filter(java.util.Optional::isPresent)
-                        .map(java.util.Optional::get)
-                        .collect(Collectors.toList()))
+                .map(product -> {
+                    List<CategoryId> categoryIds = product.getCategoryIds();
+                    // 한 번의 쿼리로 모든 카테고리 조회
+                    return categoryRepository.findAllById(categoryIds);
+                })
                 .orElse(new ArrayList<>());
     }
     

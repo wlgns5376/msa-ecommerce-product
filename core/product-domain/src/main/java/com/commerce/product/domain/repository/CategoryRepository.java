@@ -50,4 +50,14 @@ public interface CategoryRepository extends Repository<Category, CategoryId> {
      * 카테고리에 활성 상품이 있는지 확인합니다.
      */
     boolean hasActiveProducts(CategoryId categoryId);
+    
+    /**
+     * 모든 카테고리를 조회합니다.
+     */
+    List<Category> findAll();
+    
+    /**
+     * 여러 ID로 카테고리들을 조회합니다.
+     */
+    List<Category> findAllById(List<CategoryId> categoryIds);
 }
