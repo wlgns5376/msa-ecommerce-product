@@ -66,7 +66,7 @@ class ProductTest {
         
         ProductCreatedEvent event = (ProductCreatedEvent) product.getDomainEvents().get(0);
         assertThat(event.getProductId()).isEqualTo(product.getId());
-        assertThat(event.getName()).isEqualTo(productName.getValue());
+        assertThat(event.getName()).isEqualTo(productName.value());
         assertThat(event.getType()).isEqualTo(ProductType.NORMAL);
     }
 

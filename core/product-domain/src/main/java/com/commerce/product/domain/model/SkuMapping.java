@@ -1,23 +1,16 @@
 package com.commerce.product.domain.model;
 
 import com.commerce.product.domain.exception.InvalidSkuMappingException;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-@Getter
-@EqualsAndHashCode
-public class SkuMapping implements ValueObject {
-    private final Map<String, Integer> mappings;
-    private final boolean isBundle;
+public record SkuMapping(Map<String, Integer> mappings) implements ValueObject {
 
-    private SkuMapping(Map<String, Integer> mappings) {
+    public SkuMapping {
         validate(mappings);
-        this.mappings = Collections.unmodifiableMap(new HashMap<>(mappings));
-        this.isBundle = mappings.size() > 1;
+        mappings = Collections.unmodifiableMap(new HashMap<>(mappings));
     }
 
     public static SkuMapping single(String skuId) {
@@ -41,7 +34,7 @@ public class SkuMapping implements ValueObject {
         return new SkuMapping(mappings);
     }
 
-    private void validate(Map<String, Integer> mappings) {
+    private static void validate(Map<String, Integer> mappings) {
         if (mappings == null || mappings.isEmpty()) {
             throw new InvalidSkuMappingException("SKU mappings cannot be null or empty");
         }
@@ -56,8 +49,12 @@ public class SkuMapping implements ValueObject {
         }
     }
 
+    public boolean isBundle() {
+        return mappings.size() > 1;
+    }
+
     public String getSingleSkuId() {
-        if (isBundle) {
+        if (isBundle()) {
             throw new IllegalStateException("Cannot get single SKU ID from bundle mapping");
         }
         return mappings.keySet().iterator().next();
@@ -71,7 +68,7 @@ public class SkuMapping implements ValueObject {
     public String toString() {
         return "SkuMapping{" +
                 "mappings=" + mappings +
-                ", isBundle=" + isBundle +
+                ", isBundle=" + isBundle() +
                 '}';
     }
 }

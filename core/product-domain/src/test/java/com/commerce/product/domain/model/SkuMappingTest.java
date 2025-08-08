@@ -185,11 +185,11 @@ class SkuMappingTest {
         originalMappings.put("SKU003", 3);
         
         // Then - SkuMapping은 영향받지 않음
-        assertThat(skuMapping.getMappings()).hasSize(2);
+        assertThat(skuMapping.mappings()).hasSize(2);
         assertThat(skuMapping.getQuantityForSku("SKU003")).isEqualTo(0);
         
         // When & Then - 반환된 맵 수정 시도
-        assertThatThrownBy(() -> skuMapping.getMappings().put("SKU004", 4))
+        assertThatThrownBy(() -> skuMapping.mappings().put("SKU004", 4))
                 .isInstanceOf(UnsupportedOperationException.class);
     }
 

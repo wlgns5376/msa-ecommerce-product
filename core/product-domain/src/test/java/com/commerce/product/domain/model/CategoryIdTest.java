@@ -22,7 +22,7 @@ class CategoryIdTest {
 
         // Then
         assertThat(categoryId).isNotNull();
-        assertThat(categoryId.getValue()).isEqualTo(validId);
+        assertThat(categoryId.value()).isEqualTo(validId);
     }
 
     @ParameterizedTest

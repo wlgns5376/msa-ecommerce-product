@@ -15,7 +15,7 @@ public class CategoryDeactivatedEvent extends AbstractDomainEvent {
 
     @Override
     public String getAggregateId() {
-        return categoryId.getValue();
+        return categoryId.value();
     }
 
     @Override

@@ -2,25 +2,17 @@ package com.commerce.product.domain.model;
 
 import com.commerce.product.domain.exception.CurrencyMismatchException;
 import com.commerce.product.domain.exception.InvalidMoneyException;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
 
 import java.math.BigDecimal;
 
-@Getter
-@EqualsAndHashCode
-public class Money implements ValueObject {
-    private final BigDecimal amount;
-    private final Currency currency;
+public record Money(BigDecimal amount, Currency currency) implements ValueObject {
 
     public Money(BigDecimal amount) {
         this(amount, Currency.KRW);
     }
 
-    public Money(BigDecimal amount, Currency currency) {
+    public Money {
         validate(amount);
-        this.amount = amount;
-        this.currency = currency;
     }
 
     public static Money zero() {
@@ -31,7 +23,7 @@ public class Money implements ValueObject {
         return new Money(amount, currency);
     }
 
-    private void validate(BigDecimal amount) {
+    private static void validate(BigDecimal amount) {
         if (amount == null) {
             throw new InvalidMoneyException("Amount cannot be null");
         }

@@ -22,7 +22,7 @@ class CategoryNameTest {
 
         // Then
         assertThat(categoryName).isNotNull();
-        assertThat(categoryName.getValue()).isEqualTo(validName);
+        assertThat(categoryName.value()).isEqualTo(validName);
     }
 
     @ParameterizedTest
@@ -66,7 +66,7 @@ class CategoryNameTest {
         CategoryName categoryName = new CategoryName(maxLengthName);
 
         // Then
-        assertThat(categoryName.getValue()).isEqualTo(maxLengthName);
+        assertThat(categoryName.value()).isEqualTo(maxLengthName);
     }
 
     @Test
@@ -117,6 +117,6 @@ class CategoryNameTest {
         CategoryName categoryName = new CategoryName(nameWithSpecialChars);
 
         // Then
-        assertThat(categoryName.getValue()).isEqualTo(nameWithSpecialChars);
+        assertThat(categoryName.value()).isEqualTo(nameWithSpecialChars);
     }
 }

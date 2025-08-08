@@ -95,9 +95,9 @@ public class Category extends AggregateRoot<CategoryId> {
 
     public String getFullPath() {
         if (parent == null) {
-            return name.getValue();
+            return name.value();
         }
-        return parent.getFullPath() + " > " + name.getValue();
+        return parent.getFullPath() + " > " + name.value();
     }
     
     public List<Category> getChildren() {

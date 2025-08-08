@@ -26,8 +26,8 @@ class MoneyTest {
 
         // Then
         assertThat(money).isNotNull();
-        assertThat(money.getAmount()).isEqualByComparingTo(amount);
-        assertThat(money.getCurrency()).isEqualTo(currency);
+        assertThat(money.amount()).isEqualByComparingTo(amount);
+        assertThat(money.currency()).isEqualTo(currency);
     }
 
     @Test
@@ -40,7 +40,7 @@ class MoneyTest {
         Money money = new Money(amount);
 
         // Then
-        assertThat(money.getCurrency()).isEqualTo(Currency.KRW);
+        assertThat(money.currency()).isEqualTo(Currency.KRW);
     }
 
     @ParameterizedTest
@@ -72,8 +72,8 @@ class MoneyTest {
         Money money = Money.zero();
 
         // Then
-        assertThat(money.getAmount()).isEqualByComparingTo(BigDecimal.ZERO);
-        assertThat(money.getCurrency()).isEqualTo(Currency.KRW);
+        assertThat(money.amount()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(money.currency()).isEqualTo(Currency.KRW);
     }
 
     @Test
@@ -87,8 +87,8 @@ class MoneyTest {
         Money result = money1.add(money2);
 
         // Then
-        assertThat(result.getAmount()).isEqualByComparingTo(new BigDecimal("3000"));
-        assertThat(result.getCurrency()).isEqualTo(Currency.KRW);
+        assertThat(result.amount()).isEqualByComparingTo(new BigDecimal("3000"));
+        assertThat(result.currency()).isEqualTo(Currency.KRW);
     }
 
     @Test
@@ -115,8 +115,8 @@ class MoneyTest {
         Money result = money.multiply(multiplier);
 
         // Then
-        assertThat(result.getAmount()).isEqualByComparingTo(new BigDecimal("3000"));
-        assertThat(result.getCurrency()).isEqualTo(Currency.KRW);
+        assertThat(result.amount()).isEqualByComparingTo(new BigDecimal("3000"));
+        assertThat(result.currency()).isEqualTo(Currency.KRW);
     }
 
     @Test
@@ -130,7 +130,7 @@ class MoneyTest {
         Money result = money1.subtract(money2);
 
         // Then
-        assertThat(result.getAmount()).isEqualByComparingTo(new BigDecimal("3000"));
+        assertThat(result.amount()).isEqualByComparingTo(new BigDecimal("3000"));
     }
 
     @Test

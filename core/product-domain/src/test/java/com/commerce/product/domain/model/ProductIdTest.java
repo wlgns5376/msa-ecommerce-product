@@ -24,7 +24,7 @@ class ProductIdTest {
 
         // Then
         assertThat(productId).isNotNull();
-        assertThat(productId.getValue()).isEqualTo(validUuid);
+        assertThat(productId.value()).isEqualTo(validUuid);
     }
 
     @Test
@@ -35,8 +35,8 @@ class ProductIdTest {
 
         // Then
         assertThat(productId).isNotNull();
-        assertThat(productId.getValue()).isNotNull();
-        assertThat(UUID.fromString(productId.getValue())).isNotNull();
+        assertThat(productId.value()).isNotNull();
+        assertThat(UUID.fromString(productId.value())).isNotNull();
     }
 
     @ParameterizedTest

@@ -15,7 +15,7 @@ public class ProductOutOfStockEvent extends AbstractDomainEvent {
 
     @Override
     public String getAggregateId() {
-        return productId.getValue();
+        return productId.value();
     }
 
     @Override

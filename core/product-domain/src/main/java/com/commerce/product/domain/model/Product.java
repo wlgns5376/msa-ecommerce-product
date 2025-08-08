@@ -35,7 +35,7 @@ public class Product extends AggregateRoot<ProductId> {
         
         ProductId id = ProductId.generate();
         Product product = new Product(id, name, description, type);
-        product.addDomainEvent(new ProductCreatedEvent(id, name.getValue(), type));
+        product.addDomainEvent(new ProductCreatedEvent(id, name.value(), type));
         
         return product;
     }
@@ -77,7 +77,7 @@ public class Product extends AggregateRoot<ProductId> {
         
         this.name = name;
         this.description = description;
-        addDomainEvent(new ProductUpdatedEvent(id, name.getValue(), description));
+        addDomainEvent(new ProductUpdatedEvent(id, name.value(), description));
     }
 
     public void activate() {

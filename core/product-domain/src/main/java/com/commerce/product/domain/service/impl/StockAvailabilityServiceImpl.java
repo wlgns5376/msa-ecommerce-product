@@ -33,7 +33,7 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
             return checkSingleOption(bundleOption.getSingleSkuId(), requestedQuantity);
         }
         
-        for (Map.Entry<String, Integer> entry : bundleOption.getSkuMapping().getMappings().entrySet()) {
+        for (Map.Entry<String, Integer> entry : bundleOption.getSkuMapping().mappings().entrySet()) {
             String skuId = entry.getKey();
             int requiredQuantity = entry.getValue() * requestedQuantity;
             
@@ -120,7 +120,7 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
             Map<String, Integer> requiredQuantities = new HashMap<>();
             List<String> skuIds = new ArrayList<>();
             
-            for (Map.Entry<String, Integer> entry : bundleOption.getSkuMapping().getMappings().entrySet()) {
+            for (Map.Entry<String, Integer> entry : bundleOption.getSkuMapping().mappings().entrySet()) {
                 String skuId = entry.getKey();
                 int requiredQuantity = entry.getValue() * quantity;
                 requiredQuantities.put(skuId, requiredQuantity);
@@ -220,7 +220,7 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
     public Map<String, Integer> getBundleAvailableQuantity(ProductOption bundleOption) {
         Map<String, Integer> quantities = new HashMap<>();
         
-        for (String skuId : bundleOption.getSkuMapping().getMappings().keySet()) {
+        for (String skuId : bundleOption.getSkuMapping().mappings().keySet()) {
             quantities.put(skuId, getAvailableQuantity(skuId));
         }
         

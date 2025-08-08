@@ -22,7 +22,7 @@ class ProductNameTest {
 
         // Then
         assertThat(productName).isNotNull();
-        assertThat(productName.getValue()).isEqualTo(validName);
+        assertThat(productName.value()).isEqualTo(validName);
     }
 
     @ParameterizedTest
@@ -66,7 +66,7 @@ class ProductNameTest {
         ProductName productName = new ProductName(maxLengthName);
 
         // Then
-        assertThat(productName.getValue()).isEqualTo(maxLengthName);
+        assertThat(productName.value()).isEqualTo(maxLengthName);
     }
 
     @Test
@@ -117,6 +117,6 @@ class ProductNameTest {
         ProductName productName = new ProductName(nameWithSpecialChars);
 
         // Then
-        assertThat(productName.getValue()).isEqualTo(nameWithSpecialChars);
+        assertThat(productName.value()).isEqualTo(nameWithSpecialChars);
     }
 }
