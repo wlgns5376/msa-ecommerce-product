@@ -35,21 +35,21 @@ PRD 문서와 설계 문서를 기반으로 수립한 구현 작업 계획입니
 상품 관리는 재고와 함께 핵심 도메인
 
 #### 2.1 Product Aggregate 구현
-- [ ] Product 값 객체 구현 (ProductId, ProductName, ProductType, ProductStatus)
-- [ ] Product Entity 구현
-- [ ] 상품 생성/수정 비즈니스 규칙
+- [x] Product 값 객체 구현 (ProductId, ProductName, ProductType, ProductStatus)
+- [x] Product Entity 구현
+- [x] 상품 생성/수정 비즈니스 규칙
 
 #### 2.2 ProductOption 구현
-- [ ] Money 값 객체 구현
-- [ ] SkuMapping 값 객체 구현
-- [ ] ProductOption 값 객체 구현
-- [ ] 단일/묶음 옵션 검증 로직
+- [x] Money 값 객체 구현
+- [x] SkuMapping 값 객체 구현
+- [x] ProductOption 값 객체 구현
+- [x] 단일/묶음 옵션 검증 로직
 
 #### 2.3 Category Aggregate 구현
-- [ ] Category 값 객체 구현 (CategoryId, CategoryName)
-- [ ] Category Entity 구현
-- [ ] 계층 구조 관리 (최대 3단계)
-- [ ] 카테고리 활성화/비활성화 로직
+- [x] Category 값 객체 구현 (CategoryId, CategoryName)
+- [x] Category Entity 구현
+- [x] 계층 구조 관리 (최대 3단계)
+- [x] 카테고리 활성화/비활성화 로직
 
 ### 3. 도메인 서비스 구현 ⭐⭐⭐⭐
 도메인 간 협력을 위한 서비스
@@ -61,8 +61,8 @@ PRD 문서와 설계 문서를 기반으로 수립한 구현 작업 계획입니
 - [ ] Saga 패턴 기반 번들 재고 예약
 
 #### 3.2 CategoryService 구현
-- [ ] 카테고리 트리 구성 로직
-- [ ] 상품-카테고리 연결 관리
+- [x] 카테고리 트리 구성 로직
+- [x] 상품-카테고리 연결 관리
 
 ## Phase 2: Application Layer 구현 (2주차)
 
@@ -76,8 +76,8 @@ PRD 문서와 설계 문서를 기반으로 수립한 구현 작업 계획입니
 - [x] SkuRepository 인터페이스
 
 #### 4.2 Product Repository
-- [ ] ProductRepository 인터페이스
-- [ ] CategoryRepository 인터페이스
+- [x] ProductRepository 인터페이스
+- [x] CategoryRepository 인터페이스
 
 ### 5. UseCase 구현 ⭐⭐⭐⭐
 비즈니스 유스케이스 구현
@@ -113,9 +113,9 @@ PRD 문서와 설계 문서를 기반으로 수립한 구현 작업 계획입니
 - [ ] StockDepletedEvent
 
 #### 6.2 Product Events
-- [ ] ProductCreatedEvent
-- [ ] ProductUpdatedEvent
-- [ ] ProductOptionAddedEvent
+- [x] ProductCreatedEvent
+- [x] ProductUpdatedEvent
+- [x] ProductOptionAddedEvent
 - [ ] ProductOutOfStockEvent
 
 ## Phase 3: Infrastructure Layer 구현 (3주차)
