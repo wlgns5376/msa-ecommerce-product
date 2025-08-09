@@ -11,6 +11,10 @@ public record Quantity(int value) implements ValueObject {
         }
     }
     
+    public static Quantity of(int value) {
+        return new Quantity(value);
+    }
+    
     public Quantity add(Quantity other) {
         return new Quantity(this.value + other.value);
     }
@@ -21,5 +25,9 @@ public record Quantity(int value) implements ValueObject {
     
     public boolean isGreaterThanOrEqual(Quantity other) {
         return this.value >= other.value;
+    }
+    
+    public int getValue() {
+        return value;
     }
 }
