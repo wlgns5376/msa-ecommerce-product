@@ -1,6 +1,6 @@
 package com.commerce.product.domain.event;
 
-import com.commerce.product.common.event.DomainEvent;
+import com.commerce.common.event.DomainEvent;
 import lombok.Getter;
 
 import java.time.LocalDateTime;

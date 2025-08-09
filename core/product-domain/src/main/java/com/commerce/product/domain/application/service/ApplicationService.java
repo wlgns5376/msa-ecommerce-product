@@ -1,7 +1,7 @@
 package com.commerce.product.domain.application.service;
 
-import com.commerce.product.common.event.DomainEvent;
-import com.commerce.product.common.event.DomainEventPublisher;
+import com.commerce.common.event.DomainEvent;
+import com.commerce.common.event.DomainEventPublisher;
 import com.commerce.product.domain.model.AggregateRoot;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;

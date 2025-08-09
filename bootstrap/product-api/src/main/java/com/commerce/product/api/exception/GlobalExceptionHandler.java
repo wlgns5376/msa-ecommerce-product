@@ -1,7 +1,7 @@
 package com.commerce.product.api.exception;
 
-import com.commerce.product.common.exception.BusinessException;
-import com.commerce.product.common.exception.DomainException;
+import com.commerce.common.exception.BusinessException;
+import com.commerce.common.exception.DomainException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

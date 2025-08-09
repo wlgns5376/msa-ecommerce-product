@@ -1,7 +1,7 @@
 package com.commerce.inventory.domain.model;
 
 import com.commerce.inventory.domain.exception.InvalidVolumeException;
-import com.commerce.product.domain.model.ValueObject;
+import com.commerce.common.domain.model.ValueObject;
 
 public record Volume(double value, VolumeUnit unit) implements ValueObject {
     

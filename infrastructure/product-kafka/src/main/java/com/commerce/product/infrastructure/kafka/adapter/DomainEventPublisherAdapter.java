@@ -1,12 +1,14 @@
 package com.commerce.product.infrastructure.kafka.adapter;
 
-import com.commerce.product.common.event.DomainEvent;
-import com.commerce.product.common.event.DomainEventPublisher;
+import com.commerce.common.event.DomainEvent;
+import com.commerce.common.event.DomainEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
+
+import java.util.Collection;
 
 /**
  * Kafka를 통한 도메인 이벤트 발행 어댑터
@@ -34,6 +36,11 @@ public class DomainEventPublisherAdapter implements DomainEventPublisher {
         } catch (Exception e) {
             log.error("도메인 이벤트 발행 중 예외 발생: {}", event.eventType(), e);
         }
+    }
+    
+    @Override
+    public void publishEvents(Collection<DomainEvent> events) {
+        events.forEach(this::publish);
     }
     
     /**
