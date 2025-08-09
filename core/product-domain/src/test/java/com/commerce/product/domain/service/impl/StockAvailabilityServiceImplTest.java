@@ -1,5 +1,6 @@
 package com.commerce.product.domain.service.impl;
 
+import com.commerce.product.domain.exception.LockAcquisitionException;
 import com.commerce.product.domain.model.*;
 import com.commerce.product.domain.repository.InventoryRepository;
 import com.commerce.product.domain.repository.LockRepository;
@@ -12,11 +13,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -134,10 +135,10 @@ class StockAvailabilityServiceImplTest {
     @DisplayName("단일 SKU 재고 예약에 성공한다")
     void reserveStock_Success() throws ExecutionException, InterruptedException {
         String orderId = "ORDER001";
-        Lock lock = new ReentrantLock();
+        DistributedLock lock = new DistributedLock("stock:SKU001", "lock-123", Instant.now(), Duration.ofSeconds(30));
         
-        when(lockRepository.acquireLock("stock:SKU001", 5000L))
-                .thenReturn(lock);
+        when(lockRepository.acquireLock(eq("stock:SKU001"), any(Duration.class), any(Duration.class)))
+                .thenReturn(Optional.of(lock));
         when(inventoryRepository.getAvailableQuantity("SKU001"))
                 .thenReturn(100);
         when(inventoryRepository.reserveStock("SKU001", 10, orderId))
@@ -156,10 +157,10 @@ class StockAvailabilityServiceImplTest {
     @DisplayName("재고 부족으로 예약에 실패한다")
     void reserveStock_InsufficientStock() throws ExecutionException, InterruptedException {
         String orderId = "ORDER001";
-        Lock lock = new ReentrantLock();
+        DistributedLock lock = new DistributedLock("stock:SKU001", "lock-123", Instant.now(), Duration.ofSeconds(30));
         
-        when(lockRepository.acquireLock("stock:SKU001", 5000L))
-                .thenReturn(lock);
+        when(lockRepository.acquireLock(eq("stock:SKU001"), any(Duration.class), any(Duration.class)))
+                .thenReturn(Optional.of(lock));
         when(inventoryRepository.getAvailableQuantity("SKU001"))
                 .thenReturn(5);
 
@@ -176,13 +177,13 @@ class StockAvailabilityServiceImplTest {
     @DisplayName("묶음 옵션 재고 예약에 성공한다 - Saga 패턴")
     void reserveBundleStock_Success() throws ExecutionException, InterruptedException {
         String orderId = "ORDER001";
-        Lock lock1 = new ReentrantLock();
-        Lock lock2 = new ReentrantLock();
+        DistributedLock lock1 = new DistributedLock("stock:SKU001", "lock-123", Instant.now(), Duration.ofSeconds(30));
+        DistributedLock lock2 = new DistributedLock("stock:SKU002", "lock-456", Instant.now(), Duration.ofSeconds(30));
         
-        when(lockRepository.acquireLock("stock:SKU001", 5000L))
-                .thenReturn(lock1);
-        when(lockRepository.acquireLock("stock:SKU002", 5000L))
-                .thenReturn(lock2);
+        when(lockRepository.acquireLock(eq("stock:SKU001"), any(Duration.class), any(Duration.class)))
+                .thenReturn(Optional.of(lock1));
+        when(lockRepository.acquireLock(eq("stock:SKU002"), any(Duration.class), any(Duration.class)))
+                .thenReturn(Optional.of(lock2));
         when(inventoryRepository.getAvailableQuantity("SKU001"))
                 .thenReturn(100);
         when(inventoryRepository.getAvailableQuantity("SKU002"))
@@ -199,21 +200,21 @@ class StockAvailabilityServiceImplTest {
         assertThat(result).isTrue();
         verify(inventoryRepository).reserveStock("SKU001", 10, orderId);
         verify(inventoryRepository).reserveStock("SKU002", 5, orderId);
-        verify(lockRepository).releaseLock(lock1);
         verify(lockRepository).releaseLock(lock2);
+        verify(lockRepository).releaseLock(lock1);
     }
 
     @Test
     @DisplayName("묶음 옵션 예약 중 일부 실패 시 보상 트랜잭션이 실행된다")
     void reserveBundleStock_CompensatingTransaction() throws ExecutionException, InterruptedException {
         String orderId = "ORDER001";
-        Lock lock1 = new ReentrantLock();
-        Lock lock2 = new ReentrantLock();
+        DistributedLock lock1 = new DistributedLock("stock:SKU001", "lock-123", Instant.now(), Duration.ofSeconds(30));
+        DistributedLock lock2 = new DistributedLock("stock:SKU002", "lock-456", Instant.now(), Duration.ofSeconds(30));
         
-        when(lockRepository.acquireLock("stock:SKU001", 5000L))
-                .thenReturn(lock1);
-        when(lockRepository.acquireLock("stock:SKU002", 5000L))
-                .thenReturn(lock2);
+        when(lockRepository.acquireLock(eq("stock:SKU001"), any(Duration.class), any(Duration.class)))
+                .thenReturn(Optional.of(lock1));
+        when(lockRepository.acquireLock(eq("stock:SKU002"), any(Duration.class), any(Duration.class)))
+                .thenReturn(Optional.of(lock2));
         when(inventoryRepository.getAvailableQuantity("SKU001"))
                 .thenReturn(100);
         when(inventoryRepository.getAvailableQuantity("SKU002"))
@@ -227,21 +228,21 @@ class StockAvailabilityServiceImplTest {
         // 재고 체크 단계에서 실패하므로 예약이 발생하지 않음
         verify(inventoryRepository, never()).reserveStock(anyString(), anyInt(), anyString());
         verify(inventoryRepository, never()).releaseReservation(anyString());
-        verify(lockRepository).releaseLock(lock1);
         verify(lockRepository).releaseLock(lock2);
+        verify(lockRepository).releaseLock(lock1);
     }
 
     @Test
     @DisplayName("묶음 옵션 예약 중 예외 발생 시 보상 트랜잭션이 실행된다")
     void reserveBundleStock_ExceptionCompensation() throws ExecutionException, InterruptedException {
         String orderId = "ORDER001";
-        Lock lock1 = new ReentrantLock();
-        Lock lock2 = new ReentrantLock();
+        DistributedLock lock1 = new DistributedLock("stock:SKU001", "lock-123", Instant.now(), Duration.ofSeconds(30));
+        DistributedLock lock2 = new DistributedLock("stock:SKU002", "lock-456", Instant.now(), Duration.ofSeconds(30));
         
-        when(lockRepository.acquireLock("stock:SKU001", 5000L))
-                .thenReturn(lock1);
-        when(lockRepository.acquireLock("stock:SKU002", 5000L))
-                .thenReturn(lock2);
+        when(lockRepository.acquireLock(eq("stock:SKU001"), any(Duration.class), any(Duration.class)))
+                .thenReturn(Optional.of(lock1));
+        when(lockRepository.acquireLock(eq("stock:SKU002"), any(Duration.class), any(Duration.class)))
+                .thenReturn(Optional.of(lock2));
         when(inventoryRepository.getAvailableQuantity("SKU001"))
                 .thenReturn(100);
         when(inventoryRepository.getAvailableQuantity("SKU002"))
@@ -257,8 +258,8 @@ class StockAvailabilityServiceImplTest {
 
         assertThat(result).isFalse();
         verify(inventoryRepository).releaseReservation("RESERVATION001");
-        verify(lockRepository).releaseLock(lock1);
         verify(lockRepository).releaseLock(lock2);
+        verify(lockRepository).releaseLock(lock1);
     }
 
     @Test
@@ -298,20 +299,41 @@ class StockAvailabilityServiceImplTest {
         assertThat(quantities).containsEntry("SKU001", 100);
         assertThat(quantities).containsEntry("SKU002", 50);
     }
-
+    
     @Test
-    @DisplayName("락 획득 실패 시 예약이 실패한다")
-    void reserveStock_LockTimeout() throws ExecutionException, InterruptedException {
+    @DisplayName("묶음 옵션 예약 중 락 획득 실패 시 false를 반환한다")
+    void reserveBundleStock_LockAcquisitionFails() throws ExecutionException, InterruptedException {
         String orderId = "ORDER001";
+        DistributedLock lock1 = new DistributedLock("stock:SKU001", "lock-123", Instant.now(), Duration.ofSeconds(30));
         
-        when(lockRepository.acquireLock("stock:SKU001", 5000L))
-                .thenReturn(null);
+        when(lockRepository.acquireLock(eq("stock:SKU001"), any(Duration.class), any(Duration.class)))
+                .thenReturn(Optional.of(lock1));
+        when(lockRepository.acquireLock(eq("stock:SKU002"), any(Duration.class), any(Duration.class)))
+                .thenReturn(Optional.empty());
 
         CompletableFuture<Boolean> future = 
-                stockAvailabilityService.reserveStock("SKU001", 10, orderId);
+                stockAvailabilityService.reserveBundleStock(bundleOption, 5, orderId);
         Boolean result = future.get();
 
         assertThat(result).isFalse();
+        verify(lockRepository).releaseLock(lock1);
+        verify(inventoryRepository, never()).reserveStock(anyString(), anyInt(), anyString());
+    }
+
+    @Test
+    @DisplayName("락 획득 실패 시 예외가 발생한다")
+    void reserveStock_LockTimeout() {
+        String orderId = "ORDER001";
+        
+        when(lockRepository.acquireLock(eq("stock:SKU001"), any(Duration.class), any(Duration.class)))
+                .thenReturn(Optional.empty());
+
+        CompletableFuture<Boolean> future = 
+                stockAvailabilityService.reserveStock("SKU001", 10, orderId);
+        
+        assertThatThrownBy(() -> future.get())
+                .hasCauseInstanceOf(LockAcquisitionException.class);
+        
         verify(inventoryRepository, never()).getAvailableQuantity(anyString());
         verify(inventoryRepository, never()).reserveStock(anyString(), anyInt(), anyString());
     }
