@@ -23,8 +23,30 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
     
     @Override
     public boolean checkSingleOption(String skuId, int requestedQuantity) {
+        if (requestedQuantity < 0) {
+            log.warn("Invalid requested quantity: {} for SKU: {}", requestedQuantity, skuId);
+            return false;
+        }
+        
+        if (requestedQuantity == 0) {
+            return true;
+        }
+        
         int availableQuantity = inventoryRepository.getAvailableQuantity(skuId);
-        return availableQuantity >= requestedQuantity;
+        
+        if (availableQuantity < 0) {
+            log.warn("Negative available quantity: {} for SKU: {}", availableQuantity, skuId);
+            return false;
+        }
+        
+        boolean isAvailable = availableQuantity >= requestedQuantity;
+        
+        if (!isAvailable) {
+            log.debug("Insufficient stock for SKU: {}. Available: {}, Requested: {}", 
+                    skuId, availableQuantity, requestedQuantity);
+        }
+        
+        return isAvailable;
     }
     
     @Override
