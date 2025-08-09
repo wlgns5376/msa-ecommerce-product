@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -70,11 +71,14 @@ class StockAvailabilityServiceV2ImplTest {
         // SKU002: 90개 (3개씩 필요하므로 30세트 가능)
         Inventory inventory1 = mock(Inventory.class);
         when(inventory1.getAvailableQuantity()).thenReturn(Quantity.of(100));
-        when(inventoryRepository.findBySkuId(SkuId.of("SKU001"))).thenReturn(Optional.of(inventory1));
         
         Inventory inventory2 = mock(Inventory.class);
         when(inventory2.getAvailableQuantity()).thenReturn(Quantity.of(90));
-        when(inventoryRepository.findBySkuId(SkuId.of("SKU002"))).thenReturn(Optional.of(inventory2));
+        
+        Map<SkuId, Inventory> inventoryMap = new HashMap<>();
+        inventoryMap.put(SkuId.of("SKU001"), inventory1);
+        inventoryMap.put(SkuId.of("SKU002"), inventory2);
+        when(inventoryRepository.findBySkuIds(any(List.class))).thenReturn(inventoryMap);
 
         // When
         CompletableFuture<BundleAvailabilityResult> future = 
@@ -123,11 +127,14 @@ class StockAvailabilityServiceV2ImplTest {
         // SKU002: 2개 (3개씩 필요하므로 0세트 가능)
         Inventory inventory1 = mock(Inventory.class);
         when(inventory1.getAvailableQuantity()).thenReturn(Quantity.of(100));
-        when(inventoryRepository.findBySkuId(SkuId.of("SKU001"))).thenReturn(Optional.of(inventory1));
         
         Inventory inventory2 = mock(Inventory.class);
         when(inventory2.getAvailableQuantity()).thenReturn(Quantity.of(2));
-        when(inventoryRepository.findBySkuId(SkuId.of("SKU002"))).thenReturn(Optional.of(inventory2));
+        
+        Map<SkuId, Inventory> inventoryMap = new HashMap<>();
+        inventoryMap.put(SkuId.of("SKU001"), inventory1);
+        inventoryMap.put(SkuId.of("SKU002"), inventory2);
+        when(inventoryRepository.findBySkuIds(any(List.class))).thenReturn(inventoryMap);
 
         // When
         CompletableFuture<BundleAvailabilityResult> future = 
@@ -164,7 +171,9 @@ class StockAvailabilityServiceV2ImplTest {
         CompletableFuture<BundleAvailabilityResult> future = 
             stockAvailabilityService.checkBundleAvailability(skuMapping);
         
-        assertThat(future).isCompletedExceptionally();
+        org.assertj.core.api.Assertions.assertThatThrownBy(future::get)
+            .isInstanceOf(java.util.concurrent.ExecutionException.class)
+            .hasCauseInstanceOf(com.commerce.product.domain.exception.LockAcquisitionException.class);
     }
 
     @Test
@@ -182,15 +191,18 @@ class StockAvailabilityServiceV2ImplTest {
         
         Inventory inventory1 = mock(Inventory.class);
         when(inventory1.getAvailableQuantity()).thenReturn(Quantity.of(100));
-        when(inventoryRepository.findBySkuId(SkuId.of("SKU001"))).thenReturn(Optional.of(inventory1));
         
         Inventory inventory2 = mock(Inventory.class);
         when(inventory2.getAvailableQuantity()).thenReturn(Quantity.of(90));
-        when(inventoryRepository.findBySkuId(SkuId.of("SKU002"))).thenReturn(Optional.of(inventory2));
         
         Inventory inventory3 = mock(Inventory.class);
         when(inventory3.getAvailableQuantity()).thenReturn(Quantity.of(50));
-        when(inventoryRepository.findBySkuId(SkuId.of("SKU003"))).thenReturn(Optional.of(inventory3));
+        
+        Map<SkuId, Inventory> inventoryMap = new HashMap<>();
+        inventoryMap.put(SkuId.of("SKU001"), inventory1);
+        inventoryMap.put(SkuId.of("SKU002"), inventory2);
+        inventoryMap.put(SkuId.of("SKU003"), inventory3);
+        when(inventoryRepository.findBySkuIds(any(List.class))).thenReturn(inventoryMap);
 
         // When
         CompletableFuture<BundleAvailabilityResult> future = 
@@ -216,9 +228,11 @@ class StockAvailabilityServiceV2ImplTest {
         
         Inventory inventory1 = mock(Inventory.class);
         when(inventory1.getAvailableQuantity()).thenReturn(Quantity.of(100));
-        when(inventoryRepository.findBySkuId(SkuId.of("SKU001"))).thenReturn(Optional.of(inventory1));
         
-        when(inventoryRepository.findBySkuId(SkuId.of("NON_EXISTENT"))).thenReturn(Optional.empty());
+        Map<SkuId, Inventory> inventoryMap = new HashMap<>();
+        inventoryMap.put(SkuId.of("SKU001"), inventory1);
+        // NON_EXISTENT는 map에 없음
+        when(inventoryRepository.findBySkuIds(any(List.class))).thenReturn(inventoryMap);
 
         // When
         CompletableFuture<BundleAvailabilityResult> future = 
@@ -252,39 +266,36 @@ class StockAvailabilityServiceV2ImplTest {
         
         Inventory inventory1 = mock(Inventory.class);
         when(inventory1.getAvailableQuantity()).thenReturn(Quantity.of(100));
-        when(inventoryRepository.findBySkuId(SkuId.of("SKU001"))).thenReturn(Optional.of(inventory1));
         
         Inventory inventory2 = mock(Inventory.class);
         when(inventory2.getAvailableQuantity()).thenReturn(Quantity.of(90));
-        when(inventoryRepository.findBySkuId(SkuId.of("SKU002"))).thenReturn(Optional.of(inventory2));
+        
+        Map<SkuId, Inventory> inventoryMap = new HashMap<>();
+        inventoryMap.put(SkuId.of("SKU001"), inventory1);
+        inventoryMap.put(SkuId.of("SKU002"), inventory2);
+        when(inventoryRepository.findBySkuIds(any(List.class))).thenReturn(inventoryMap);
 
         // When - 여러 스레드에서 동시 실행
         int threadCount = 10;
-        Thread[] threads = new Thread[threadCount];
-        boolean[] results = new boolean[threadCount];
-        
+        java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(threadCount);
+        java.util.List<CompletableFuture<BundleAvailabilityResult>> futures = new java.util.ArrayList<>();
+
         for (int i = 0; i < threadCount; i++) {
-            final int index = i;
-            threads[i] = new Thread(() -> {
+            futures.add(CompletableFuture.supplyAsync(() -> {
                 try {
-                    BundleAvailabilityResult result = 
-                        stockAvailabilityService.checkBundleAvailability(skuMapping).get();
-                    results[index] = result.isAvailable();
-                } catch (Exception e) {
-                    results[index] = false;
+                    return stockAvailabilityService.checkBundleAvailability(skuMapping).get();
+                } catch (InterruptedException | ExecutionException e) {
+                    throw new RuntimeException(e);
                 }
-            });
-            threads[i].start();
-        }
-        
-        // 모든 스레드 종료 대기
-        for (Thread thread : threads) {
-            thread.join();
+            }, executor));
         }
 
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+        executor.shutdown();
+
         // Then - 모든 결과가 동일해야 함
-        for (boolean result : results) {
-            assertThat(result).isTrue();
+        for (CompletableFuture<BundleAvailabilityResult> future : futures) {
+            assertThat(future.join().isAvailable()).isTrue();
         }
         
         // 락 획득/해제가 스레드 수만큼 호출되었는지 확인

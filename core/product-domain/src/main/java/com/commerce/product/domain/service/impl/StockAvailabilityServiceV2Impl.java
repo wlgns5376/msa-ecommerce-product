@@ -31,47 +31,45 @@ public class StockAvailabilityServiceV2Impl implements StockAvailabilityServiceV
     
     @Override
     public CompletableFuture<AvailabilityResult> checkProductOptionAvailability(String optionId) {
-        return CompletableFuture.supplyAsync(() -> {
-            log.debug("Checking availability for option: {}", optionId);
-            
-            Optional<ProductOption> optionOpt = productRepository.findOptionById(optionId);
-            if (optionOpt.isEmpty()) {
-                log.warn("Option not found: {}", optionId);
-                return AvailabilityResult.unavailable();
-            }
-            
-            ProductOption option = optionOpt.get();
-            SkuMapping skuMapping = option.getSkuMapping();
-            
-            if (!skuMapping.isBundle()) {
-                // 단일 SKU 옵션
-                String skuId = skuMapping.getSingleSkuId();
-                Optional<Inventory> inventoryOpt = inventoryRepository.findBySkuId(SkuId.of(skuId));
-                
-                if (inventoryOpt.isEmpty()) {
-                    log.warn("Inventory not found for SKU: {}", skuId);
+        log.debug("Checking availability for option: {}", optionId);
+
+        return CompletableFuture.supplyAsync(() -> productRepository.findOptionById(optionId))
+                .thenCompose(optionOpt -> {
+                    if (optionOpt.isEmpty()) {
+                        log.warn("Option not found: {}", optionId);
+                        return CompletableFuture.completedFuture(AvailabilityResult.unavailable());
+                    }
+
+                    ProductOption option = optionOpt.get();
+                    SkuMapping skuMapping = option.getSkuMapping();
+
+                    if (!skuMapping.isBundle()) {
+                        // 단일 SKU 옵션
+                        return CompletableFuture.supplyAsync(() -> {
+                            String skuId = skuMapping.getSingleSkuId();
+                            return inventoryRepository.findBySkuId(SkuId.of(skuId))
+                                    .map(inventory -> {
+                                        int availableQuantity = inventory.getAvailableQuantity().getValue();
+                                        return availableQuantity > 0
+                                                ? AvailabilityResult.available(availableQuantity)
+                                                : AvailabilityResult.unavailable();
+                                    })
+                                    .orElseGet(() -> {
+                                        log.warn("Inventory not found for SKU: {}", skuId);
+                                        return AvailabilityResult.unavailable();
+                                    });
+                        });
+                    } else {
+                        // 묶음 옵션은 checkBundleAvailability 사용
+                        return checkBundleAvailability(skuMapping)
+                                .thenApply(bundleResult -> bundleResult.isAvailable()
+                                        ? AvailabilityResult.available(bundleResult.availableSets())
+                                        : AvailabilityResult.unavailable());
+                    }
+                }).exceptionally(e -> {
+                    log.error("Error checking product option availability for optionId: {}", optionId, e);
                     return AvailabilityResult.unavailable();
-                }
-                
-                Inventory inventory = inventoryOpt.get();
-                int availableQuantity = inventory.getAvailableQuantity().getValue();
-                
-                return availableQuantity > 0 
-                    ? AvailabilityResult.available(availableQuantity)
-                    : AvailabilityResult.unavailable();
-            }
-            
-            // 묶음 옵션은 checkBundleAvailability 사용
-            try {
-                BundleAvailabilityResult bundleResult = checkBundleAvailability(skuMapping).get();
-                return bundleResult.isAvailable()
-                    ? AvailabilityResult.available(bundleResult.availableSets())
-                    : AvailabilityResult.unavailable();
-            } catch (Exception e) {
-                log.error("Error checking bundle availability", e);
-                return AvailabilityResult.unavailable();
-            }
-        });
+                });
     }
     
     @Override
@@ -89,6 +87,11 @@ public class StockAvailabilityServiceV2Impl implements StockAvailabilityServiceV
             log.debug("Acquired lock for bundle availability check: {}", lockKey);
             
             try {
+                // 일괄 조회로 N+1 쿼리 문제 해결
+                Map<SkuId, Inventory> inventoryMap = inventoryRepository.findBySkuIds(
+                    skuMapping.mappings().keySet().stream().map(SkuId::of).collect(Collectors.toList())
+                );
+
                 List<BundleAvailabilityResult.SkuAvailabilityDetail> details = new ArrayList<>();
                 int minAvailableSets = Integer.MAX_VALUE;
                 
@@ -96,9 +99,9 @@ public class StockAvailabilityServiceV2Impl implements StockAvailabilityServiceV
                     String skuId = entry.getKey();
                     int requiredQuantity = entry.getValue();
                     
-                    Optional<Inventory> inventoryOpt = inventoryRepository.findBySkuId(SkuId.of(skuId));
+                    Inventory inventory = inventoryMap.get(SkuId.of(skuId));
                     
-                    if (inventoryOpt.isEmpty()) {
+                    if (inventory == null) {
                         log.warn("Inventory not found for SKU: {}", skuId);
                         details.add(new BundleAvailabilityResult.SkuAvailabilityDetail(
                             skuId, requiredQuantity, 0, 0
@@ -107,7 +110,6 @@ public class StockAvailabilityServiceV2Impl implements StockAvailabilityServiceV
                         continue;
                     }
                     
-                    Inventory inventory = inventoryOpt.get();
                     int availableQuantity = inventory.getAvailableQuantity().getValue();
                     int availableSets = availableQuantity / requiredQuantity;
                     
@@ -119,10 +121,6 @@ public class StockAvailabilityServiceV2Impl implements StockAvailabilityServiceV
                     
                     log.debug("SKU {} - Required: {}, Available: {}, Sets: {}", 
                         skuId, requiredQuantity, availableQuantity, availableSets);
-                }
-                
-                if (minAvailableSets == Integer.MAX_VALUE) {
-                    minAvailableSets = 0;
                 }
                 
                 log.info("Bundle availability check result - Available sets: {}", minAvailableSets);
