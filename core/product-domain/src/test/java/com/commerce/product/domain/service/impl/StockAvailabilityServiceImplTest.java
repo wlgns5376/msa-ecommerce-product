@@ -1,9 +1,15 @@
 package com.commerce.product.domain.service.impl;
 
 import com.commerce.product.domain.model.*;
+import com.commerce.product.domain.model.inventory.Inventory;
+import com.commerce.product.domain.model.inventory.SkuId;
+import com.commerce.common.domain.model.Quantity;
 import com.commerce.product.domain.repository.InventoryRepository;
 import com.commerce.product.domain.repository.LockRepository;
+import com.commerce.product.domain.repository.ProductRepository;
 import com.commerce.product.domain.service.StockAvailabilityService;
+import com.commerce.product.domain.service.result.AvailabilityResult;
+import com.commerce.product.domain.service.result.BundleAvailabilityResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,6 +21,8 @@ import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -30,16 +38,22 @@ class StockAvailabilityServiceImplTest {
     private InventoryRepository inventoryRepository;
     
     @Mock
+    private ProductRepository productRepository;
+    
+    @Mock
     private LockRepository lockRepository;
     
     private StockAvailabilityService stockAvailabilityService;
+    
+    private Executor ioExecutor;
     
     private ProductOption singleOption;
     private ProductOption bundleOption;
 
     @BeforeEach
     void setUp() {
-        stockAvailabilityService = new StockAvailabilityServiceImpl(inventoryRepository, lockRepository);
+        ioExecutor = Executors.newCachedThreadPool();
+        stockAvailabilityService = new StockAvailabilityServiceImpl(inventoryRepository, productRepository, lockRepository, ioExecutor);
         
         singleOption = ProductOption.single(
                 "Single Option",
@@ -314,5 +328,103 @@ class StockAvailabilityServiceImplTest {
         assertThat(result).isFalse();
         verify(inventoryRepository, never()).getAvailableQuantity(anyString());
         verify(inventoryRepository, never()).reserveStock(anyString(), anyInt(), anyString());
+    }
+    
+    @Test
+    @DisplayName("checkProductOptionAvailability - 단일 옵션의 재고가 충분한 경우")
+    void checkProductOptionAvailability_SingleOption_Available() throws ExecutionException, InterruptedException {
+        String optionId = "OPTION001";
+        SkuId skuId = SkuId.of("SKU001");
+        Inventory inventory = mock(Inventory.class);
+        Quantity quantity = mock(Quantity.class);
+        
+        when(productRepository.findOptionById(optionId))
+                .thenReturn(Optional.of(singleOption));
+        when(inventoryRepository.findBySkuId(skuId))
+                .thenReturn(Optional.of(inventory));
+        when(inventory.getAvailableQuantity()).thenReturn(quantity);
+        when(quantity.getValue()).thenReturn(50);
+        
+        CompletableFuture<AvailabilityResult> future = 
+                stockAvailabilityService.checkProductOptionAvailability(optionId);
+        AvailabilityResult result = future.get();
+        
+        assertThat(result.isAvailable()).isTrue();
+        assertThat(result.availableQuantity()).isEqualTo(50);
+    }
+    
+    @Test
+    @DisplayName("checkProductOptionAvailability - 옵션이 없는 경우")
+    void checkProductOptionAvailability_OptionNotFound() throws ExecutionException, InterruptedException {
+        String optionId = "OPTION_NOT_FOUND";
+        
+        when(productRepository.findOptionById(optionId))
+                .thenReturn(Optional.empty());
+        
+        CompletableFuture<AvailabilityResult> future = 
+                stockAvailabilityService.checkProductOptionAvailability(optionId);
+        AvailabilityResult result = future.get();
+        
+        assertThat(result.isAvailable()).isFalse();
+    }
+    
+    @Test
+    @DisplayName("checkBundleAvailability - 묶음 옵션의 모든 SKU 재고가 충분한 경우")
+    void checkBundleAvailability_AllAvailable() throws ExecutionException, InterruptedException {
+        SkuMapping skuMapping = SkuMapping.bundle(Map.of("SKU001", 2, "SKU002", 1));
+        Lock lock = new ReentrantLock();
+        
+        Inventory inventory1 = mock(Inventory.class);
+        Inventory inventory2 = mock(Inventory.class);
+        Quantity quantity1 = mock(Quantity.class);
+        Quantity quantity2 = mock(Quantity.class);
+        
+        when(lockRepository.acquireLock(anyString(), eq(5000L)))
+                .thenReturn(lock);
+        when(inventoryRepository.findBySkuIds(anyList()))
+                .thenReturn(Map.of(
+                    SkuId.of("SKU001"), inventory1,
+                    SkuId.of("SKU002"), inventory2
+                ));
+        when(inventory1.getAvailableQuantity()).thenReturn(quantity1);
+        when(inventory2.getAvailableQuantity()).thenReturn(quantity2);
+        when(quantity1.getValue()).thenReturn(10);
+        when(quantity2.getValue()).thenReturn(5);
+        
+        CompletableFuture<BundleAvailabilityResult> future = 
+                stockAvailabilityService.checkBundleAvailability(skuMapping);
+        BundleAvailabilityResult result = future.get();
+        
+        assertThat(result.isAvailable()).isTrue();
+        assertThat(result.availableSets()).isEqualTo(5); // min(10/2, 5/1) = min(5, 5) = 5
+        verify(lockRepository).releaseLock(lock);
+    }
+    
+    @Test
+    @DisplayName("checkBundleAvailability - 일부 SKU 재고가 부족한 경우")
+    void checkBundleAvailability_PartiallyUnavailable() throws ExecutionException, InterruptedException {
+        SkuMapping skuMapping = SkuMapping.bundle(Map.of("SKU001", 2, "SKU002", 1));
+        Lock lock = new ReentrantLock();
+        
+        Inventory inventory1 = mock(Inventory.class);
+        Quantity quantity1 = mock(Quantity.class);
+        
+        when(lockRepository.acquireLock(anyString(), eq(5000L)))
+                .thenReturn(lock);
+        when(inventoryRepository.findBySkuIds(anyList()))
+                .thenReturn(Map.of(
+                    SkuId.of("SKU001"), inventory1
+                    // SKU002 is missing
+                ));
+        when(inventory1.getAvailableQuantity()).thenReturn(quantity1);
+        when(quantity1.getValue()).thenReturn(10);
+        
+        CompletableFuture<BundleAvailabilityResult> future = 
+                stockAvailabilityService.checkBundleAvailability(skuMapping);
+        BundleAvailabilityResult result = future.get();
+        
+        assertThat(result.isAvailable()).isFalse();
+        assertThat(result.availableSets()).isEqualTo(0);
+        verify(lockRepository).releaseLock(lock);
     }
 }
