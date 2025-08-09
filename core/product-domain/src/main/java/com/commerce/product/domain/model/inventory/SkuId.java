@@ -1,6 +1,6 @@
 package com.commerce.product.domain.model.inventory;
 
-import com.commerce.product.domain.model.ValueObject;
+import com.commerce.common.domain.model.ValueObject;
 
 public record SkuId(String value) implements ValueObject {
     

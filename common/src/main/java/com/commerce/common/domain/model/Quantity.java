@@ -1,13 +1,10 @@
-package com.commerce.inventory.domain.model;
-
-import com.commerce.inventory.domain.exception.InvalidQuantityException;
-import com.commerce.product.domain.model.ValueObject;
+package com.commerce.common.domain.model;
 
 public record Quantity(int value) implements ValueObject {
     
     public Quantity {
         if (value < 0) {
-            throw new InvalidQuantityException("수량은 0 이상이어야 합니다");
+            throw new IllegalArgumentException("수량은 0 이상이어야 합니다");
         }
     }
     

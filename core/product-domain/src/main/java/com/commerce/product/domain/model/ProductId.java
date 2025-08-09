@@ -1,5 +1,6 @@
 package com.commerce.product.domain.model;
 
+import com.commerce.common.domain.model.ValueObject;
 import com.commerce.product.domain.exception.InvalidProductIdException;
 
 import java.util.UUID;

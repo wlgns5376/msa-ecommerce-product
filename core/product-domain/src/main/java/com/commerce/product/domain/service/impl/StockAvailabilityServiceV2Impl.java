@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.locks.Lock;
 import java.util.stream.Collectors;
 
@@ -26,6 +27,7 @@ public class StockAvailabilityServiceV2Impl implements StockAvailabilityServiceV
     private final InventoryRepositoryV2 inventoryRepository;
     private final ProductRepository productRepository;
     private final LockRepository lockRepository;
+    private final Executor ioExecutor;
     
     private static final long LOCK_TIMEOUT_MILLIS = 5000L;
     
@@ -33,7 +35,7 @@ public class StockAvailabilityServiceV2Impl implements StockAvailabilityServiceV
     public CompletableFuture<AvailabilityResult> checkProductOptionAvailability(String optionId) {
         log.debug("Checking availability for option: {}", optionId);
 
-        return CompletableFuture.supplyAsync(() -> productRepository.findOptionById(optionId))
+        return CompletableFuture.supplyAsync(() -> productRepository.findOptionById(optionId), ioExecutor)
                 .thenCompose(optionOpt -> {
                     if (optionOpt.isEmpty()) {
                         log.warn("Option not found: {}", optionId);
@@ -58,7 +60,7 @@ public class StockAvailabilityServiceV2Impl implements StockAvailabilityServiceV
                                         log.warn("Inventory not found for SKU: {}", skuId);
                                         return AvailabilityResult.unavailable();
                                     });
-                        });
+                        }, ioExecutor);
                     } else {
                         // 묶음 옵션은 checkBundleAvailability 사용
                         return checkBundleAvailability(skuMapping)
@@ -133,7 +135,7 @@ public class StockAvailabilityServiceV2Impl implements StockAvailabilityServiceV
                 lockRepository.releaseLock(lock);
                 log.debug("Released lock for bundle availability check: {}", lockKey);
             }
-        });
+        }, ioExecutor);
     }
     
     @Override

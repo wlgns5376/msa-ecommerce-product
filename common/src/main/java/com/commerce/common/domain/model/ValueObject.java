@@ -1,4 +1,4 @@
-package com.commerce.product.domain.model;
+package com.commerce.common.domain.model;
 
 /**
  * 값 객체의 마커 인터페이스

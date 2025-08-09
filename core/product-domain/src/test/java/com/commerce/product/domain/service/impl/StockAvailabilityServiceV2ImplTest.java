@@ -1,7 +1,7 @@
 package com.commerce.product.domain.service.impl;
 
 import com.commerce.product.domain.model.inventory.Inventory;
-import com.commerce.product.domain.model.inventory.Quantity;
+import com.commerce.common.domain.model.Quantity;
 import com.commerce.product.domain.model.inventory.SkuId;
 import com.commerce.product.domain.model.SkuMapping;
 import com.commerce.product.domain.repository.InventoryRepositoryV2;
@@ -23,6 +23,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -45,13 +47,16 @@ class StockAvailabilityServiceV2ImplTest {
     private LockRepository lockRepository;
     
     private StockAvailabilityServiceV2 stockAvailabilityService;
+    private Executor ioExecutor;
     
     @BeforeEach
     void setUp() {
+        ioExecutor = Executors.newFixedThreadPool(10);
         stockAvailabilityService = new StockAvailabilityServiceV2Impl(
             inventoryRepository, 
             productRepository, 
-            lockRepository
+            lockRepository,
+            ioExecutor
         );
     }
 
@@ -281,13 +286,10 @@ class StockAvailabilityServiceV2ImplTest {
         java.util.List<CompletableFuture<BundleAvailabilityResult>> futures = new java.util.ArrayList<>();
 
         for (int i = 0; i < threadCount; i++) {
-            futures.add(CompletableFuture.supplyAsync(() -> {
-                try {
-                    return stockAvailabilityService.checkBundleAvailability(skuMapping).get();
-                } catch (InterruptedException | ExecutionException e) {
-                    throw new RuntimeException(e);
-                }
-            }, executor));
+            futures.add(
+                CompletableFuture.runAsync(() -> {}, executor)
+                    .thenCompose(v -> stockAvailabilityService.checkBundleAvailability(skuMapping))
+            );
         }
 
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
