@@ -24,8 +24,8 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
     @Override
     public boolean checkSingleOption(String skuId, int requestedQuantity) {
         if (requestedQuantity < 0) {
-            log.warn("Invalid requested quantity: {} for SKU: {}", requestedQuantity, skuId);
-            return false;
+            throw new IllegalArgumentException(
+                    String.format("Requested quantity cannot be negative: %d for SKU: %s", requestedQuantity, skuId));
         }
         
         if (requestedQuantity == 0) {
@@ -35,8 +35,8 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
         int availableQuantity = inventoryRepository.getAvailableQuantity(skuId);
         
         if (availableQuantity < 0) {
-            log.warn("Negative available quantity: {} for SKU: {}", availableQuantity, skuId);
-            return false;
+            throw new IllegalStateException(
+                    String.format("Available quantity cannot be negative: %d for SKU: %s", availableQuantity, skuId));
         }
         
         boolean isAvailable = availableQuantity >= requestedQuantity;

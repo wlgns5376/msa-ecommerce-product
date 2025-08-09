@@ -15,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -183,7 +184,7 @@ class SingleOptionStockAvailabilityTest {
         }
         
         @Test
-        @DisplayName("음수 재고량에 대해 false를 반환한다")
+        @DisplayName("음수 재고량에 대해 IllegalStateException을 던진다")
         void negativeAvailableQuantity() {
             // Given
             String skuId = "SKU001";
@@ -191,25 +192,23 @@ class SingleOptionStockAvailabilityTest {
             when(inventoryRepository.getAvailableQuantity(skuId))
                     .thenReturn(-5);
             
-            // When
-            boolean result = stockAvailabilityService.checkSingleOption(skuId, requestedQuantity);
-            
-            // Then
-            assertThat(result).isFalse();
+            // When & Then
+            assertThatThrownBy(() -> stockAvailabilityService.checkSingleOption(skuId, requestedQuantity))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessage("Available quantity cannot be negative: -5 for SKU: SKU001");
         }
         
         @Test
-        @DisplayName("음수 요청 수량에 대해 false를 반환한다")
+        @DisplayName("음수 요청 수량에 대해 IllegalArgumentException을 던진다")
         void negativeRequestedQuantity() {
             // Given
             String skuId = "SKU001";
             int requestedQuantity = -10;
             
-            // When
-            boolean result = stockAvailabilityService.checkSingleOption(skuId, requestedQuantity);
-            
-            // Then
-            assertThat(result).isFalse();
+            // When & Then
+            assertThatThrownBy(() -> stockAvailabilityService.checkSingleOption(skuId, requestedQuantity))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("Requested quantity cannot be negative: -10 for SKU: SKU001");
             verify(inventoryRepository, never()).getAvailableQuantity(anyString());
         }
     }
