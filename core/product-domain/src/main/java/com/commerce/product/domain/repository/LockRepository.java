@@ -1,10 +1,17 @@
 package com.commerce.product.domain.repository;
 
-import java.util.concurrent.locks.Lock;
+import com.commerce.product.domain.model.DistributedLock;
+
+import java.time.Duration;
+import java.util.Optional;
 
 public interface LockRepository extends Repository {
     
-    Lock acquireLock(String key, long timeoutMillis);
+    Optional<DistributedLock> acquireLock(String key, Duration leaseDuration, Duration waitTimeout);
     
-    void releaseLock(Lock lock);
+    boolean releaseLock(DistributedLock lock);
+    
+    boolean extendLock(DistributedLock lock, Duration additionalTime);
+    
+    boolean isLocked(String key);
 }
