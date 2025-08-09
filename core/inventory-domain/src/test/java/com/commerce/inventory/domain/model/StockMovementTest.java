@@ -1,5 +1,7 @@
 package com.commerce.inventory.domain.model;
 
+import com.commerce.common.domain.model.Quantity;
+
 import com.commerce.inventory.domain.exception.InvalidStockMovementException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,7 +25,7 @@ class StockMovementTest {
         MovementId id = MovementId.generate();
         SkuId skuId = SkuId.generate();
         MovementType type = MovementType.INBOUND;
-        Quantity quantity = new Quantity(100);
+        Quantity quantity = Quantity.of(100);
         String reference = "PO-2024-001";
         LocalDateTime timestamp = LocalDateTime.now();
 
@@ -46,7 +48,7 @@ class StockMovementTest {
     void shouldCreateInboundMovement() {
         // given
         SkuId skuId = SkuId.generate();
-        Quantity quantity = new Quantity(100);
+        Quantity quantity = Quantity.of(100);
         String reference = "PO-2024-001";
 
         // when
@@ -64,7 +66,7 @@ class StockMovementTest {
     void shouldCreateOutboundMovement() {
         // given
         SkuId skuId = SkuId.generate();
-        Quantity quantity = new Quantity(50);
+        Quantity quantity = Quantity.of(50);
         String reference = "ORDER-2024-001";
 
         // when
@@ -83,7 +85,7 @@ class StockMovementTest {
         // given
         SkuId skuId = SkuId.generate();
         MovementType type = MovementType.INBOUND;
-        Quantity quantity = new Quantity(100);
+        Quantity quantity = Quantity.of(100);
         String reference = "PO-2024-001";
 
         // when & then
@@ -100,7 +102,7 @@ class StockMovementTest {
         // given
         MovementId id = MovementId.generate();
         MovementType type = MovementType.INBOUND;
-        Quantity quantity = new Quantity(100);
+        Quantity quantity = Quantity.of(100);
         String reference = "PO-2024-001";
 
         // when & then
@@ -117,7 +119,7 @@ class StockMovementTest {
         // given
         MovementId id = MovementId.generate();
         SkuId skuId = SkuId.generate();
-        Quantity quantity = new Quantity(100);
+        Quantity quantity = Quantity.of(100);
         String reference = "PO-2024-001";
 
         // when & then
@@ -145,7 +147,7 @@ class StockMovementTest {
                 .hasMessage("수량은 0보다 커야 합니다");
 
         assertThatThrownBy(() -> StockMovement.create(
-                id, skuId, type, new Quantity(0), reference, LocalDateTime.now()
+                id, skuId, type, Quantity.of(0), reference, LocalDateTime.now()
         ))
                 .isInstanceOf(InvalidStockMovementException.class)
                 .hasMessage("수량은 0보다 커야 합니다");
@@ -159,7 +161,7 @@ class StockMovementTest {
         MovementId id = MovementId.generate();
         SkuId skuId = SkuId.generate();
         MovementType type = MovementType.INBOUND;
-        Quantity quantity = new Quantity(100);
+        Quantity quantity = Quantity.of(100);
 
         // when & then
         assertThatThrownBy(() -> StockMovement.create(
@@ -175,7 +177,7 @@ class StockMovementTest {
     void shouldCreateStockMovementWithAllTypes(MovementType type) {
         // given
         SkuId skuId = SkuId.generate();
-        Quantity quantity = new Quantity(100);
+        Quantity quantity = Quantity.of(100);
         String reference = "REF-2024-001";
 
         // when
@@ -192,7 +194,7 @@ class StockMovementTest {
     void shouldCreateAdjustmentMovement() {
         // given
         SkuId skuId = SkuId.generate();
-        Quantity quantity = new Quantity(10);
+        Quantity quantity = Quantity.of(10);
         String reference = "ADJ-2024-001";
 
         // when

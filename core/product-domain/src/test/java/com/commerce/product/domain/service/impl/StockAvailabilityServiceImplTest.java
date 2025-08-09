@@ -343,7 +343,7 @@ class StockAvailabilityServiceImplTest {
         when(inventoryRepository.findBySkuId(skuId))
                 .thenReturn(Optional.of(inventory));
         when(inventory.getAvailableQuantity()).thenReturn(quantity);
-        when(quantity.getValue()).thenReturn(50);
+        when(quantity.value()).thenReturn(50);
         
         CompletableFuture<AvailabilityResult> future = 
                 stockAvailabilityService.checkProductOptionAvailability(optionId);
@@ -388,8 +388,8 @@ class StockAvailabilityServiceImplTest {
                 ));
         when(inventory1.getAvailableQuantity()).thenReturn(quantity1);
         when(inventory2.getAvailableQuantity()).thenReturn(quantity2);
-        when(quantity1.getValue()).thenReturn(10);
-        when(quantity2.getValue()).thenReturn(5);
+        when(quantity1.value()).thenReturn(10);
+        when(quantity2.value()).thenReturn(5);
         
         CompletableFuture<BundleAvailabilityResult> future = 
                 stockAvailabilityService.checkBundleAvailability(skuMapping);
@@ -417,7 +417,7 @@ class StockAvailabilityServiceImplTest {
                     // SKU002 is missing
                 ));
         when(inventory1.getAvailableQuantity()).thenReturn(quantity1);
-        when(quantity1.getValue()).thenReturn(10);
+        when(quantity1.value()).thenReturn(10);
         
         CompletableFuture<BundleAvailabilityResult> future = 
                 stockAvailabilityService.checkBundleAvailability(skuMapping);

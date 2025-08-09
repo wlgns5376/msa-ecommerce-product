@@ -1,5 +1,6 @@
 package com.commerce.inventory.domain.model;
 
+import com.commerce.common.domain.model.Quantity;
 import com.commerce.inventory.domain.exception.InsufficientStockException;
 import com.commerce.inventory.domain.exception.InvalidInventoryException;
 import com.commerce.product.domain.model.AggregateRoot;
@@ -25,11 +26,11 @@ public class Inventory extends AggregateRoot<SkuId> {
     }
     
     public static Inventory createWithInitialStock(SkuId skuId, Quantity initialQuantity) {
-        return new Inventory(skuId, initialQuantity, new Quantity(0));
+        return new Inventory(skuId, initialQuantity, Quantity.zero());
     }
     
     public static Inventory createEmpty(SkuId skuId) {
-        return new Inventory(skuId, new Quantity(0), new Quantity(0));
+        return new Inventory(skuId, Quantity.zero(), Quantity.zero());
     }
     
     public Quantity getAvailableQuantity() {
@@ -37,7 +38,7 @@ public class Inventory extends AggregateRoot<SkuId> {
     }
     
     public boolean canReserve(Quantity quantity) {
-        return getAvailableQuantity().isGreaterThanOrEqual(quantity);
+        return getAvailableQuantity().isGreaterThanOrEqualTo(quantity);
     }
     
     public void receive(Quantity quantity, String reference) {

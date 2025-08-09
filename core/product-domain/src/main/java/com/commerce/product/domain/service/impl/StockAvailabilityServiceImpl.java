@@ -257,7 +257,7 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
                             String skuId = skuMapping.getSingleSkuId();
                             return inventoryRepository.findBySkuId(SkuId.of(skuId))
                                     .map(inventory -> {
-                                        int availableQuantity = inventory.getAvailableQuantity().getValue();
+                                        int availableQuantity = inventory.getAvailableQuantity().value();
                                         return availableQuantity > 0
                                                 ? AvailabilityResult.available(availableQuantity)
                                                 : AvailabilityResult.unavailable();
@@ -318,7 +318,7 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
                         continue;
                     }
                     
-                    int availableQuantity = inventory.getAvailableQuantity().getValue();
+                    int availableQuantity = inventory.getAvailableQuantity().value();
                     int availableSets = availableQuantity / requiredQuantity;
                     
                     details.add(new BundleAvailabilityResult.SkuAvailabilityDetail(
