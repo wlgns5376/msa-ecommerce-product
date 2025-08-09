@@ -153,7 +153,7 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
                     
                     if (lockOpt.isEmpty()) {
                         log.warn("Failed to acquire lock for SKU: {} in bundle", skuId);
-                        return false;
+                        throw new LockAcquisitionException("Unable to acquire lock for bundle SKU: " + skuId);
                     }
                     locks.put(skuId, lockOpt.get());
                 }

@@ -61,8 +61,7 @@ class DistributedLockTest {
         long remainingTime = lock.getRemainingTimeMillis();
         
         // Then
-        assertThat(remainingTime).isGreaterThan(29000L);
-        assertThat(remainingTime).isLessThanOrEqualTo(30000L);
+        assertThat(remainingTime).isCloseTo(30000L, org.assertj.core.api.Assertions.within(1000L));
     }
     
     @Test

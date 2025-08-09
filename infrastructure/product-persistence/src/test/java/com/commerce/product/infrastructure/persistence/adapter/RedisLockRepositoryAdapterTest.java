@@ -147,16 +147,19 @@ class RedisLockRepositoryAdapterTest {
             .thenReturn(1L);
         
         // When
-        boolean result = lockRepository.extendLock(lock, additionalTime);
+        Optional<DistributedLock> result = lockRepository.extendLock(lock, additionalTime);
         
         // Then
-        assertThat(result).isTrue();
+        assertThat(result).isPresent();
+        assertThat(result.get().key()).isEqualTo(key);
+        assertThat(result.get().lockId()).isEqualTo(lockId);
+        assertThat(result.get().leaseDuration()).isEqualTo(additionalTime);
         
         verify(redisTemplate).execute(
             any(DefaultRedisScript.class),
             eq(Collections.singletonList("distributed_lock:" + key)),
             eq(lockId),
-            eq("50000")
+            eq("20000")
         );
     }
     

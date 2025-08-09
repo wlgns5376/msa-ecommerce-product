@@ -107,10 +107,10 @@ class RedisLockRepositoryIntegrationTest {
         DistributedLock lock = lockOpt.get();
         
         // When
-        boolean extended = lockRepository.extendLock(lock, Duration.ofSeconds(3));
+        Optional<DistributedLock> extendedOpt = lockRepository.extendLock(lock, Duration.ofSeconds(3));
         
         // Then
-        assertThat(extended).isTrue();
+        assertThat(extendedOpt).isPresent();
         assertThat(lockRepository.isLocked(key)).isTrue();
         
         // 원래 만료 시간 이후에도 락이 유지되는지 확인

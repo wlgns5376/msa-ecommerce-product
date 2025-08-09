@@ -21,6 +21,7 @@ public class RedisLockRepositoryAdapter implements LockRepository {
     private final RedisTemplate<String, String> redisTemplate;
     
     private static final String LOCK_PREFIX = "distributed_lock:";
+    private static final long LOCK_RETRY_INTERVAL_MS = 50L;
     private static final String RELEASE_SCRIPT = 
         "if redis.call('get', KEYS[1]) == ARGV[1] then " +
         "   return redis.call('del', KEYS[1]) " +
@@ -55,7 +56,7 @@ public class RedisLockRepositoryAdapter implements LockRepository {
             }
             
             try {
-                Thread.sleep(50); // 50ms 대기 후 재시도
+                Thread.sleep(LOCK_RETRY_INTERVAL_MS);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 log.warn("Lock acquisition interrupted: key={}", key);
@@ -95,33 +96,31 @@ public class RedisLockRepositoryAdapter implements LockRepository {
     }
     
     @Override
-    public boolean extendLock(DistributedLock lock, Duration additionalTime) {
+    public Optional<DistributedLock> extendLock(DistributedLock lock, Duration newLeaseDuration) {
         String lockKey = LOCK_PREFIX + lock.key();
         
         DefaultRedisScript<Long> script = new DefaultRedisScript<>();
         script.setScriptText(EXTEND_SCRIPT);
         script.setResultType(Long.class);
         
-        long totalDurationMillis = lock.leaseDuration().toMillis() + additionalTime.toMillis();
-        
         Long result = redisTemplate.execute(
             script, 
             Collections.singletonList(lockKey), 
             lock.lockId(),
-            String.valueOf(totalDurationMillis)
+            String.valueOf(newLeaseDuration.toMillis())
         );
         
         boolean extended = result != null && result > 0;
         
         if (extended) {
-            log.debug("Lock extended: key={}, lockId={}, additionalTime={}ms", 
-                lock.key(), lock.lockId(), additionalTime.toMillis());
+            log.debug("Lock extended: key={}, lockId={}, newLeaseDuration={}ms", 
+                lock.key(), lock.lockId(), newLeaseDuration.toMillis());
+            return Optional.of(new DistributedLock(lock.key(), lock.lockId(), Instant.now(), newLeaseDuration));
         } else {
             log.warn("Failed to extend lock (not owned or expired): key={}, lockId={}", 
                 lock.key(), lock.lockId());
+            return Optional.empty();
         }
-        
-        return extended;
     }
     
     @Override

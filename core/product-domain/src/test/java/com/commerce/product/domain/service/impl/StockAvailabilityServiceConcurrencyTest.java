@@ -1,5 +1,6 @@
 package com.commerce.product.domain.service.impl;
 
+import com.commerce.product.domain.exception.LockAcquisitionException;
 import com.commerce.product.domain.model.*;
 import com.commerce.product.domain.repository.InventoryRepository;
 import com.commerce.product.domain.repository.LockRepository;
@@ -282,7 +283,7 @@ class StockAvailabilityServiceConcurrencyTest {
                     // 재고 예약 시도
                     stockAvailabilityService.reserveStock(skuId, 5, orderId).get(3, TimeUnit.SECONDS);
                 } catch (Exception e) {
-                    if (e.getCause() != null && e.getCause().getMessage().contains("Unable to acquire lock")) {
+                    if (e.getCause() instanceof LockAcquisitionException) {
                         timeoutCount.incrementAndGet();
                     }
                 } finally {

@@ -11,7 +11,7 @@ public interface LockRepository {
     
     boolean releaseLock(DistributedLock lock);
     
-    boolean extendLock(DistributedLock lock, Duration additionalTime);
+    Optional<DistributedLock> extendLock(DistributedLock lock, Duration newLeaseDuration);
     
     boolean isLocked(String key);
 }
