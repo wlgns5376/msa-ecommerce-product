@@ -174,7 +174,7 @@ class RedisLockRepositoryIntegrationTest {
     
     @Test
     @DisplayName("락 대기 시간 동안 재시도하여 락을 획득할 수 있다")
-    void lockAcquisitionWithRetry() throws InterruptedException {
+    void lockAcquisitionWithRetry() throws InterruptedException, ExecutionException, TimeoutException {
         // Given
         String key = "retry-lock";
         Duration leaseDuration = Duration.ofMillis(500);

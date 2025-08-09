@@ -5,7 +5,7 @@ import com.commerce.product.domain.model.DistributedLock;
 import java.time.Duration;
 import java.util.Optional;
 
-public interface LockRepository extends Repository {
+public interface LockRepository {
     
     Optional<DistributedLock> acquireLock(String key, Duration leaseDuration, Duration waitTimeout);
     
