@@ -1,24 +1,19 @@
 package com.commerce.product.domain.service.impl;
 
 import com.commerce.product.domain.exception.LockAcquisitionException;
-import com.commerce.product.domain.model.inventory.Inventory;
-import com.commerce.product.domain.model.inventory.SkuId;
+import com.commerce.product.domain.model.DistributedLock;
 import com.commerce.product.domain.model.ProductOption;
-import com.commerce.product.domain.model.SkuMapping;
 import com.commerce.product.domain.repository.InventoryRepository;
 import com.commerce.product.domain.repository.LockRepository;
 import com.commerce.product.domain.repository.ProductRepository;
 import com.commerce.product.domain.service.StockAvailabilityService;
-import com.commerce.product.domain.service.result.AvailabilityResult;
-import com.commerce.product.domain.service.result.BundleAvailabilityResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
-import java.util.concurrent.locks.Lock;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -28,8 +23,8 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
     private final InventoryRepository inventoryRepository;
     private final ProductRepository productRepository;
     private final LockRepository lockRepository;
-    private final Executor ioExecutor;
-    private static final long LOCK_TIMEOUT_MILLIS = 5000L;
+    private static final Duration DEFAULT_LEASE_DURATION = Duration.ofSeconds(30);
+    private static final Duration DEFAULT_WAIT_TIMEOUT = Duration.ofSeconds(5);
     
     @Override
     public boolean checkSingleOption(String skuId, int requestedQuantity) {
@@ -89,12 +84,18 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
     @Override
     public CompletableFuture<Boolean> reserveStock(String skuId, int quantity, String orderId) {
         return CompletableFuture.supplyAsync(() -> {
-            Lock lock = lockRepository.acquireLock("stock:" + skuId, LOCK_TIMEOUT_MILLIS);
+            Optional<DistributedLock> lockOpt = lockRepository.acquireLock(
+                "stock:" + skuId, 
+                DEFAULT_LEASE_DURATION, 
+                DEFAULT_WAIT_TIMEOUT
+            );
             
-            if (lock == null) {
+            if (lockOpt.isEmpty()) {
                 log.warn("Failed to acquire lock for SKU: {}", skuId);
-                return false;
+                throw new LockAcquisitionException("Unable to acquire lock for SKU: " + skuId);
             }
+            
+            DistributedLock lock = lockOpt.get();
             
             try {
                 int availableQuantity = inventoryRepository.getAvailableQuantity(skuId);
@@ -140,18 +141,23 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
             // 데드락 방지를 위해 SKU ID 순서대로 정렬
             Collections.sort(skuIds);
             
-            Map<String, Lock> locks = new LinkedHashMap<>();
+            Map<String, DistributedLock> locks = new LinkedHashMap<>();
             Map<String, String> reservations = new LinkedHashMap<>();
             
             try {
                 // 모든 락 획득
                 for (String skuId : skuIds) {
-                    Lock lock = lockRepository.acquireLock("stock:" + skuId, LOCK_TIMEOUT_MILLIS);
-                    if (lock == null) {
+                    Optional<DistributedLock> lockOpt = lockRepository.acquireLock(
+                        "stock:" + skuId, 
+                        DEFAULT_LEASE_DURATION, 
+                        DEFAULT_WAIT_TIMEOUT
+                    );
+                    
+                    if (lockOpt.isEmpty()) {
                         log.warn("Failed to acquire lock for SKU: {} in bundle", skuId);
-                        return false;
+                        throw new LockAcquisitionException("Unable to acquire lock for bundle SKU: " + skuId);
                     }
-                    locks.put(skuId, lock);
+                    locks.put(skuId, lockOpt.get());
                 }
                 
                 // 재고 가용성 체크
@@ -187,15 +193,7 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
                 
             } finally {
                 // 역순으로 락 해제
-                List<String> reverseSkuIds = new ArrayList<>(locks.keySet());
-                Collections.reverse(reverseSkuIds);
-                
-                for (String skuId : reverseSkuIds) {
-                    Lock lock = locks.get(skuId);
-                    if (lock != null) {
-                        lockRepository.releaseLock(lock);
-                    }
-                }
+                releaseLocks(locks);
             }
         });
     }
@@ -237,125 +235,19 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
         return quantities;
     }
     
-    @Override
-    public CompletableFuture<AvailabilityResult> checkProductOptionAvailability(String optionId) {
-        log.debug("Checking availability for option: {}", optionId);
-
-        return CompletableFuture.supplyAsync(() -> productRepository.findOptionById(optionId), ioExecutor)
-                .thenCompose(optionOpt -> {
-                    if (optionOpt.isEmpty()) {
-                        log.warn("Option not found: {}", optionId);
-                        return CompletableFuture.completedFuture(AvailabilityResult.unavailable());
-                    }
-
-                    ProductOption option = optionOpt.get();
-                    SkuMapping skuMapping = option.getSkuMapping();
-
-                    if (!skuMapping.isBundle()) {
-                        // 단일 SKU 옵션
-                        return CompletableFuture.supplyAsync(() -> {
-                            String skuId = skuMapping.getSingleSkuId();
-                            return inventoryRepository.findBySkuId(SkuId.of(skuId))
-                                    .map(inventory -> {
-                                        int availableQuantity = inventory.getAvailableQuantity().value();
-                                        return availableQuantity > 0
-                                                ? AvailabilityResult.available(availableQuantity)
-                                                : AvailabilityResult.unavailable();
-                                    })
-                                    .orElseGet(() -> {
-                                        log.warn("Inventory not found for SKU: {}", skuId);
-                                        return AvailabilityResult.unavailable();
-                                    });
-                        }, ioExecutor);
-                    } else {
-                        // 묶음 옵션은 checkBundleAvailability 사용
-                        return checkBundleAvailability(skuMapping)
-                                .thenApply(bundleResult -> bundleResult.isAvailable()
-                                        ? AvailabilityResult.available(bundleResult.availableSets())
-                                        : AvailabilityResult.unavailable());
-                    }
-                }).exceptionally(e -> {
-                    log.error("Error checking product option availability for optionId: {}", optionId, e);
-                    return AvailabilityResult.unavailable();
-                });
-    }
-    
-    @Override
-    public CompletableFuture<BundleAvailabilityResult> checkBundleAvailability(SkuMapping skuMapping) {
-        return CompletableFuture.supplyAsync(() -> {
-            // 분산 락을 사용하여 번들 재고 확인의 원자성 보장
-            String lockKey = generateLockKey(skuMapping);
-            Lock lock = lockRepository.acquireLock(lockKey, LOCK_TIMEOUT_MILLIS);
-            
-            if (lock == null) {
-                log.error("Failed to acquire lock for key: {}", lockKey);
-                throw new LockAcquisitionException("Failed to acquire lock for bundle availability check");
-            }
-            
-            log.debug("Acquired lock for bundle availability check: {}", lockKey);
-            
-            try {
-                // 일괄 조회로 N+1 쿼리 문제 해결
-                Map<SkuId, Inventory> inventoryMap = inventoryRepository.findBySkuIds(
-                    skuMapping.mappings().keySet().stream().map(SkuId::of).collect(Collectors.toList())
-                );
-
-                List<BundleAvailabilityResult.SkuAvailabilityDetail> details = new ArrayList<>();
-                int minAvailableSets = Integer.MAX_VALUE;
-                
-                for (Map.Entry<String, Integer> entry : skuMapping.mappings().entrySet()) {
-                    String skuId = entry.getKey();
-                    int requiredQuantity = entry.getValue();
-                    
-                    Inventory inventory = inventoryMap.get(SkuId.of(skuId));
-                    
-                    if (inventory == null) {
-                        log.warn("Inventory not found for SKU: {}", skuId);
-                        details.add(new BundleAvailabilityResult.SkuAvailabilityDetail(
-                            skuId, requiredQuantity, 0, 0
-                        ));
-                        minAvailableSets = 0;
-                        continue;
-                    }
-                    
-                    int availableQuantity = inventory.getAvailableQuantity().value();
-                    int availableSets = availableQuantity / requiredQuantity;
-                    
-                    details.add(new BundleAvailabilityResult.SkuAvailabilityDetail(
-                        skuId, requiredQuantity, availableQuantity, availableSets
-                    ));
-                    
-                    minAvailableSets = Math.min(minAvailableSets, availableSets);
-                    
-                    log.debug("SKU {} - Required: {}, Available: {}, Sets: {}", 
-                        skuId, requiredQuantity, availableQuantity, availableSets);
+    private void releaseLocks(Map<String, DistributedLock> locks) {
+        List<String> reverseSkuIds = new ArrayList<>(locks.keySet());
+        Collections.reverse(reverseSkuIds);
+        
+        for (String skuId : reverseSkuIds) {
+            DistributedLock lock = locks.get(skuId);
+            if (lock != null) {
+                try {
+                    lockRepository.releaseLock(lock);
+                } catch (Exception e) {
+                    log.error("Error releasing lock for SKU: {}", skuId, e);
                 }
-                
-                log.info("Bundle availability check result - Available sets: {}", minAvailableSets);
-                
-                return minAvailableSets > 0
-                    ? BundleAvailabilityResult.available(minAvailableSets, details)
-                    : BundleAvailabilityResult.unavailable(details);
-                    
-            } finally {
-                lockRepository.releaseLock(lock);
-                log.debug("Released lock for bundle availability check: {}", lockKey);
             }
-        }, ioExecutor);
-    }
-    
-    @Override
-    public CompletableFuture<Void> reserveBundleStock(SkuMapping skuMapping, String reservationId) {
-        // TODO: Saga 패턴을 사용한 분산 트랜잭션 구현
-        // 이 부분은 별도의 작업으로 구현 예정
-        return CompletableFuture.completedFuture(null);
-    }
-    
-    private String generateLockKey(SkuMapping skuMapping) {
-        // 데드락 방지를 위해 SKU ID를 정렬
-        String sortedSkuIds = skuMapping.mappings().keySet().stream()
-            .sorted()
-            .collect(Collectors.joining(":"));
-        return "bundle-stock-check:" + sortedSkuIds;
+        }
     }
 }

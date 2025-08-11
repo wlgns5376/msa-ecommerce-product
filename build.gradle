@@ -113,7 +113,7 @@ configure(subprojects.findAll { it.path.contains(':product-persistence') }) {
         implementation project(':common')
         implementation project(':product-domain')
         implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-        compileOnly 'org.springframework.boot:spring-boot-starter-data-redis'
+        implementation 'org.springframework.boot:spring-boot-starter-data-redis'
         implementation 'org.flywaydb:flyway-core'
         runtimeOnly 'com.h2database:h2'
         runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'

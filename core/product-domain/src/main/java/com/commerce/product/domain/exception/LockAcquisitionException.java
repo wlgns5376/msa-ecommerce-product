@@ -1,6 +1,6 @@
 package com.commerce.product.domain.exception;
 
-public class LockAcquisitionException extends RuntimeException {
+public class LockAcquisitionException extends ProductDomainException {
     
     public LockAcquisitionException(String message) {
         super(message);
