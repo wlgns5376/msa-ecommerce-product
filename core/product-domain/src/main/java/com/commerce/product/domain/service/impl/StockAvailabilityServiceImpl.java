@@ -1,5 +1,7 @@
 package com.commerce.product.domain.service.impl;
 
+import com.commerce.product.domain.exception.LockAcquisitionException;
+import com.commerce.product.domain.model.DistributedLock;
 import com.commerce.product.domain.model.ProductOption;
 import com.commerce.product.domain.repository.InventoryRepository;
 import com.commerce.product.domain.repository.LockRepository;
@@ -7,10 +9,10 @@ import com.commerce.product.domain.service.StockAvailabilityService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.Lock;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -19,7 +21,8 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
     
     private final InventoryRepository inventoryRepository;
     private final LockRepository lockRepository;
-    private static final long LOCK_TIMEOUT_MILLIS = 5000L;
+    private static final Duration DEFAULT_LEASE_DURATION = Duration.ofSeconds(30);
+    private static final Duration DEFAULT_WAIT_TIMEOUT = Duration.ofSeconds(5);
     
     @Override
     public boolean checkSingleOption(String skuId, int requestedQuantity) {
@@ -79,12 +82,18 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
     @Override
     public CompletableFuture<Boolean> reserveStock(String skuId, int quantity, String orderId) {
         return CompletableFuture.supplyAsync(() -> {
-            Lock lock = lockRepository.acquireLock("stock:" + skuId, LOCK_TIMEOUT_MILLIS);
+            Optional<DistributedLock> lockOpt = lockRepository.acquireLock(
+                "stock:" + skuId, 
+                DEFAULT_LEASE_DURATION, 
+                DEFAULT_WAIT_TIMEOUT
+            );
             
-            if (lock == null) {
+            if (lockOpt.isEmpty()) {
                 log.warn("Failed to acquire lock for SKU: {}", skuId);
-                return false;
+                throw new LockAcquisitionException("Unable to acquire lock for SKU: " + skuId);
             }
+            
+            DistributedLock lock = lockOpt.get();
             
             try {
                 int availableQuantity = inventoryRepository.getAvailableQuantity(skuId);
@@ -130,18 +139,23 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
             // 데드락 방지를 위해 SKU ID 순서대로 정렬
             Collections.sort(skuIds);
             
-            Map<String, Lock> locks = new LinkedHashMap<>();
+            Map<String, DistributedLock> locks = new LinkedHashMap<>();
             Map<String, String> reservations = new LinkedHashMap<>();
             
             try {
                 // 모든 락 획득
                 for (String skuId : skuIds) {
-                    Lock lock = lockRepository.acquireLock("stock:" + skuId, LOCK_TIMEOUT_MILLIS);
-                    if (lock == null) {
+                    Optional<DistributedLock> lockOpt = lockRepository.acquireLock(
+                        "stock:" + skuId, 
+                        DEFAULT_LEASE_DURATION, 
+                        DEFAULT_WAIT_TIMEOUT
+                    );
+                    
+                    if (lockOpt.isEmpty()) {
                         log.warn("Failed to acquire lock for SKU: {} in bundle", skuId);
-                        return false;
+                        throw new LockAcquisitionException("Unable to acquire lock for bundle SKU: " + skuId);
                     }
-                    locks.put(skuId, lock);
+                    locks.put(skuId, lockOpt.get());
                 }
                 
                 // 재고 가용성 체크
@@ -177,15 +191,7 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
                 
             } finally {
                 // 역순으로 락 해제
-                List<String> reverseSkuIds = new ArrayList<>(locks.keySet());
-                Collections.reverse(reverseSkuIds);
-                
-                for (String skuId : reverseSkuIds) {
-                    Lock lock = locks.get(skuId);
-                    if (lock != null) {
-                        lockRepository.releaseLock(lock);
-                    }
-                }
+                releaseLocks(locks);
             }
         });
     }
@@ -225,5 +231,21 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
         }
         
         return quantities;
+    }
+    
+    private void releaseLocks(Map<String, DistributedLock> locks) {
+        List<String> reverseSkuIds = new ArrayList<>(locks.keySet());
+        Collections.reverse(reverseSkuIds);
+        
+        for (String skuId : reverseSkuIds) {
+            DistributedLock lock = locks.get(skuId);
+            if (lock != null) {
+                try {
+                    lockRepository.releaseLock(lock);
+                } catch (Exception e) {
+                    log.error("Error releasing lock for SKU: {}", skuId, e);
+                }
+            }
+        }
     }
 }
