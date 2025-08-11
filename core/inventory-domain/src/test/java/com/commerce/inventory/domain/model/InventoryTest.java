@@ -1,5 +1,7 @@
 package com.commerce.inventory.domain.model;
 
+import com.commerce.common.domain.model.Quantity;
+
 import com.commerce.inventory.domain.exception.InsufficientStockException;
 import com.commerce.inventory.domain.exception.InvalidInventoryException;
 import org.junit.jupiter.api.DisplayName;
@@ -15,8 +17,8 @@ class InventoryTest {
     void shouldCreateInventoryWithValidValues() {
         // given
         SkuId skuId = SkuId.generate();
-        Quantity totalQuantity = new Quantity(100);
-        Quantity reservedQuantity = new Quantity(20);
+        Quantity totalQuantity = Quantity.of(100);
+        Quantity reservedQuantity = Quantity.of(20);
 
         // when
         Inventory inventory = Inventory.create(skuId, totalQuantity, reservedQuantity);
@@ -25,7 +27,7 @@ class InventoryTest {
         assertThat(inventory.getSkuId()).isEqualTo(skuId);
         assertThat(inventory.getTotalQuantity()).isEqualTo(totalQuantity);
         assertThat(inventory.getReservedQuantity()).isEqualTo(reservedQuantity);
-        assertThat(inventory.getAvailableQuantity()).isEqualTo(new Quantity(80));
+        assertThat(inventory.getAvailableQuantity()).isEqualTo(Quantity.of(80));
     }
 
     @Test
@@ -33,7 +35,7 @@ class InventoryTest {
     void shouldCreateInventoryWithInitialStock() {
         // given
         SkuId skuId = SkuId.generate();
-        Quantity initialQuantity = new Quantity(100);
+        Quantity initialQuantity = Quantity.of(100);
 
         // when
         Inventory inventory = Inventory.createWithInitialStock(skuId, initialQuantity);
@@ -41,7 +43,7 @@ class InventoryTest {
         // then
         assertThat(inventory.getSkuId()).isEqualTo(skuId);
         assertThat(inventory.getTotalQuantity()).isEqualTo(initialQuantity);
-        assertThat(inventory.getReservedQuantity()).isEqualTo(new Quantity(0));
+        assertThat(inventory.getReservedQuantity()).isEqualTo(Quantity.of(0));
         assertThat(inventory.getAvailableQuantity()).isEqualTo(initialQuantity);
     }
 
@@ -56,17 +58,17 @@ class InventoryTest {
 
         // then
         assertThat(inventory.getSkuId()).isEqualTo(skuId);
-        assertThat(inventory.getTotalQuantity()).isEqualTo(new Quantity(0));
-        assertThat(inventory.getReservedQuantity()).isEqualTo(new Quantity(0));
-        assertThat(inventory.getAvailableQuantity()).isEqualTo(new Quantity(0));
+        assertThat(inventory.getTotalQuantity()).isEqualTo(Quantity.of(0));
+        assertThat(inventory.getReservedQuantity()).isEqualTo(Quantity.of(0));
+        assertThat(inventory.getAvailableQuantity()).isEqualTo(Quantity.of(0));
     }
 
     @Test
     @DisplayName("SKU ID가 없으면 Inventory 생성 시 예외가 발생한다")
     void shouldThrowExceptionWhenSkuIdIsNull() {
         // given
-        Quantity totalQuantity = new Quantity(100);
-        Quantity reservedQuantity = new Quantity(20);
+        Quantity totalQuantity = Quantity.of(100);
+        Quantity reservedQuantity = Quantity.of(20);
 
         // when & then
         assertThatThrownBy(() -> Inventory.create(null, totalQuantity, reservedQuantity))
@@ -79,8 +81,8 @@ class InventoryTest {
     void shouldThrowExceptionWhenReservedQuantityExceedsTotal() {
         // given
         SkuId skuId = SkuId.generate();
-        Quantity totalQuantity = new Quantity(50);
-        Quantity reservedQuantity = new Quantity(100);
+        Quantity totalQuantity = Quantity.of(50);
+        Quantity reservedQuantity = Quantity.of(100);
 
         // when & then
         assertThatThrownBy(() -> Inventory.create(skuId, totalQuantity, reservedQuantity))
@@ -93,7 +95,7 @@ class InventoryTest {
     void shouldReceiveStock() {
         // given
         Inventory inventory = Inventory.createEmpty(SkuId.generate());
-        Quantity receiveQuantity = new Quantity(50);
+        Quantity receiveQuantity = Quantity.of(50);
         String reference = "PO-2024-001";
 
         // when
@@ -108,16 +110,16 @@ class InventoryTest {
     @DisplayName("재고를 여러 번 입고할 수 있다")
     void shouldReceiveStockMultipleTimes() {
         // given
-        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), new Quantity(100));
-        Quantity firstReceive = new Quantity(50);
-        Quantity secondReceive = new Quantity(30);
+        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), Quantity.of(100));
+        Quantity firstReceive = Quantity.of(50);
+        Quantity secondReceive = Quantity.of(30);
 
         // when
         inventory.receive(firstReceive, "PO-2024-001");
         inventory.receive(secondReceive, "PO-2024-002");
 
         // then
-        assertThat(inventory.getTotalQuantity()).isEqualTo(new Quantity(180));
+        assertThat(inventory.getTotalQuantity()).isEqualTo(Quantity.of(180));
     }
 
     @Test
@@ -126,21 +128,21 @@ class InventoryTest {
         // given
         Inventory inventory = Inventory.create(
                 SkuId.generate(),
-                new Quantity(100),
-                new Quantity(30)
+                Quantity.of(100),
+                Quantity.of(30)
         );
 
         // when & then
-        assertThat(inventory.canReserve(new Quantity(70))).isTrue();
-        assertThat(inventory.canReserve(new Quantity(71))).isFalse();
+        assertThat(inventory.canReserve(Quantity.of(70))).isTrue();
+        assertThat(inventory.canReserve(Quantity.of(71))).isFalse();
     }
 
     @Test
     @DisplayName("재고를 예약할 수 있다")
     void shouldReserveStock() {
         // given
-        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), new Quantity(100));
-        Quantity reserveQuantity = new Quantity(30);
+        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), Quantity.of(100));
+        Quantity reserveQuantity = Quantity.of(30);
         String orderId = "ORDER-2024-001";
         int ttlSeconds = 3600;
 
@@ -150,15 +152,15 @@ class InventoryTest {
         // then
         assertThat(reservationId).isNotNull();
         assertThat(inventory.getReservedQuantity()).isEqualTo(reserveQuantity);
-        assertThat(inventory.getAvailableQuantity()).isEqualTo(new Quantity(70));
+        assertThat(inventory.getAvailableQuantity()).isEqualTo(Quantity.of(70));
     }
 
     @Test
     @DisplayName("가용 재고가 부족하면 예약 시 예외가 발생한다")
     void shouldThrowExceptionWhenInsufficientStock() {
         // given
-        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), new Quantity(50));
-        Quantity reserveQuantity = new Quantity(100);
+        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), Quantity.of(50));
+        Quantity reserveQuantity = Quantity.of(100);
 
         // when & then
         assertThatThrownBy(() -> inventory.reserve(reserveQuantity, "ORDER-2024-001", 3600))
@@ -170,55 +172,55 @@ class InventoryTest {
     @DisplayName("예약을 해제할 수 있다")
     void shouldReleaseReservation() {
         // given
-        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), new Quantity(100));
-        ReservationId reservationId = inventory.reserve(new Quantity(30), "ORDER-2024-001", 3600);
+        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), Quantity.of(100));
+        ReservationId reservationId = inventory.reserve(Quantity.of(30), "ORDER-2024-001", 3600);
 
         // when
-        inventory.releaseReservedQuantity(new Quantity(30));
+        inventory.releaseReservedQuantity(Quantity.of(30));
 
         // then
-        assertThat(inventory.getReservedQuantity()).isEqualTo(new Quantity(0));
-        assertThat(inventory.getAvailableQuantity()).isEqualTo(new Quantity(100));
+        assertThat(inventory.getReservedQuantity()).isEqualTo(Quantity.of(0));
+        assertThat(inventory.getAvailableQuantity()).isEqualTo(Quantity.of(100));
     }
 
     @Test
     @DisplayName("예약을 확정하여 재고를 차감할 수 있다")
     void shouldConfirmReservation() {
         // given
-        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), new Quantity(100));
-        ReservationId reservationId = inventory.reserve(new Quantity(30), "ORDER-2024-001", 3600);
+        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), Quantity.of(100));
+        ReservationId reservationId = inventory.reserve(Quantity.of(30), "ORDER-2024-001", 3600);
 
         // when
-        inventory.confirmReservedQuantity(new Quantity(30));
+        inventory.confirmReservedQuantity(Quantity.of(30));
 
         // then
-        assertThat(inventory.getTotalQuantity()).isEqualTo(new Quantity(70));
-        assertThat(inventory.getReservedQuantity()).isEqualTo(new Quantity(0));
-        assertThat(inventory.getAvailableQuantity()).isEqualTo(new Quantity(70));
+        assertThat(inventory.getTotalQuantity()).isEqualTo(Quantity.of(70));
+        assertThat(inventory.getReservedQuantity()).isEqualTo(Quantity.of(0));
+        assertThat(inventory.getAvailableQuantity()).isEqualTo(Quantity.of(70));
     }
 
     @Test
     @DisplayName("재고를 직접 차감할 수 있다")
     void shouldDeductStock() {
         // given
-        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), new Quantity(100));
-        Quantity deductQuantity = new Quantity(30);
+        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), Quantity.of(100));
+        Quantity deductQuantity = Quantity.of(30);
         String reference = "RETURN-2024-001";
 
         // when
         inventory.deduct(deductQuantity, reference);
 
         // then
-        assertThat(inventory.getTotalQuantity()).isEqualTo(new Quantity(70));
-        assertThat(inventory.getAvailableQuantity()).isEqualTo(new Quantity(70));
+        assertThat(inventory.getTotalQuantity()).isEqualTo(Quantity.of(70));
+        assertThat(inventory.getAvailableQuantity()).isEqualTo(Quantity.of(70));
     }
 
     @Test
     @DisplayName("총 재고보다 많은 수량을 차감하면 예외가 발생한다")
     void shouldThrowExceptionWhenDeductExceedsTotalStock() {
         // given
-        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), new Quantity(50));
-        Quantity deductQuantity = new Quantity(100);
+        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), Quantity.of(50));
+        Quantity deductQuantity = Quantity.of(100);
 
         // when & then
         assertThatThrownBy(() -> inventory.deduct(deductQuantity, "RETURN-2024-001"))
@@ -230,11 +232,11 @@ class InventoryTest {
     @DisplayName("예약 해제 시 해제할 수량이 0이면 예외가 발생한다")
     void shouldThrowExceptionWhenReleaseQuantityIsZero() {
         // given
-        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), new Quantity(100));
-        inventory.reserve(new Quantity(30), "ORDER-2024-001", 3600);
+        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), Quantity.of(100));
+        inventory.reserve(Quantity.of(30), "ORDER-2024-001", 3600);
         
         // when & then
-        assertThatThrownBy(() -> inventory.releaseReservedQuantity(new Quantity(0)))
+        assertThatThrownBy(() -> inventory.releaseReservedQuantity(Quantity.of(0)))
                 .isInstanceOf(InvalidInventoryException.class)
                 .hasMessage("해제할 수량은 0보다 커야 합니다");
     }
@@ -243,11 +245,11 @@ class InventoryTest {
     @DisplayName("예약 해제 시 예약된 수량보다 많은 수량을 해제하면 예외가 발생한다")
     void shouldThrowExceptionWhenReleaseQuantityExceedsReserved() {
         // given
-        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), new Quantity(100));
-        inventory.reserve(new Quantity(30), "ORDER-2024-001", 3600);
+        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), Quantity.of(100));
+        inventory.reserve(Quantity.of(30), "ORDER-2024-001", 3600);
         
         // when & then
-        assertThatThrownBy(() -> inventory.releaseReservedQuantity(new Quantity(50)))
+        assertThatThrownBy(() -> inventory.releaseReservedQuantity(Quantity.of(50)))
                 .isInstanceOf(InvalidInventoryException.class)
                 .hasMessage("해제할 예약 수량이 부족합니다. 현재 예약: 30, 해제 요청: 50");
     }
@@ -256,11 +258,11 @@ class InventoryTest {
     @DisplayName("예약 확정 시 확정할 수량이 0이면 예외가 발생한다")
     void shouldThrowExceptionWhenConfirmQuantityIsZero() {
         // given
-        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), new Quantity(100));
-        inventory.reserve(new Quantity(30), "ORDER-2024-001", 3600);
+        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), Quantity.of(100));
+        inventory.reserve(Quantity.of(30), "ORDER-2024-001", 3600);
         
         // when & then
-        assertThatThrownBy(() -> inventory.confirmReservedQuantity(new Quantity(0)))
+        assertThatThrownBy(() -> inventory.confirmReservedQuantity(Quantity.of(0)))
                 .isInstanceOf(InvalidInventoryException.class)
                 .hasMessage("확정할 수량은 0보다 커야 합니다");
     }
@@ -269,11 +271,11 @@ class InventoryTest {
     @DisplayName("예약 확정 시 예약된 수량보다 많은 수량을 확정하면 예외가 발생한다")
     void shouldThrowExceptionWhenConfirmQuantityExceedsReserved() {
         // given
-        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), new Quantity(100));
-        inventory.reserve(new Quantity(30), "ORDER-2024-001", 3600);
+        Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), Quantity.of(100));
+        inventory.reserve(Quantity.of(30), "ORDER-2024-001", 3600);
         
         // when & then
-        assertThatThrownBy(() -> inventory.confirmReservedQuantity(new Quantity(50)))
+        assertThatThrownBy(() -> inventory.confirmReservedQuantity(Quantity.of(50)))
                 .isInstanceOf(InvalidInventoryException.class)
                 .hasMessage("확정할 예약 수량이 부족합니다. 현재 예약: 30, 확정 요청: 50");
     }

@@ -1,5 +1,7 @@
 package com.commerce.inventory.domain.model;
 
+import com.commerce.common.domain.model.Quantity;
+
 import com.commerce.inventory.domain.exception.InvalidReservationException;
 import com.commerce.inventory.domain.exception.InvalidReservationStateException;
 import org.junit.jupiter.api.DisplayName;
@@ -22,7 +24,7 @@ class ReservationTest {
         // given
         ReservationId id = ReservationId.generate();
         SkuId skuId = SkuId.generate();
-        Quantity quantity = new Quantity(10);
+        Quantity quantity = Quantity.of(10);
         String orderId = "ORDER-2024-001";
         LocalDateTime expiresAt = FIXED_TIME.plusHours(1);
 
@@ -44,7 +46,7 @@ class ReservationTest {
     void shouldCreateReservationWithTTL() {
         // given
         SkuId skuId = SkuId.generate();
-        Quantity quantity = new Quantity(10);
+        Quantity quantity = Quantity.of(10);
         String orderId = "ORDER-2024-001";
         int ttlSeconds = 3600; // 1시간
 
@@ -62,7 +64,7 @@ class ReservationTest {
     void shouldThrowExceptionWhenIdIsNull() {
         // given
         SkuId skuId = SkuId.generate();
-        Quantity quantity = new Quantity(10);
+        Quantity quantity = Quantity.of(10);
         String orderId = "ORDER-2024-001";
         LocalDateTime expiresAt = FIXED_TIME.plusHours(1);
 
@@ -77,7 +79,7 @@ class ReservationTest {
     void shouldThrowExceptionWhenSkuIdIsNull() {
         // given
         ReservationId id = ReservationId.generate();
-        Quantity quantity = new Quantity(10);
+        Quantity quantity = Quantity.of(10);
         String orderId = "ORDER-2024-001";
         LocalDateTime expiresAt = FIXED_TIME.plusHours(1);
 
@@ -101,7 +103,7 @@ class ReservationTest {
                 .isInstanceOf(InvalidReservationException.class)
                 .hasMessage("수량은 0보다 커야 합니다");
 
-        assertThatThrownBy(() -> Reservation.create(id, skuId, new Quantity(0), orderId, expiresAt, FIXED_TIME))
+        assertThatThrownBy(() -> Reservation.create(id, skuId, Quantity.of(0), orderId, expiresAt, FIXED_TIME))
                 .isInstanceOf(InvalidReservationException.class)
                 .hasMessage("수량은 0보다 커야 합니다");
     }
@@ -113,7 +115,7 @@ class ReservationTest {
         // given
         ReservationId id = ReservationId.generate();
         SkuId skuId = SkuId.generate();
-        Quantity quantity = new Quantity(10);
+        Quantity quantity = Quantity.of(10);
         LocalDateTime expiresAt = FIXED_TIME.plusHours(1);
 
         // when & then
@@ -128,7 +130,7 @@ class ReservationTest {
         // given
         ReservationId id = ReservationId.generate();
         SkuId skuId = SkuId.generate();
-        Quantity quantity = new Quantity(10);
+        Quantity quantity = Quantity.of(10);
         String orderId = "ORDER-2024-001";
         LocalDateTime expiresAt = FIXED_TIME.minusHours(1);
 
@@ -143,13 +145,13 @@ class ReservationTest {
     void shouldCheckIfReservationIsActive() {
         // given
         Reservation activeReservation = Reservation.createWithTTL(
-                SkuId.generate(), new Quantity(10), "ORDER-2024-001", 3600, FIXED_TIME
+                SkuId.generate(), Quantity.of(10), "ORDER-2024-001", 3600, FIXED_TIME
         );
         
         Reservation expiredReservation = Reservation.create(
                 ReservationId.generate(),
                 SkuId.generate(),
-                new Quantity(10),
+                Quantity.of(10),
                 "ORDER-2024-002",
                 FIXED_TIME.minusHours(1),
                 FIXED_TIME.minusHours(2)  // 생성 시점을 만료 시간보다 이전으로 설정
@@ -166,7 +168,7 @@ class ReservationTest {
     void shouldReleaseReservation() {
         // given
         Reservation reservation = Reservation.createWithTTL(
-                SkuId.generate(), new Quantity(10), "ORDER-2024-001", 3600, FIXED_TIME
+                SkuId.generate(), Quantity.of(10), "ORDER-2024-001", 3600, FIXED_TIME
         );
 
         // when
@@ -182,7 +184,7 @@ class ReservationTest {
     void shouldThrowExceptionWhenReleaseAlreadyReleasedReservation() {
         // given
         Reservation reservation = Reservation.createWithTTL(
-                SkuId.generate(), new Quantity(10), "ORDER-2024-001", 3600, FIXED_TIME
+                SkuId.generate(), Quantity.of(10), "ORDER-2024-001", 3600, FIXED_TIME
         );
         reservation.release();
 
@@ -197,7 +199,7 @@ class ReservationTest {
     void shouldConfirmReservation() {
         // given
         Reservation reservation = Reservation.createWithTTL(
-                SkuId.generate(), new Quantity(10), "ORDER-2024-001", 3600, FIXED_TIME
+                SkuId.generate(), Quantity.of(10), "ORDER-2024-001", 3600, FIXED_TIME
         );
 
         // when
@@ -215,7 +217,7 @@ class ReservationTest {
         Reservation reservation = Reservation.create(
                 ReservationId.generate(),
                 SkuId.generate(),
-                new Quantity(10),
+                Quantity.of(10),
                 "ORDER-2024-001",
                 FIXED_TIME.minusHours(1),  // 이미 만료된 시간
                 FIXED_TIME.minusHours(2)  // 생성 시점을 만료 시간보다 이전으로 설정
@@ -232,7 +234,7 @@ class ReservationTest {
     void shouldThrowExceptionWhenConfirmAlreadyConfirmedReservation() {
         // given
         Reservation reservation = Reservation.createWithTTL(
-                SkuId.generate(), new Quantity(10), "ORDER-2024-001", 3600, FIXED_TIME
+                SkuId.generate(), Quantity.of(10), "ORDER-2024-001", 3600, FIXED_TIME
         );
         reservation.confirm(FIXED_TIME);
 
@@ -247,7 +249,7 @@ class ReservationTest {
     void shouldThrowExceptionWhenConfirmReleasedReservation() {
         // given
         Reservation reservation = Reservation.createWithTTL(
-                SkuId.generate(), new Quantity(10), "ORDER-2024-001", 3600, FIXED_TIME
+                SkuId.generate(), Quantity.of(10), "ORDER-2024-001", 3600, FIXED_TIME
         );
         reservation.release();
 

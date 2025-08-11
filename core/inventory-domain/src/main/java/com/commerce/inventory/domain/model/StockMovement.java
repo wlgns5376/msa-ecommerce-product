@@ -1,5 +1,6 @@
 package com.commerce.inventory.domain.model;
 
+import com.commerce.common.domain.model.Quantity;
 import com.commerce.inventory.domain.exception.InvalidStockMovementException;
 import com.commerce.product.domain.model.BaseEntity;
 import lombok.Getter;

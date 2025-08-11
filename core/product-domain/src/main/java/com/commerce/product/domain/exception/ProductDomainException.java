@@ -1,6 +1,6 @@
 package com.commerce.product.domain.exception;
 
-import com.commerce.product.common.exception.DomainException;
+import com.commerce.common.exception.DomainException;
 
 public class ProductDomainException extends DomainException {
     private static final String ERROR_CODE_PREFIX = "PRODUCT_";

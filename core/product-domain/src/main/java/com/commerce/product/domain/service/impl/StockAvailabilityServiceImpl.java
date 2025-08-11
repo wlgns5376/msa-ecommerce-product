@@ -5,6 +5,7 @@ import com.commerce.product.domain.model.DistributedLock;
 import com.commerce.product.domain.model.ProductOption;
 import com.commerce.product.domain.repository.InventoryRepository;
 import com.commerce.product.domain.repository.LockRepository;
+import com.commerce.product.domain.repository.ProductRepository;
 import com.commerce.product.domain.service.StockAvailabilityService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 public class StockAvailabilityServiceImpl implements StockAvailabilityService {
     
     private final InventoryRepository inventoryRepository;
+    private final ProductRepository productRepository;
     private final LockRepository lockRepository;
     private static final Duration DEFAULT_LEASE_DURATION = Duration.ofSeconds(30);
     private static final Duration DEFAULT_WAIT_TIMEOUT = Duration.ofSeconds(5);

@@ -1,5 +1,7 @@
 package com.commerce.inventory.domain.model;
 
+import com.commerce.common.domain.model.Quantity;
+
 import com.commerce.inventory.domain.exception.InvalidSkuException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
