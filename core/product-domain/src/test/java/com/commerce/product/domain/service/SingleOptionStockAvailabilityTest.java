@@ -1,7 +1,10 @@
 package com.commerce.product.domain.service;
 
+import com.commerce.common.event.DomainEventPublisher;
 import com.commerce.product.domain.repository.InventoryRepository;
 import com.commerce.product.domain.repository.LockRepository;
+import com.commerce.product.domain.repository.ProductRepository;
+import com.commerce.product.domain.repository.SagaRepository;
 import com.commerce.product.domain.service.impl.StockAvailabilityServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -29,11 +32,20 @@ class SingleOptionStockAvailabilityTest {
     @Mock
     private LockRepository lockRepository;
     
+    @Mock
+    private ProductRepository productRepository;
+    
+    @Mock
+    private SagaRepository sagaRepository;
+    
+    @Mock
+    private DomainEventPublisher eventPublisher;
+    
     private StockAvailabilityService stockAvailabilityService;
     
     @BeforeEach
     void setUp() {
-        stockAvailabilityService = new StockAvailabilityServiceImpl(inventoryRepository, lockRepository);
+        stockAvailabilityService = new StockAvailabilityServiceImpl(inventoryRepository, productRepository, lockRepository, sagaRepository, eventPublisher);
     }
     
     @Nested

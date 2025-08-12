@@ -1,10 +1,12 @@
 package com.commerce.product.domain.service.impl;
 
+import com.commerce.common.event.DomainEventPublisher;
 import com.commerce.product.domain.exception.LockAcquisitionException;
 import com.commerce.product.domain.model.*;
 import com.commerce.product.domain.repository.InventoryRepository;
 import com.commerce.product.domain.repository.LockRepository;
 import com.commerce.product.domain.repository.ProductRepository;
+import com.commerce.product.domain.repository.SagaRepository;
 import com.commerce.product.domain.service.StockAvailabilityService;
 import com.commerce.product.domain.service.result.AvailabilityResult;
 import com.commerce.product.domain.service.result.BundleAvailabilityResult;
@@ -39,6 +41,12 @@ class StockAvailabilityServiceImplTest {
     @Mock
     private LockRepository lockRepository;
     
+    @Mock
+    private SagaRepository sagaRepository;
+    
+    @Mock
+    private DomainEventPublisher eventPublisher;
+    
     private StockAvailabilityService stockAvailabilityService;
     
     private ProductOption singleOption;
@@ -46,7 +54,7 @@ class StockAvailabilityServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        stockAvailabilityService = new StockAvailabilityServiceImpl(inventoryRepository, productRepository, lockRepository);
+        stockAvailabilityService = new StockAvailabilityServiceImpl(inventoryRepository, productRepository, lockRepository, sagaRepository, eventPublisher);
         
         singleOption = ProductOption.single(
                 "Single Option",

@@ -103,4 +103,9 @@ public class Category extends AggregateRoot<CategoryId> {
     public List<Category> getChildren() {
         return Collections.unmodifiableList(children);
     }
+    
+    @Override
+    public CategoryId getId() {
+        return id;
+    }
 }
