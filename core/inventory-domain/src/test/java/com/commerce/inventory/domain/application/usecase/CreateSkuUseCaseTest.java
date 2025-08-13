@@ -1,0 +1,211 @@
+package com.commerce.inventory.domain.application.usecase;
+
+import com.commerce.inventory.domain.model.*;
+import com.commerce.inventory.domain.repository.SkuRepository;
+import com.commerce.inventory.domain.exception.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class CreateSkuUseCaseTest {
+    
+    @Mock
+    private SkuRepository skuRepository;
+    
+    private CreateSkuUseCase useCase;
+    
+    @BeforeEach
+    void setUp() {
+        useCase = new CreateSkuUseCase(skuRepository);
+    }
+    
+    @Test
+    @DisplayName("정상적인 SKU 생성 요청시 SKU가 생성되어야 한다")
+    void createSku_WithValidRequest_ShouldCreateSku() {
+        // Given
+        CreateSkuRequest request = CreateSkuRequest.builder()
+                .code("SKU-001")
+                .name("테스트 상품")
+                .description("테스트 상품 설명")
+                .weight(1.5)
+                .weightUnit("KILOGRAM")
+                .volume(100.0)
+                .volumeUnit("CUBIC_CM")
+                .build();
+                
+        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        when(skuRepository.save(any(Sku.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
+        // When
+        CreateSkuResponse response = useCase.execute(request);
+        
+        // Then
+        assertThat(response).isNotNull();
+        assertThat(response.getId()).isNotNull();
+        assertThat(response.getCode()).isEqualTo("SKU-001");
+        assertThat(response.getName()).isEqualTo("테스트 상품");
+        assertThat(response.getDescription()).isEqualTo("테스트 상품 설명");
+        assertThat(response.getWeight()).isEqualTo(1.5);
+        assertThat(response.getWeightUnit()).isEqualTo("KILOGRAM");
+        assertThat(response.getVolume()).isEqualTo(100.0);
+        assertThat(response.getVolumeUnit()).isEqualTo("CUBIC_CM");
+        assertThat(response.getCreatedAt()).isNotNull();
+        
+        verify(skuRepository).findByCode(any(SkuCode.class));
+        verify(skuRepository).save(any(Sku.class));
+    }
+    
+    @Test
+    @DisplayName("중복된 SKU 코드로 생성 요청시 예외가 발생해야 한다")
+    void createSku_WithDuplicateCode_ShouldThrowException() {
+        // Given
+        CreateSkuRequest request = CreateSkuRequest.builder()
+                .code("SKU-001")
+                .name("테스트 상품")
+                .build();
+                
+        Sku existingSku = Sku.create(
+                CreateSkuCommand.builder()
+                        .id(SkuId.generate())
+                        .code(SkuCode.of("SKU-001"))
+                        .name("기존 상품")
+                        .build(),
+                LocalDateTime.now()
+        );
+        
+        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.of(existingSku));
+        
+        // When & Then
+        assertThatThrownBy(() -> useCase.execute(request))
+                .isInstanceOf(DuplicateSkuCodeException.class)
+                .hasMessageContaining("이미 존재하는 SKU 코드입니다");
+                
+        verify(skuRepository).findByCode(any(SkuCode.class));
+        verify(skuRepository, never()).save(any(Sku.class));
+    }
+    
+    @Test
+    @DisplayName("필수 필드가 누락된 요청시 예외가 발생해야 한다")
+    void createSku_WithMissingRequiredFields_ShouldThrowException() {
+        // Given - 코드 누락
+        CreateSkuRequest requestWithoutCode = CreateSkuRequest.builder()
+                .name("테스트 상품")
+                .build();
+                
+        // When & Then
+        assertThatThrownBy(() -> useCase.execute(requestWithoutCode))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("SKU 코드는 필수입니다");
+                
+        // Given - 이름 누락
+        CreateSkuRequest requestWithoutName = CreateSkuRequest.builder()
+                .code("SKU-001")
+                .build();
+                
+        // When & Then
+        assertThatThrownBy(() -> useCase.execute(requestWithoutName))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("SKU 이름은 필수입니다");
+                
+        verify(skuRepository, never()).save(any(Sku.class));
+    }
+    
+    @Test
+    @DisplayName("무게와 부피 정보 없이도 SKU를 생성할 수 있어야 한다")
+    void createSku_WithoutWeightAndVolume_ShouldCreateSku() {
+        // Given
+        CreateSkuRequest request = CreateSkuRequest.builder()
+                .code("SKU-002")
+                .name("디지털 상품")
+                .description("무게와 부피가 없는 디지털 상품")
+                .build();
+                
+        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        when(skuRepository.save(any(Sku.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
+        // When
+        CreateSkuResponse response = useCase.execute(request);
+        
+        // Then
+        assertThat(response).isNotNull();
+        assertThat(response.getCode()).isEqualTo("SKU-002");
+        assertThat(response.getName()).isEqualTo("디지털 상품");
+        assertThat(response.getWeight()).isNull();
+        assertThat(response.getWeightUnit()).isNull();
+        assertThat(response.getVolume()).isNull();
+        assertThat(response.getVolumeUnit()).isNull();
+        
+        verify(skuRepository).save(any(Sku.class));
+    }
+    
+    @Test
+    @DisplayName("잘못된 형식의 SKU 코드로 생성 요청시 예외가 발생해야 한다")
+    void createSku_WithInvalidCodeFormat_ShouldThrowException() {
+        // Given
+        CreateSkuRequest request = CreateSkuRequest.builder()
+                .code("invalid code!")  // 특수문자 포함
+                .name("테스트 상품")
+                .build();
+                
+        // When & Then
+        assertThatThrownBy(() -> useCase.execute(request))
+                .isInstanceOf(InvalidSkuCodeException.class)
+                .hasMessageContaining("유효하지 않은 SKU 코드 형식");
+                
+        verify(skuRepository, never()).save(any(Sku.class));
+    }
+    
+    @Test
+    @DisplayName("음수 무게로 생성 요청시 예외가 발생해야 한다")
+    void createSku_WithNegativeWeight_ShouldThrowException() {
+        // Given
+        CreateSkuRequest request = CreateSkuRequest.builder()
+                .code("SKU-003")
+                .name("테스트 상품")
+                .weight(-1.0)
+                .weightUnit("KG")
+                .build();
+                
+        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        
+        // When & Then
+        assertThatThrownBy(() -> useCase.execute(request))
+                .isInstanceOf(InvalidWeightException.class)
+                .hasMessageContaining("무게는 0보다 커야 합니다");
+                
+        verify(skuRepository, never()).save(any(Sku.class));
+    }
+    
+    @Test
+    @DisplayName("음수 부피로 생성 요청시 예외가 발생해야 한다")
+    void createSku_WithNegativeVolume_ShouldThrowException() {
+        // Given
+        CreateSkuRequest request = CreateSkuRequest.builder()
+                .code("SKU-004")
+                .name("테스트 상품")
+                .volume(-100.0)
+                .volumeUnit("CUBIC_CM")
+                .build();
+                
+        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        
+        // When & Then
+        assertThatThrownBy(() -> useCase.execute(request))
+                .isInstanceOf(InvalidVolumeException.class)
+                .hasMessageContaining("부피는 0보다 커야 합니다");
+                
+        verify(skuRepository, never()).save(any(Sku.class));
+    }
+}

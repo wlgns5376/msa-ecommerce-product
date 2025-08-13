@@ -16,4 +16,8 @@ public record SkuId(String value) implements ValueObject {
     public static SkuId generate() {
         return new SkuId(UUID.randomUUID().toString());
     }
+    
+    public String getValue() {
+        return value;
+    }
 }

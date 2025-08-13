@@ -13,4 +13,16 @@ public record Volume(double value, VolumeUnit unit) implements ValueObject {
             throw new InvalidVolumeException("부피 단위는 필수입니다");
         }
     }
+    
+    public static Volume of(double value, VolumeUnit unit) {
+        return new Volume(value, unit);
+    }
+    
+    public double getValue() {
+        return value;
+    }
+    
+    public VolumeUnit getUnit() {
+        return unit;
+    }
 }

@@ -3,10 +3,13 @@ package com.commerce.product.domain.service.impl;
 import com.commerce.product.domain.exception.LockAcquisitionException;
 import com.commerce.product.domain.model.DistributedLock;
 import com.commerce.product.domain.model.ProductOption;
+import com.commerce.product.domain.model.SkuMapping;
 import com.commerce.product.domain.repository.InventoryRepository;
 import com.commerce.product.domain.repository.LockRepository;
 import com.commerce.product.domain.repository.ProductRepository;
 import com.commerce.product.domain.service.StockAvailabilityService;
+import com.commerce.product.domain.service.result.AvailabilityResult;
+import com.commerce.product.domain.service.result.BundleAvailabilityResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -271,5 +274,64 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
                 }
             }
         }
+    }
+    
+    @Override
+    public CompletableFuture<AvailabilityResult> checkProductOptionAvailability(String optionId) {
+        return CompletableFuture.supplyAsync(() -> {
+            // TODO: Implement product option availability check
+            // This would require fetching the product option from repository
+            // and checking its SKU availability
+            throw new UnsupportedOperationException("checkProductOptionAvailability not yet implemented");
+        });
+    }
+    
+    @Override
+    public CompletableFuture<BundleAvailabilityResult> checkBundleAvailability(SkuMapping skuMapping) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<BundleAvailabilityResult.SkuAvailabilityDetail> details = new ArrayList<>();
+            int minAvailableSets = Integer.MAX_VALUE;
+            
+            for (Map.Entry<String, Integer> entry : skuMapping.mappings().entrySet()) {
+                String skuId = entry.getKey();
+                int requiredQuantity = entry.getValue();
+                int availableQuantity = inventoryRepository.getAvailableQuantity(skuId);
+                
+                int availableSetsForSku = requiredQuantity > 0 ? availableQuantity / requiredQuantity : 0;
+                minAvailableSets = Math.min(minAvailableSets, availableSetsForSku);
+                
+                details.add(new BundleAvailabilityResult.SkuAvailabilityDetail(
+                    skuId,
+                    requiredQuantity,
+                    availableQuantity,
+                    availableSetsForSku
+                ));
+                
+                if (availableQuantity < requiredQuantity) {
+                    log.debug("Insufficient stock for SKU: {} in bundle. Available: {}, Required: {}",
+                            skuId, availableQuantity, requiredQuantity);
+                }
+            }
+            
+            // If no mappings or minAvailableSets is still MAX_VALUE, set it to 0
+            if (minAvailableSets == Integer.MAX_VALUE) {
+                minAvailableSets = 0;
+            }
+            
+            boolean allAvailable = minAvailableSets > 0;
+            
+            return allAvailable
+                ? BundleAvailabilityResult.available(minAvailableSets, details)
+                : BundleAvailabilityResult.unavailable(details);
+        });
+    }
+    
+    @Override
+    public CompletableFuture<Void> reserveBundleStock(SkuMapping skuMapping, String reservationId) {
+        return CompletableFuture.runAsync(() -> {
+            // TODO: Implement Saga pattern for bundle stock reservation
+            // This would coordinate multiple SKU reservations with compensation logic
+            throw new UnsupportedOperationException("reserveBundleStock with Saga pattern not yet implemented");
+        });
     }
 }

@@ -13,4 +13,16 @@ public record Weight(double value, WeightUnit unit) implements ValueObject {
             throw new InvalidWeightException("무게 단위는 필수입니다");
         }
     }
+    
+    public static Weight of(double value, WeightUnit unit) {
+        return new Weight(value, unit);
+    }
+    
+    public double getValue() {
+        return value;
+    }
+    
+    public WeightUnit getUnit() {
+        return unit;
+    }
 }
