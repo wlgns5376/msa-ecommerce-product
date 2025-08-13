@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Getter
 public class BundleReservationSaga extends AggregateRoot<SagaId> {
@@ -110,12 +111,9 @@ public class BundleReservationSaga extends AggregateRoot<SagaId> {
     }
     
     public List<SagaStep> getCompensatableSteps() {
-        List<SagaStep> compensatableSteps = new ArrayList<>();
-        for (SagaStep step : steps) {
-            if (step.isCompensatable()) {
-                compensatableSteps.add(step);
-            }
-        }
+        List<SagaStep> compensatableSteps = steps.stream()
+                .filter(SagaStep::isCompensatable)
+                .collect(Collectors.toList());
         // 역순으로 보상 실행
         Collections.reverse(compensatableSteps);
         return compensatableSteps;

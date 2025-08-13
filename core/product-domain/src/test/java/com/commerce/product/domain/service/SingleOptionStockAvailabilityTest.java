@@ -6,6 +6,7 @@ import com.commerce.product.domain.repository.LockRepository;
 import com.commerce.product.domain.repository.ProductRepository;
 import com.commerce.product.domain.repository.SagaRepository;
 import com.commerce.product.domain.service.impl.StockAvailabilityServiceImpl;
+import com.commerce.product.domain.service.saga.BundleReservationSagaOrchestrator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -41,11 +42,14 @@ class SingleOptionStockAvailabilityTest {
     @Mock
     private DomainEventPublisher eventPublisher;
     
+    @Mock
+    private BundleReservationSagaOrchestrator bundleReservationSagaOrchestrator;
+    
     private StockAvailabilityService stockAvailabilityService;
     
     @BeforeEach
     void setUp() {
-        stockAvailabilityService = new StockAvailabilityServiceImpl(inventoryRepository, productRepository, lockRepository, sagaRepository, eventPublisher);
+        stockAvailabilityService = new StockAvailabilityServiceImpl(inventoryRepository, productRepository, lockRepository, sagaRepository, eventPublisher, bundleReservationSagaOrchestrator);
     }
     
     @Nested

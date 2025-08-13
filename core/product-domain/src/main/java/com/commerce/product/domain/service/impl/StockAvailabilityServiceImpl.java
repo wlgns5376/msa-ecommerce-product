@@ -31,6 +31,7 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
     private final LockRepository lockRepository;
     private final SagaRepository sagaRepository;
     private final DomainEventPublisher eventPublisher;
+    private final BundleReservationSagaOrchestrator bundleReservationSagaOrchestrator;
     private static final Duration DEFAULT_LEASE_DURATION = Duration.ofSeconds(30);
     private static final Duration DEFAULT_WAIT_TIMEOUT = Duration.ofSeconds(5);
     
@@ -286,22 +287,23 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
         return CompletableFuture.supplyAsync(() -> {
             ProductOption option = productRepository.findOptionById(optionId)
                     .orElseThrow(() -> new IllegalArgumentException("Option not found: " + optionId));
-            
+            return option;
+        }).thenCompose(option -> {
             if (!option.isBundle()) {
                 // 단일 SKU 옵션
                 String skuId = option.getSingleSkuId();
                 int availableQuantity = inventoryRepository.getAvailableQuantity(skuId);
-                return availableQuantity > 0 
+                AvailabilityResult result = availableQuantity > 0 
                     ? AvailabilityResult.available(availableQuantity)
                     : AvailabilityResult.unavailable();
+                return CompletableFuture.completedFuture(result);
             }
             
             // 묶음 옵션
             return checkBundleAvailability(option.getSkuMapping())
                     .thenApply(bundleResult -> bundleResult.isAvailable() 
                         ? AvailabilityResult.available(bundleResult.availableSets())
-                        : AvailabilityResult.unavailable())
-                    .join();
+                        : AvailabilityResult.unavailable());
         });
     }
     
@@ -350,14 +352,9 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
     
     @Override
     public CompletableFuture<Void> reserveBundleStock(SkuMapping skuMapping, String reservationId) {
-        // Saga Orchestrator를 사용한 번들 재고 예약
-        BundleReservationSagaOrchestrator orchestrator = new BundleReservationSagaOrchestrator(
-            inventoryRepository, lockRepository, sagaRepository, eventPublisher
-        );
-        
         // 임시 orderId 생성 (실제로는 주문 서비스에서 전달받아야 함)
         String orderId = "ORDER-" + UUID.randomUUID().toString();
         
-        return orchestrator.execute(orderId, skuMapping, 1, reservationId);
+        return bundleReservationSagaOrchestrator.execute(orderId, skuMapping, 1, reservationId);
     }
 }

@@ -18,6 +18,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -43,9 +44,6 @@ public class BundleReservationSagaOrchestrator {
                 
                 // 각 SKU에 대한 예약 실행
                 executeReservationSteps(saga);
-                
-                // 최신 상태 다시 로드
-                sagaRepository.update(saga);
                 
                 if (saga.getStatus().isTerminal()) {
                     if (saga.getStatus() == com.commerce.product.domain.model.saga.SagaStatus.COMPLETED) {
@@ -134,22 +132,20 @@ public class BundleReservationSagaOrchestrator {
                 }
             }
             
+            // Saga가 이미 recordStepSuccess를 통해 자동으로 complete 되므로
+            // 추가적인 update는 필요하지 않음
+            
         } finally {
             releaseLocks(locks);
         }
     }
     
     private Map<String, Integer> calculateRequiredQuantities(BundleReservationSaga saga) {
-        Map<String, Integer> requiredQuantities = new HashMap<>();
-        
-        for (Map.Entry<String, Integer> entry : saga.getSkuMapping().mappings().entrySet()) {
-            String skuId = entry.getKey();
-            int baseQuantity = entry.getValue();
-            int totalRequired = baseQuantity * saga.getQuantity();
-            requiredQuantities.put(skuId, totalRequired);
-        }
-        
-        return requiredQuantities;
+        return saga.getSkuMapping().mappings().entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue() * saga.getQuantity()
+                ));
     }
     
     private void acquireAllLocks(List<String> skuIds, Map<String, DistributedLock> locks) {
@@ -184,6 +180,12 @@ public class BundleReservationSagaOrchestrator {
                 log.error("Failed to compensate reservation for SKU: {}, ReservationId: {}", 
                     skuId, reservationId, e);
             }
+        }
+        
+        // 보상이 완료되면 saga를 FAILED 상태로 업데이트
+        if (saga.getStatus() != com.commerce.product.domain.model.saga.SagaStatus.FAILED) {
+            saga.fail("Compensated due to reservation failure");
+            sagaRepository.update(saga);
         }
     }
     

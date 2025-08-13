@@ -2,8 +2,6 @@ package com.commerce.product.domain.event;
 
 import lombok.Getter;
 
-import java.time.LocalDateTime;
-
 @Getter
 public class BundleReservationFailedEvent extends AbstractDomainEvent {
     

@@ -10,6 +10,7 @@ import com.commerce.product.domain.repository.SagaRepository;
 import com.commerce.product.domain.service.StockAvailabilityService;
 import com.commerce.product.domain.service.result.AvailabilityResult;
 import com.commerce.product.domain.service.result.BundleAvailabilityResult;
+import com.commerce.product.domain.service.saga.BundleReservationSagaOrchestrator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -47,6 +48,9 @@ class StockAvailabilityServiceImplTest {
     @Mock
     private DomainEventPublisher eventPublisher;
     
+    @Mock
+    private BundleReservationSagaOrchestrator bundleReservationSagaOrchestrator;
+    
     private StockAvailabilityService stockAvailabilityService;
     
     private ProductOption singleOption;
@@ -54,7 +58,7 @@ class StockAvailabilityServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        stockAvailabilityService = new StockAvailabilityServiceImpl(inventoryRepository, productRepository, lockRepository, sagaRepository, eventPublisher);
+        stockAvailabilityService = new StockAvailabilityServiceImpl(inventoryRepository, productRepository, lockRepository, sagaRepository, eventPublisher, bundleReservationSagaOrchestrator);
         
         singleOption = ProductOption.single(
                 "Single Option",

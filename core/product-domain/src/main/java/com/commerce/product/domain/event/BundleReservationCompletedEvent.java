@@ -3,8 +3,6 @@ package com.commerce.product.domain.event;
 import com.commerce.product.domain.model.SkuMapping;
 import lombok.Getter;
 
-import java.time.LocalDateTime;
-
 @Getter
 public class BundleReservationCompletedEvent extends AbstractDomainEvent {
     
