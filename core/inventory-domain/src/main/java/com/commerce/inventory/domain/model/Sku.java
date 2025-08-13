@@ -35,7 +35,7 @@ public class Sku extends AggregateRoot<SkuId> {
         return new Sku(command, currentTime);
     }
     
-    public static Sku create(SkuId id, SkuCode code, String name, Weight weight, Volume volume) {
+    public static Sku create(SkuId id, SkuCode code, String name, Weight weight, Volume volume, LocalDateTime currentTime) {
         CreateSkuCommand command = CreateSkuCommand.builder()
             .id(id)
             .code(code)
@@ -43,7 +43,7 @@ public class Sku extends AggregateRoot<SkuId> {
             .weight(weight)
             .volume(volume)
             .build();
-        return new Sku(command, LocalDateTime.now());
+        return new Sku(command, currentTime);
     }
     
     public void update(UpdateSkuCommand command, LocalDateTime currentTime) {

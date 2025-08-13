@@ -20,11 +20,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -49,15 +55,18 @@ class ReceiveStockUseCaseTest {
     @Mock
     private SaveStockMovementPort saveStockMovementPort;
     
+    private Clock fixedClock;
     private ReceiveStockUseCase useCase;
     
     @BeforeEach
     void setUp() {
+        fixedClock = Clock.fixed(Instant.parse("2024-01-01T10:00:00Z"), ZoneId.of("UTC"));
         useCase = new ReceiveStockService(
             loadSkuPort,
             loadInventoryPort,
             saveInventoryPort,
-            saveStockMovementPort
+            saveStockMovementPort,
+            fixedClock
         );
     }
     
@@ -67,7 +76,7 @@ class ReceiveStockUseCaseTest {
         // Given
         SkuId skuId = SkuId.generate();
         SkuCode skuCode = SkuCode.of("SKU-001");
-        Sku sku = Sku.create(skuId, skuCode, "테스트 상품", Weight.of(100, WeightUnit.GRAM), null);
+        Sku sku = Sku.create(skuId, skuCode, "테스트 상품", Weight.of(100, WeightUnit.GRAM), null, LocalDateTime.now(fixedClock));
         
         Inventory inventory = Inventory.createWithInitialStock(skuId, Quantity.of(100));
         
@@ -126,7 +135,7 @@ class ReceiveStockUseCaseTest {
         // Given
         SkuId skuId = SkuId.generate();
         SkuCode skuCode = SkuCode.of("SKU-002");
-        Sku sku = Sku.create(skuId, skuCode, "신규 상품", Weight.of(200, WeightUnit.GRAM), null);
+        Sku sku = Sku.create(skuId, skuCode, "신규 상품", Weight.of(200, WeightUnit.GRAM), null, LocalDateTime.now(fixedClock));
         
         ReceiveStockCommand command = ReceiveStockCommand.builder()
             .skuId(skuId.value())
@@ -151,58 +160,38 @@ class ReceiveStockUseCaseTest {
         assertThat(savedInventory.getAvailableQuantity().value()).isEqualTo(100);
     }
     
-    @Test
-    @DisplayName("잘못된 수량으로 재고 입고 시 예외 발생")
-    void receiveStock_WithInvalidQuantity_ShouldThrowException() {
+    @ParameterizedTest
+    @ValueSource(ints = {0, -10})
+    @DisplayName("0 또는 음수 수량으로 재고 입고 시 예외 발생")
+    void receiveStock_WithInvalidQuantity_ShouldThrowException(int invalidQuantity) {
         // Given
         SkuId skuId = SkuId.generate();
-        
-        ReceiveStockCommand commandWithZero = ReceiveStockCommand.builder()
+        ReceiveStockCommand command = ReceiveStockCommand.builder()
             .skuId(skuId.value())
-            .quantity(0)
-            .reference("PO-2024-003")
-            .build();
-        
-        ReceiveStockCommand commandWithNegative = ReceiveStockCommand.builder()
-            .skuId(skuId.value())
-            .quantity(-10)
+            .quantity(invalidQuantity)
             .reference("PO-2024-003")
             .build();
         
         // When & Then
-        assertThatThrownBy(() -> useCase.receive(commandWithZero))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("입고 수량은 0보다 커야 합니다");
-            
-        assertThatThrownBy(() -> useCase.receive(commandWithNegative))
+        assertThatThrownBy(() -> useCase.receive(command))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("입고 수량은 0보다 커야 합니다");
     }
     
-    @Test
+    @ParameterizedTest
+    @NullAndEmptySource
     @DisplayName("참조 번호 없이 재고 입고 시 예외 발생")
-    void receiveStock_WithoutReference_ShouldThrowException() {
+    void receiveStock_WithoutReference_ShouldThrowException(String invalidReference) {
         // Given
         SkuId skuId = SkuId.generate();
-        
-        ReceiveStockCommand commandWithNull = ReceiveStockCommand.builder()
+        ReceiveStockCommand command = ReceiveStockCommand.builder()
             .skuId(skuId.value())
             .quantity(50)
-            .reference(null)
-            .build();
-            
-        ReceiveStockCommand commandWithEmpty = ReceiveStockCommand.builder()
-            .skuId(skuId.value())
-            .quantity(50)
-            .reference("")
+            .reference(invalidReference)
             .build();
         
         // When & Then
-        assertThatThrownBy(() -> useCase.receive(commandWithNull))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("참조 번호는 필수입니다");
-            
-        assertThatThrownBy(() -> useCase.receive(commandWithEmpty))
+        assertThatThrownBy(() -> useCase.receive(command))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("참조 번호는 필수입니다");
     }

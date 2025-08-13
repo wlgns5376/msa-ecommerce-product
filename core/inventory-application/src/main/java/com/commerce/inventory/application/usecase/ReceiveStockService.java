@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 @Service
@@ -28,10 +29,11 @@ public class ReceiveStockService implements ReceiveStockUseCase {
     private final LoadInventoryPort loadInventoryPort;
     private final SaveInventoryPort saveInventoryPort;
     private final SaveStockMovementPort saveStockMovementPort;
+    private final Clock clock;
     
     @Override
     public void receive(ReceiveStockCommand command) {
-        validateCommand(command);
+        command.validate();
         
         SkuId skuId = SkuId.of(command.getSkuId());
         
@@ -56,18 +58,8 @@ public class ReceiveStockService implements ReceiveStockUseCase {
             quantity,
             MovementType.RECEIVE,
             command.getReference(),
-            LocalDateTime.now()
+            LocalDateTime.now(clock)
         );
         saveStockMovementPort.save(movement);
-    }
-    
-    private void validateCommand(ReceiveStockCommand command) {
-        if (command.getQuantity() <= 0) {
-            throw new IllegalArgumentException("입고 수량은 0보다 커야 합니다");
-        }
-        
-        if (command.getReference() == null || command.getReference().trim().isEmpty()) {
-            throw new IllegalArgumentException("참조 번호는 필수입니다");
-        }
     }
 }

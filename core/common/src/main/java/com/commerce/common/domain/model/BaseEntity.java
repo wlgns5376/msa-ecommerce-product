@@ -1,5 +1,6 @@
 package com.commerce.common.domain.model;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 public abstract class BaseEntity {
@@ -7,8 +8,12 @@ public abstract class BaseEntity {
     private LocalDateTime updatedAt;
     
     protected BaseEntity() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        this(Clock.systemDefaultZone());
+    }
+    
+    protected BaseEntity(Clock clock) {
+        this.createdAt = LocalDateTime.now(clock);
+        this.updatedAt = LocalDateTime.now(clock);
     }
     
     public LocalDateTime getCreatedAt() {
@@ -20,6 +25,10 @@ public abstract class BaseEntity {
     }
     
     protected void updateTimestamp() {
-        this.updatedAt = LocalDateTime.now();
+        updateTimestamp(Clock.systemDefaultZone());
+    }
+    
+    protected void updateTimestamp(Clock clock) {
+        this.updatedAt = LocalDateTime.now(clock);
     }
 }
