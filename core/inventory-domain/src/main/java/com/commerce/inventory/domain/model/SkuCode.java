@@ -11,7 +11,7 @@ public record SkuCode(String value) implements ValueObject {
         }
         
         if (!value.matches("^[A-Za-z0-9\\-_]+$")) {
-            throw new InvalidSkuCodeException("SKU 코드는 영문자, 숫자, 하이픈, 언더스코어만 허용됩니다");
+            throw new InvalidSkuCodeException("SKU 코드는 영문자, 숫자, 하이픈, 언더스코어만 허용됩니다: " + value);
         }
     }
     

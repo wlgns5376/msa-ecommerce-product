@@ -97,9 +97,9 @@ class CreateSkuUseCaseTest {
     }
     
     @Test
-    @DisplayName("필수 필드가 누락된 요청시 예외가 발생해야 한다")
-    void createSku_WithMissingRequiredFields_ShouldThrowException() {
-        // Given - 코드 누락
+    @DisplayName("코드가 누락된 요청시 예외가 발생해야 한다")
+    void createSku_WithMissingCode_ShouldThrowException() {
+        // Given
         CreateSkuRequest requestWithoutCode = CreateSkuRequest.builder()
                 .name("테스트 상품")
                 .build();
@@ -109,7 +109,13 @@ class CreateSkuUseCaseTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("SKU 코드는 필수입니다");
                 
-        // Given - 이름 누락
+        verify(skuRepository, never()).save(any(Sku.class));
+    }
+    
+    @Test
+    @DisplayName("이름이 누락된 요청시 예외가 발생해야 한다")
+    void createSku_WithMissingName_ShouldThrowException() {
+        // Given
         CreateSkuRequest requestWithoutName = CreateSkuRequest.builder()
                 .code("SKU-001")
                 .build();
@@ -162,7 +168,7 @@ class CreateSkuUseCaseTest {
         // When & Then
         assertThatThrownBy(() -> useCase.execute(request))
                 .isInstanceOf(InvalidSkuCodeException.class)
-                .hasMessageContaining("유효하지 않은 SKU 코드 형식");
+                .hasMessageContaining("SKU 코드는 영문자, 숫자, 하이픈, 언더스코어만 허용됩니다");
                 
         verify(skuRepository, never()).save(any(Sku.class));
     }
@@ -207,5 +213,76 @@ class CreateSkuUseCaseTest {
                 .hasMessageContaining("부피는 0보다 커야 합니다");
                 
         verify(skuRepository, never()).save(any(Sku.class));
+    }
+    
+    @Test
+    @DisplayName("잘못된 무게 단위로 생성 요청시 예외가 발생해야 한다")
+    void createSku_WithInvalidWeightUnit_ShouldThrowException() {
+        // Given
+        CreateSkuRequest request = CreateSkuRequest.builder()
+                .code("SKU-005")
+                .name("테스트 상품")
+                .weight(100.0)
+                .weightUnit("INVALID_UNIT")
+                .build();
+                
+        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        
+        // When & Then
+        assertThatThrownBy(() -> useCase.execute(request))
+                .isInstanceOf(InvalidWeightException.class)
+                .hasMessageContaining("유효하지 않은 무게 단위입니다: INVALID_UNIT");
+                
+        verify(skuRepository, never()).save(any(Sku.class));
+    }
+    
+    @Test
+    @DisplayName("잘못된 부피 단위로 생성 요청시 예외가 발생해야 한다")
+    void createSku_WithInvalidVolumeUnit_ShouldThrowException() {
+        // Given
+        CreateSkuRequest request = CreateSkuRequest.builder()
+                .code("SKU-006")
+                .name("테스트 상품")
+                .volume(100.0)
+                .volumeUnit("INVALID_UNIT")
+                .build();
+                
+        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        
+        // When & Then
+        assertThatThrownBy(() -> useCase.execute(request))
+                .isInstanceOf(InvalidVolumeException.class)
+                .hasMessageContaining("유효하지 않은 부피 단위입니다: INVALID_UNIT");
+                
+        verify(skuRepository, never()).save(any(Sku.class));
+    }
+    
+    @Test
+    @DisplayName("대소문자가 다른 단위명도 처리할 수 있어야 한다")
+    void createSku_WithDifferentCaseUnits_ShouldCreateSku() {
+        // Given
+        CreateSkuRequest request = CreateSkuRequest.builder()
+                .code("SKU-007")
+                .name("테스트 상품")
+                .weight(100.0)
+                .weightUnit("kilogram")  // 소문자
+                .volume(50.0)
+                .volumeUnit("cubic_cm")  // 소문자
+                .build();
+                
+        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        when(skuRepository.save(any(Sku.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
+        // When
+        CreateSkuResponse response = useCase.execute(request);
+        
+        // Then
+        assertThat(response).isNotNull();
+        assertThat(response.getWeight()).isEqualTo(100.0);
+        assertThat(response.getWeightUnit()).isEqualTo("KILOGRAM");
+        assertThat(response.getVolume()).isEqualTo(50.0);
+        assertThat(response.getVolumeUnit()).isEqualTo("CUBIC_CM");
+        
+        verify(skuRepository).save(any(Sku.class));
     }
 }

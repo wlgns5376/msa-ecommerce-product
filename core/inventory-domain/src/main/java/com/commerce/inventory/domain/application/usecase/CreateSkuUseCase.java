@@ -44,11 +44,7 @@ public class CreateSkuUseCase implements UseCase<CreateSkuRequest, CreateSkuResp
     }
     
     private SkuCode createSkuCode(String code) {
-        try {
-            return SkuCode.of(code);
-        } catch (InvalidSkuCodeException e) {
-            throw new InvalidSkuCodeException("유효하지 않은 SKU 코드 형식입니다: " + code);
-        }
+        return SkuCode.of(code);
     }
     
     private void checkDuplicateCode(SkuCode skuCode) {
@@ -67,13 +63,23 @@ public class CreateSkuUseCase implements UseCase<CreateSkuRequest, CreateSkuResp
         
         if (request.getWeight() != null && request.getWeightUnit() != null) {
             validateWeight(request.getWeight());
-            WeightUnit weightUnit = WeightUnit.valueOf(request.getWeightUnit());
+            WeightUnit weightUnit;
+            try {
+                weightUnit = WeightUnit.valueOf(request.getWeightUnit().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new InvalidWeightException("유효하지 않은 무게 단위입니다: " + request.getWeightUnit());
+            }
             builder.weight(Weight.of(request.getWeight(), weightUnit));
         }
         
         if (request.getVolume() != null && request.getVolumeUnit() != null) {
             validateVolume(request.getVolume());
-            VolumeUnit volumeUnit = VolumeUnit.valueOf(request.getVolumeUnit());
+            VolumeUnit volumeUnit;
+            try {
+                volumeUnit = VolumeUnit.valueOf(request.getVolumeUnit().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new InvalidVolumeException("유효하지 않은 부피 단위입니다: " + request.getVolumeUnit());
+            }
             builder.volume(Volume.of(request.getVolume(), volumeUnit));
         }
         

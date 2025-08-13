@@ -4,6 +4,7 @@ import com.commerce.product.domain.exception.LockAcquisitionException;
 import com.commerce.product.domain.model.*;
 import com.commerce.product.domain.repository.InventoryRepository;
 import com.commerce.product.domain.repository.LockRepository;
+import com.commerce.product.domain.repository.ProductRepository;
 import com.commerce.product.domain.service.StockAvailabilityService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -33,6 +34,9 @@ class StockAvailabilityServiceConcurrencyTest {
     private InventoryRepository inventoryRepository;
     
     @Mock
+    private ProductRepository productRepository;
+    
+    @Mock
     private LockRepository lockRepository;
     
     private StockAvailabilityService stockAvailabilityService;
@@ -42,7 +46,7 @@ class StockAvailabilityServiceConcurrencyTest {
     
     @BeforeEach
     void setUp() {
-        stockAvailabilityService = new StockAvailabilityServiceImpl(inventoryRepository, lockRepository);
+        stockAvailabilityService = new StockAvailabilityServiceImpl(inventoryRepository, productRepository, lockRepository);
         
         // 초기 재고 설정
         stockMap.put("SKU001", new AtomicInteger(100));

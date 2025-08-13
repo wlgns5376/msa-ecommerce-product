@@ -297,7 +297,7 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
                 int requiredQuantity = entry.getValue();
                 int availableQuantity = inventoryRepository.getAvailableQuantity(skuId);
                 
-                int availableSetsForSku = requiredQuantity > 0 ? availableQuantity / requiredQuantity : 0;
+                int availableSetsForSku = requiredQuantity > 0 ? availableQuantity / requiredQuantity : Integer.MAX_VALUE;
                 minAvailableSets = Math.min(minAvailableSets, availableSetsForSku);
                 
                 details.add(new BundleAvailabilityResult.SkuAvailabilityDetail(
