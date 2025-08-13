@@ -2,13 +2,13 @@ package com.commerce.inventory.domain.model;
 
 import com.commerce.common.domain.model.Quantity;
 import com.commerce.inventory.domain.exception.InvalidStockMovementException;
-import com.commerce.product.domain.model.BaseEntity;
+import com.commerce.common.domain.model.BaseEntity;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
 
 @Getter
-public class StockMovement extends BaseEntity<MovementId> {
+public class StockMovement extends BaseEntity {
     
     private final MovementId id;
     private final SkuId skuId;
@@ -44,6 +44,16 @@ public class StockMovement extends BaseEntity<MovementId> {
             LocalDateTime timestamp
     ) {
         return new StockMovement(id, skuId, type, quantity, reference, timestamp);
+    }
+    
+    public static StockMovement create(
+            SkuId skuId,
+            Quantity quantity,
+            MovementType type,
+            String reference,
+            LocalDateTime timestamp
+    ) {
+        return new StockMovement(MovementId.generate(), skuId, type, quantity, reference, timestamp);
     }
     
     public static StockMovement createInbound(SkuId skuId, Quantity quantity, String reference, LocalDateTime currentTime) {
@@ -115,7 +125,6 @@ public class StockMovement extends BaseEntity<MovementId> {
         }
     }
     
-    @Override
     public MovementId getId() {
         return id;
     }

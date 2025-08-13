@@ -10,4 +10,8 @@ public record SkuCode(String value) implements ValueObject {
             throw new InvalidSkuCodeException("SKU 코드는 필수입니다");
         }
     }
+    
+    public static SkuCode of(String value) {
+        return new SkuCode(value);
+    }
 }

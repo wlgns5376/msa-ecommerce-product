@@ -1,6 +1,7 @@
 package com.commerce.inventory.domain.model;
 
 public enum MovementType {
+    RECEIVE("입고"),
     INBOUND("입고"),
     OUTBOUND("출고"),
     ADJUSTMENT("조정");

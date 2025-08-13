@@ -1,0 +1,209 @@
+package com.commerce.inventory.application.usecase;
+
+import com.commerce.common.domain.model.Quantity;
+import com.commerce.inventory.application.port.in.ReceiveStockCommand;
+import com.commerce.inventory.application.port.in.ReceiveStockUseCase;
+import com.commerce.inventory.application.port.out.LoadInventoryPort;
+import com.commerce.inventory.application.port.out.LoadSkuPort;
+import com.commerce.inventory.application.port.out.SaveInventoryPort;
+import com.commerce.inventory.application.port.out.SaveStockMovementPort;
+import com.commerce.inventory.domain.exception.InvalidSkuException;
+import com.commerce.inventory.domain.model.Inventory;
+import com.commerce.inventory.domain.model.MovementType;
+import com.commerce.inventory.domain.model.Sku;
+import com.commerce.inventory.domain.model.SkuCode;
+import com.commerce.inventory.domain.model.SkuId;
+import com.commerce.inventory.domain.model.StockMovement;
+import com.commerce.inventory.domain.model.Weight;
+import com.commerce.inventory.domain.model.WeightUnit;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+@DisplayName("ReceiveStockUseCase 테스트")
+class ReceiveStockUseCaseTest {
+
+    @Mock
+    private LoadSkuPort loadSkuPort;
+    
+    @Mock
+    private LoadInventoryPort loadInventoryPort;
+    
+    @Mock
+    private SaveInventoryPort saveInventoryPort;
+    
+    @Mock
+    private SaveStockMovementPort saveStockMovementPort;
+    
+    private ReceiveStockUseCase useCase;
+    
+    @BeforeEach
+    void setUp() {
+        useCase = new ReceiveStockService(
+            loadSkuPort,
+            loadInventoryPort,
+            saveInventoryPort,
+            saveStockMovementPort
+        );
+    }
+    
+    @Test
+    @DisplayName("정상적인 재고 입고 처리")
+    void receiveStock_WithValidData_ShouldSucceed() {
+        // Given
+        SkuId skuId = SkuId.generate();
+        SkuCode skuCode = SkuCode.of("SKU-001");
+        Sku sku = Sku.create(skuId, skuCode, "테스트 상품", Weight.of(100, WeightUnit.GRAM), null);
+        
+        Inventory inventory = Inventory.createWithInitialStock(skuId, Quantity.of(100));
+        
+        ReceiveStockCommand command = ReceiveStockCommand.builder()
+            .skuId(skuId.value())
+            .quantity(50)
+            .reference("PO-2024-001")
+            .build();
+        
+        when(loadSkuPort.load(skuId)).thenReturn(Optional.of(sku));
+        when(loadInventoryPort.load(skuId)).thenReturn(Optional.of(inventory));
+        
+        // When
+        useCase.receive(command);
+        
+        // Then
+        ArgumentCaptor<Inventory> inventoryCaptor = ArgumentCaptor.forClass(Inventory.class);
+        verify(saveInventoryPort).save(inventoryCaptor.capture());
+        
+        Inventory savedInventory = inventoryCaptor.getValue();
+        assertThat(savedInventory.getTotalQuantity().value()).isEqualTo(150);
+        assertThat(savedInventory.getAvailableQuantity().value()).isEqualTo(150);
+        
+        ArgumentCaptor<StockMovement> movementCaptor = ArgumentCaptor.forClass(StockMovement.class);
+        verify(saveStockMovementPort).save(movementCaptor.capture());
+        
+        StockMovement savedMovement = movementCaptor.getValue();
+        assertThat(savedMovement.getSkuId()).isEqualTo(skuId);
+        assertThat(savedMovement.getQuantity()).isEqualTo(Quantity.of(50));
+        assertThat(savedMovement.getType()).isEqualTo(MovementType.RECEIVE);
+        assertThat(savedMovement.getReference()).isEqualTo("PO-2024-001");
+    }
+    
+    @Test
+    @DisplayName("존재하지 않는 SKU에 대한 재고 입고 시 예외 발생")
+    void receiveStock_WithNonExistentSku_ShouldThrowException() {
+        // Given
+        SkuId skuId = SkuId.generate();
+        ReceiveStockCommand command = ReceiveStockCommand.builder()
+            .skuId(skuId.value())
+            .quantity(50)
+            .reference("PO-2024-001")
+            .build();
+        
+        when(loadSkuPort.load(skuId)).thenReturn(Optional.empty());
+        
+        // When & Then
+        assertThatThrownBy(() -> useCase.receive(command))
+            .isInstanceOf(InvalidSkuException.class)
+            .hasMessageContaining("존재하지 않는 SKU입니다");
+    }
+    
+    @Test
+    @DisplayName("재고가 없는 SKU에 대한 첫 재고 입고")
+    void receiveStock_WithNoExistingInventory_ShouldCreateNewInventory() {
+        // Given
+        SkuId skuId = SkuId.generate();
+        SkuCode skuCode = SkuCode.of("SKU-002");
+        Sku sku = Sku.create(skuId, skuCode, "신규 상품", Weight.of(200, WeightUnit.GRAM), null);
+        
+        ReceiveStockCommand command = ReceiveStockCommand.builder()
+            .skuId(skuId.value())
+            .quantity(100)
+            .reference("PO-2024-002")
+            .build();
+        
+        when(loadSkuPort.load(skuId)).thenReturn(Optional.of(sku));
+        when(loadInventoryPort.load(skuId)).thenReturn(Optional.empty());
+        
+        // When
+        useCase.receive(command);
+        
+        // Then
+        ArgumentCaptor<Inventory> inventoryCaptor = ArgumentCaptor.forClass(Inventory.class);
+        verify(saveInventoryPort).save(inventoryCaptor.capture());
+        
+        Inventory savedInventory = inventoryCaptor.getValue();
+        assertThat(savedInventory.getSkuId()).isEqualTo(skuId);
+        assertThat(savedInventory.getTotalQuantity().value()).isEqualTo(100);
+        assertThat(savedInventory.getReservedQuantity().value()).isEqualTo(0);
+        assertThat(savedInventory.getAvailableQuantity().value()).isEqualTo(100);
+    }
+    
+    @Test
+    @DisplayName("잘못된 수량으로 재고 입고 시 예외 발생")
+    void receiveStock_WithInvalidQuantity_ShouldThrowException() {
+        // Given
+        SkuId skuId = SkuId.generate();
+        
+        ReceiveStockCommand commandWithZero = ReceiveStockCommand.builder()
+            .skuId(skuId.value())
+            .quantity(0)
+            .reference("PO-2024-003")
+            .build();
+        
+        ReceiveStockCommand commandWithNegative = ReceiveStockCommand.builder()
+            .skuId(skuId.value())
+            .quantity(-10)
+            .reference("PO-2024-003")
+            .build();
+        
+        // When & Then
+        assertThatThrownBy(() -> useCase.receive(commandWithZero))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("입고 수량은 0보다 커야 합니다");
+            
+        assertThatThrownBy(() -> useCase.receive(commandWithNegative))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("입고 수량은 0보다 커야 합니다");
+    }
+    
+    @Test
+    @DisplayName("참조 번호 없이 재고 입고 시 예외 발생")
+    void receiveStock_WithoutReference_ShouldThrowException() {
+        // Given
+        SkuId skuId = SkuId.generate();
+        
+        ReceiveStockCommand commandWithNull = ReceiveStockCommand.builder()
+            .skuId(skuId.value())
+            .quantity(50)
+            .reference(null)
+            .build();
+            
+        ReceiveStockCommand commandWithEmpty = ReceiveStockCommand.builder()
+            .skuId(skuId.value())
+            .quantity(50)
+            .reference("")
+            .build();
+        
+        // When & Then
+        assertThatThrownBy(() -> useCase.receive(commandWithNull))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("참조 번호는 필수입니다");
+            
+        assertThatThrownBy(() -> useCase.receive(commandWithEmpty))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("참조 번호는 필수입니다");
+    }
+}

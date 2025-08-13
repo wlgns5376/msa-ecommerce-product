@@ -1,7 +1,7 @@
 package com.commerce.inventory.domain.model;
 
 import com.commerce.inventory.domain.exception.InvalidSkuException;
-import com.commerce.product.domain.model.AggregateRoot;
+import com.commerce.common.domain.model.AggregateRoot;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
@@ -33,6 +33,17 @@ public class Sku extends AggregateRoot<SkuId> {
     
     public static Sku create(CreateSkuCommand command, LocalDateTime currentTime) {
         return new Sku(command, currentTime);
+    }
+    
+    public static Sku create(SkuId id, SkuCode code, String name, Weight weight, Volume volume) {
+        CreateSkuCommand command = CreateSkuCommand.builder()
+            .id(id)
+            .code(code)
+            .name(name)
+            .weight(weight)
+            .volume(volume)
+            .build();
+        return new Sku(command, LocalDateTime.now());
     }
     
     public void update(UpdateSkuCommand command, LocalDateTime currentTime) {

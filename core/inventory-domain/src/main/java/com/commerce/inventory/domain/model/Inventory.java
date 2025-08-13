@@ -3,7 +3,7 @@ package com.commerce.inventory.domain.model;
 import com.commerce.common.domain.model.Quantity;
 import com.commerce.inventory.domain.exception.InsufficientStockException;
 import com.commerce.inventory.domain.exception.InvalidInventoryException;
-import com.commerce.product.domain.model.AggregateRoot;
+import com.commerce.common.domain.model.AggregateRoot;
 import lombok.Getter;
 
 @Getter
