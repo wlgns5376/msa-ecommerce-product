@@ -1,10 +1,14 @@
 package com.commerce.product.domain.service.impl;
 
+import com.commerce.common.event.DomainEventPublisher;
 import com.commerce.product.domain.exception.LockAcquisitionException;
 import com.commerce.product.domain.model.*;
 import com.commerce.product.domain.repository.InventoryRepository;
 import com.commerce.product.domain.repository.LockRepository;
+import com.commerce.product.domain.repository.ProductRepository;
+import com.commerce.product.domain.repository.SagaRepository;
 import com.commerce.product.domain.service.StockAvailabilityService;
+import com.commerce.product.domain.service.saga.BundleReservationSagaOrchestrator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,6 +39,18 @@ class StockAvailabilityServiceConcurrencyTest {
     @Mock
     private LockRepository lockRepository;
     
+    @Mock
+    private ProductRepository productRepository;
+    
+    @Mock
+    private SagaRepository sagaRepository;
+    
+    @Mock
+    private DomainEventPublisher eventPublisher;
+    
+    @Mock
+    private BundleReservationSagaOrchestrator bundleReservationSagaOrchestrator;
+    
     private StockAvailabilityService stockAvailabilityService;
     
     private final Map<String, AtomicInteger> stockMap = new ConcurrentHashMap<>();
@@ -42,7 +58,7 @@ class StockAvailabilityServiceConcurrencyTest {
     
     @BeforeEach
     void setUp() {
-        stockAvailabilityService = new StockAvailabilityServiceImpl(inventoryRepository, lockRepository);
+        stockAvailabilityService = new StockAvailabilityServiceImpl(inventoryRepository, productRepository, lockRepository, sagaRepository, eventPublisher, bundleReservationSagaOrchestrator);
         
         // 초기 재고 설정
         stockMap.put("SKU001", new AtomicInteger(100));
