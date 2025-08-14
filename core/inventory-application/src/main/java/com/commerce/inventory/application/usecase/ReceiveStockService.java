@@ -49,8 +49,9 @@ public class ReceiveStockService implements ReceiveStockUseCase {
         SkuId skuId = SkuId.of(command.getSkuId());
         
         // SKU 존재 확인
-        loadSkuPort.load(skuId)
-            .orElseThrow(() -> new InvalidSkuException("존재하지 않는 SKU입니다: " + skuId.value()));
+        if (!loadSkuPort.exists(skuId)) {
+            throw new InvalidSkuException("존재하지 않는 SKU입니다: " + skuId.value());
+        }
         
         // 재고 조회 또는 생성
         Inventory inventory = loadInventoryPort.load(skuId)

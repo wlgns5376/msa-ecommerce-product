@@ -94,7 +94,7 @@ class ReceiveStockUseCaseTest {
             .reference("PO-2024-001")
             .build();
         
-        when(loadSkuPort.load(skuId)).thenReturn(Optional.of(sku));
+        when(loadSkuPort.exists(skuId)).thenReturn(true);
         when(loadInventoryPort.load(skuId)).thenReturn(Optional.of(inventory));
         when(validator.validate(command)).thenReturn(Set.of());
         
@@ -130,7 +130,7 @@ class ReceiveStockUseCaseTest {
             .reference("PO-2024-001")
             .build();
         
-        when(loadSkuPort.load(skuId)).thenReturn(Optional.empty());
+        when(loadSkuPort.exists(skuId)).thenReturn(false);
         when(validator.validate(command)).thenReturn(Set.of());
         
         // When & Then
@@ -153,7 +153,7 @@ class ReceiveStockUseCaseTest {
             .reference("PO-2024-002")
             .build();
         
-        when(loadSkuPort.load(skuId)).thenReturn(Optional.of(sku));
+        when(loadSkuPort.exists(skuId)).thenReturn(true);
         when(loadInventoryPort.load(skuId)).thenReturn(Optional.empty());
         when(validator.validate(command)).thenReturn(Set.of());
         

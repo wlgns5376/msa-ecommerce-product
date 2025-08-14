@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface LoadSkuPort {
     Optional<Sku> load(SkuId skuId);
+    boolean exists(SkuId skuId);
 }
