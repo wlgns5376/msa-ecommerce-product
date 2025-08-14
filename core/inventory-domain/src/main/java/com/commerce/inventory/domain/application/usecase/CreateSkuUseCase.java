@@ -6,15 +6,17 @@ import com.commerce.inventory.domain.exception.InvalidVolumeException;
 import com.commerce.inventory.domain.exception.InvalidWeightException;
 import com.commerce.inventory.domain.model.*;
 import com.commerce.inventory.domain.repository.SkuRepository;
-import com.commerce.product.domain.application.usecase.UseCase;
+import com.commerce.common.application.usecase.UseCase;
 import lombok.RequiredArgsConstructor;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 @RequiredArgsConstructor
 public class CreateSkuUseCase implements UseCase<CreateSkuRequest, CreateSkuResponse> {
     
     private final SkuRepository skuRepository;
+    private final Clock clock;
     
     @Override
     public CreateSkuResponse execute(CreateSkuRequest request) {
@@ -24,7 +26,7 @@ public class CreateSkuUseCase implements UseCase<CreateSkuRequest, CreateSkuResp
         
         CreateSkuCommand command = buildCreateCommand(request, skuCode);
         
-        Sku sku = Sku.create(command, LocalDateTime.now());
+        Sku sku = Sku.create(command, LocalDateTime.now(clock));
         
         Sku savedSku = skuRepository.save(sku);
         
@@ -49,12 +51,18 @@ public class CreateSkuUseCase implements UseCase<CreateSkuRequest, CreateSkuResp
                 .name(request.getName())
                 .description(request.getDescription());
         
-        if (request.getWeight() != null && request.getWeightUnit() != null) {
+        if (request.getWeight() != null || request.getWeightUnit() != null) {
+            if (request.getWeight() == null || request.getWeightUnit() == null) {
+                throw new InvalidWeightException("무게와 무게 단위는 모두 제공되거나 모두 제공되지 않아야 합니다.");
+            }
             WeightUnit weightUnit = WeightUnit.fromString(request.getWeightUnit());
             builder.weight(Weight.of(request.getWeight(), weightUnit));
         }
         
-        if (request.getVolume() != null && request.getVolumeUnit() != null) {
+        if (request.getVolume() != null || request.getVolumeUnit() != null) {
+            if (request.getVolume() == null || request.getVolumeUnit() == null) {
+                throw new InvalidVolumeException("부피와 부피 단위는 모두 제공되거나 모두 제공되지 않아야 합니다.");
+            }
             VolumeUnit volumeUnit = VolumeUnit.fromString(request.getVolumeUnit());
             builder.volume(Volume.of(request.getVolume(), volumeUnit));
         }

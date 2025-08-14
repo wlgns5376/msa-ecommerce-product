@@ -10,7 +10,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,11 +27,14 @@ class CreateSkuUseCaseTest {
     @Mock
     private SkuRepository skuRepository;
     
+    private Clock fixedClock;
     private CreateSkuUseCase useCase;
     
     @BeforeEach
     void setUp() {
-        useCase = new CreateSkuUseCase(skuRepository);
+        // 고정된 시간을 설정하여 테스트의 일관성 보장
+        fixedClock = Clock.fixed(Instant.parse("2024-01-01T10:00:00Z"), ZoneId.of("UTC"));
+        useCase = new CreateSkuUseCase(skuRepository, fixedClock);
     }
     
     @Test
@@ -326,5 +332,111 @@ class CreateSkuUseCaseTest {
                 .hasMessageContaining("부피는 0보다 커야 합니다");
                 
         verify(skuRepository, never()).save(any(Sku.class));
+    }
+    
+    @Test
+    @DisplayName("무게 값만 제공하고 단위를 제공하지 않으면 예외가 발생해야 한다")
+    void createSku_WithWeightButNoUnit_ShouldThrowException() {
+        // Given
+        CreateSkuRequest request = CreateSkuRequest.builder()
+                .code("SKU-010")
+                .name("테스트 상품")
+                .weight(100.0)
+                .weightUnit(null)
+                .build();
+                
+        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        
+        // When & Then
+        assertThatThrownBy(() -> useCase.execute(request))
+                .isInstanceOf(InvalidWeightException.class)
+                .hasMessageContaining("무게와 무게 단위는 모두 제공되거나 모두 제공되지 않아야 합니다");
+                
+        verify(skuRepository, never()).save(any(Sku.class));
+    }
+    
+    @Test
+    @DisplayName("무게 단위만 제공하고 값을 제공하지 않으면 예외가 발생해야 한다")
+    void createSku_WithWeightUnitButNoValue_ShouldThrowException() {
+        // Given
+        CreateSkuRequest request = CreateSkuRequest.builder()
+                .code("SKU-011")
+                .name("테스트 상품")
+                .weight(null)
+                .weightUnit("KILOGRAM")
+                .build();
+                
+        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        
+        // When & Then
+        assertThatThrownBy(() -> useCase.execute(request))
+                .isInstanceOf(InvalidWeightException.class)
+                .hasMessageContaining("무게와 무게 단위는 모두 제공되거나 모두 제공되지 않아야 합니다");
+                
+        verify(skuRepository, never()).save(any(Sku.class));
+    }
+    
+    @Test
+    @DisplayName("부피 값만 제공하고 단위를 제공하지 않으면 예외가 발생해야 한다")
+    void createSku_WithVolumeButNoUnit_ShouldThrowException() {
+        // Given
+        CreateSkuRequest request = CreateSkuRequest.builder()
+                .code("SKU-012")
+                .name("테스트 상품")
+                .volume(100.0)
+                .volumeUnit(null)
+                .build();
+                
+        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        
+        // When & Then
+        assertThatThrownBy(() -> useCase.execute(request))
+                .isInstanceOf(InvalidVolumeException.class)
+                .hasMessageContaining("부피와 부피 단위는 모두 제공되거나 모두 제공되지 않아야 합니다");
+                
+        verify(skuRepository, never()).save(any(Sku.class));
+    }
+    
+    @Test
+    @DisplayName("부피 단위만 제공하고 값을 제공하지 않으면 예외가 발생해야 한다")
+    void createSku_WithVolumeUnitButNoValue_ShouldThrowException() {
+        // Given
+        CreateSkuRequest request = CreateSkuRequest.builder()
+                .code("SKU-013")
+                .name("테스트 상품")
+                .volume(null)
+                .volumeUnit("CUBIC_CM")
+                .build();
+                
+        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        
+        // When & Then
+        assertThatThrownBy(() -> useCase.execute(request))
+                .isInstanceOf(InvalidVolumeException.class)
+                .hasMessageContaining("부피와 부피 단위는 모두 제공되거나 모두 제공되지 않아야 합니다");
+                
+        verify(skuRepository, never()).save(any(Sku.class));
+    }
+    
+    @Test
+    @DisplayName("생성된 SKU의 생성 시간이 고정된 Clock 시간과 일치해야 한다")
+    void createSku_WithFixedClock_ShouldHaveExpectedCreatedAt() {
+        // Given
+        CreateSkuRequest request = CreateSkuRequest.builder()
+                .code("SKU-TIME-TEST")
+                .name("시간 테스트 상품")
+                .build();
+                
+        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        when(skuRepository.save(any(Sku.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
+        LocalDateTime expectedTime = LocalDateTime.now(fixedClock);
+        
+        // When
+        CreateSkuResponse response = useCase.execute(request);
+        
+        // Then
+        assertThat(response.getCreatedAt()).isEqualTo(expectedTime);
+        assertThat(response.getCreatedAt()).isEqualTo(LocalDateTime.of(2024, 1, 1, 10, 0, 0));
     }
 }
