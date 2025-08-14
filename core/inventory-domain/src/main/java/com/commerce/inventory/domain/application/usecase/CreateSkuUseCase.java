@@ -55,7 +55,7 @@ public class CreateSkuUseCase implements UseCase<CreateSkuRequest, CreateSkuResp
     
     private void addWeightToCommand(CreateSkuCommand.CreateSkuCommandBuilder builder, CreateSkuRequest request) {
         boolean weightValueProvided = request.getWeight() != null;
-        boolean weightUnitProvided = request.getWeightUnit() != null;
+        boolean weightUnitProvided = request.getWeightUnit() != null && !request.getWeightUnit().trim().isEmpty();
         if (weightValueProvided != weightUnitProvided) {
             throw new InvalidWeightException("무게와 무게 단위는 모두 제공되거나 모두 제공되지 않아야 합니다.");
         }
@@ -67,7 +67,7 @@ public class CreateSkuUseCase implements UseCase<CreateSkuRequest, CreateSkuResp
     
     private void addVolumeToCommand(CreateSkuCommand.CreateSkuCommandBuilder builder, CreateSkuRequest request) {
         boolean volumeValueProvided = request.getVolume() != null;
-        boolean volumeUnitProvided = request.getVolumeUnit() != null;
+        boolean volumeUnitProvided = request.getVolumeUnit() != null && !request.getVolumeUnit().trim().isEmpty();
         if (volumeValueProvided != volumeUnitProvided) {
             throw new InvalidVolumeException("부피와 부피 단위는 모두 제공되거나 모두 제공되지 않아야 합니다.");
         }

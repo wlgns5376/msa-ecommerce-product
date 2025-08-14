@@ -439,4 +439,88 @@ class CreateSkuUseCaseTest {
         assertThat(response.getCreatedAt()).isEqualTo(expectedTime);
         assertThat(response.getCreatedAt()).isEqualTo(LocalDateTime.of(2024, 1, 1, 10, 0, 0));
     }
+    
+    @Test
+    @DisplayName("무게 단위가 빈 문자열인 경우 무게와 무게 단위 불일치 예외가 발생해야 한다")
+    void createSku_WithEmptyWeightUnit_ShouldThrowInvalidWeightException() {
+        // Given
+        CreateSkuRequest request = CreateSkuRequest.builder()
+                .code("SKU-014")
+                .name("테스트 상품")
+                .weight(100.0)
+                .weightUnit("")
+                .build();
+                
+        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        
+        // When & Then
+        assertThatThrownBy(() -> useCase.execute(request))
+                .isInstanceOf(InvalidWeightException.class)
+                .hasMessageContaining("무게와 무게 단위는 모두 제공되거나 모두 제공되지 않아야 합니다");
+                
+        verify(skuRepository, never()).save(any(Sku.class));
+    }
+    
+    @Test
+    @DisplayName("무게 단위가 공백 문자열인 경우 무게와 무게 단위 불일치 예외가 발생해야 한다")
+    void createSku_WithWhitespaceWeightUnit_ShouldThrowInvalidWeightException() {
+        // Given
+        CreateSkuRequest request = CreateSkuRequest.builder()
+                .code("SKU-015")
+                .name("테스트 상품")
+                .weight(100.0)
+                .weightUnit("   ")
+                .build();
+                
+        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        
+        // When & Then
+        assertThatThrownBy(() -> useCase.execute(request))
+                .isInstanceOf(InvalidWeightException.class)
+                .hasMessageContaining("무게와 무게 단위는 모두 제공되거나 모두 제공되지 않아야 합니다");
+                
+        verify(skuRepository, never()).save(any(Sku.class));
+    }
+    
+    @Test
+    @DisplayName("부피 단위가 빈 문자열인 경우 부피와 부피 단위 불일치 예외가 발생해야 한다")
+    void createSku_WithEmptyVolumeUnit_ShouldThrowInvalidVolumeException() {
+        // Given
+        CreateSkuRequest request = CreateSkuRequest.builder()
+                .code("SKU-016")
+                .name("테스트 상품")
+                .volume(100.0)
+                .volumeUnit("")
+                .build();
+                
+        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        
+        // When & Then
+        assertThatThrownBy(() -> useCase.execute(request))
+                .isInstanceOf(InvalidVolumeException.class)
+                .hasMessageContaining("부피와 부피 단위는 모두 제공되거나 모두 제공되지 않아야 합니다");
+                
+        verify(skuRepository, never()).save(any(Sku.class));
+    }
+    
+    @Test
+    @DisplayName("부피 단위가 공백 문자열인 경우 부피와 부피 단위 불일치 예외가 발생해야 한다")
+    void createSku_WithWhitespaceVolumeUnit_ShouldThrowInvalidVolumeException() {
+        // Given
+        CreateSkuRequest request = CreateSkuRequest.builder()
+                .code("SKU-017")
+                .name("테스트 상품")
+                .volume(100.0)
+                .volumeUnit("   ")
+                .build();
+                
+        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        
+        // When & Then
+        assertThatThrownBy(() -> useCase.execute(request))
+                .isInstanceOf(InvalidVolumeException.class)
+                .hasMessageContaining("부피와 부피 단위는 모두 제공되거나 모두 제공되지 않아야 합니다");
+                
+        verify(skuRepository, never()).save(any(Sku.class));
+    }
 }
