@@ -74,6 +74,7 @@ public class Inventory extends AggregateRoot<SkuId> {
         }
         
         this.totalQuantity = this.totalQuantity.add(quantity);
+        updateTimestamp();
         
         // 도메인 이벤트 발생 (추후 구현)
         // this.raise(new StockReceivedEvent(this.skuId, quantity));

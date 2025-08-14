@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -47,8 +48,10 @@ public class ReceiveStockService implements ReceiveStockUseCase {
         // Bean Validation을 사용한 유효성 검사
         Set<ConstraintViolation<ReceiveStockCommand>> violations = validator.validate(command);
         if (!violations.isEmpty()) {
-            ConstraintViolation<ReceiveStockCommand> violation = violations.iterator().next();
-            throw new IllegalArgumentException(violation.getMessage());
+            String combinedMessage = violations.stream()
+                    .map(ConstraintViolation::getMessage)
+                    .collect(Collectors.joining(", "));
+            throw new IllegalArgumentException(combinedMessage);
         }
         
         SkuId skuId = SkuId.of(command.getSkuId());
