@@ -16,7 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 public class ReserveStockUseCase implements UseCase<ReserveStockRequest, ReserveStockResponse> {
@@ -35,37 +38,32 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
         LocalDateTime currentTime = LocalDateTime.now(clock);
         int ttlSeconds = request.getTtlSeconds() != null ? request.getTtlSeconds() : DEFAULT_TTL_SECONDS;
         
-        // 먼저 모든 재고를 검증
-        List<Inventory> inventories = new ArrayList<>();
+        // 먼저 모든 재고를 검증하고 Map에 저장
+        Map<String, Inventory> inventoryMap = new HashMap<>();
         for (ReserveStockRequest.ReservationItem item : request.getItems()) {
             SkuId skuId = new SkuId(item.getSkuId());
             Inventory inventory = inventoryRepository.findBySkuIdWithLock(skuId)
                     .orElseThrow(() -> new InvalidSkuIdException("SKU를 찾을 수 없습니다: " + item.getSkuId()));
-            
+
             if (!inventory.canReserve(Quantity.of(item.getQuantity()))) {
                 throw new InsufficientStockException(
-                    String.format("재고가 부족합니다. SKU: %s, 가용 재고: %d, 요청 수량: %d", 
-                        item.getSkuId(), inventory.getAvailableQuantity().value(), item.getQuantity())
+                        String.format("재고가 부족합니다. SKU: %s, 가용 재고: %d, 요청 수량: %d",
+                                item.getSkuId(), inventory.getAvailableQuantity().value(), item.getQuantity())
                 );
             }
-            inventories.add(inventory);
+            inventoryMap.put(item.getSkuId(), inventory);
         }
-        
+
         // 모든 재고가 충분하면 예약 진행
-        List<ReserveStockResponse.ReservationResult> results = new ArrayList<>();
-        for (int i = 0; i < request.getItems().size(); i++) {
-            ReserveStockRequest.ReservationItem item = request.getItems().get(i);
-            Inventory inventory = inventories.get(i);
-            
-            ReserveStockResponse.ReservationResult result = reserveSingleItem(
-                    item, 
-                    inventory,
-                    request.getOrderId(), 
-                    ttlSeconds, 
-                    currentTime
-            );
-            results.add(result);
-        }
+        List<ReserveStockResponse.ReservationResult> results = request.getItems().stream()
+                .map(item -> reserveSingleItem(
+                        item,
+                        inventoryMap.get(item.getSkuId()),
+                        request.getOrderId(),
+                        ttlSeconds,
+                        currentTime
+                ))
+                .collect(Collectors.toList());
         
         return ReserveStockResponse.builder()
                 .reservations(results)
