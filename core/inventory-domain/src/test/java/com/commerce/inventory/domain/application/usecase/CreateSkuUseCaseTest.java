@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -51,7 +52,7 @@ class CreateSkuUseCaseTest {
                 .volumeUnit("CUBIC_CM")
                 .build();
                 
-        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        when(skuRepository.existsByCode(any(SkuCode.class))).thenReturn(false);
         when(skuRepository.save(any(Sku.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         // When
@@ -69,7 +70,7 @@ class CreateSkuUseCaseTest {
         assertThat(response.getVolumeUnit()).isEqualTo("CUBIC_CM");
         assertThat(response.getCreatedAt()).isNotNull();
         
-        verify(skuRepository).findByCode(any(SkuCode.class));
+        verify(skuRepository).existsByCode(any(SkuCode.class));
         verify(skuRepository).save(any(Sku.class));
     }
     
@@ -91,14 +92,14 @@ class CreateSkuUseCaseTest {
                 LocalDateTime.now(fixedClock)
         );
         
-        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.of(existingSku));
+        when(skuRepository.existsByCode(any(SkuCode.class))).thenReturn(true);
         
         // When & Then
         assertThatThrownBy(() -> useCase.execute(request))
                 .isInstanceOf(DuplicateSkuCodeException.class)
                 .hasMessageContaining("이미 존재하는 SKU 코드입니다");
                 
-        verify(skuRepository).findByCode(any(SkuCode.class));
+        verify(skuRepository).existsByCode(any(SkuCode.class));
         verify(skuRepository, never()).save(any(Sku.class));
     }
     
@@ -144,7 +145,7 @@ class CreateSkuUseCaseTest {
                 .description("무게와 부피가 없는 디지털 상품")
                 .build();
                 
-        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        when(skuRepository.existsByCode(any(SkuCode.class))).thenReturn(false);
         when(skuRepository.save(any(Sku.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         // When
@@ -190,7 +191,7 @@ class CreateSkuUseCaseTest {
                 .weightUnit("KILOGRAM")
                 .build();
                 
-        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        when(skuRepository.existsByCode(any(SkuCode.class))).thenReturn(false);
         
         // When & Then
         assertThatThrownBy(() -> useCase.execute(request))
@@ -211,7 +212,7 @@ class CreateSkuUseCaseTest {
                 .volumeUnit("CUBIC_CM")
                 .build();
                 
-        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        when(skuRepository.existsByCode(any(SkuCode.class))).thenReturn(false);
         
         // When & Then
         assertThatThrownBy(() -> useCase.execute(request))
@@ -232,7 +233,7 @@ class CreateSkuUseCaseTest {
                 .weightUnit("INVALID_UNIT")
                 .build();
                 
-        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        when(skuRepository.existsByCode(any(SkuCode.class))).thenReturn(false);
         
         // When & Then
         assertThatThrownBy(() -> useCase.execute(request))
@@ -253,7 +254,7 @@ class CreateSkuUseCaseTest {
                 .volumeUnit("INVALID_UNIT")
                 .build();
                 
-        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        when(skuRepository.existsByCode(any(SkuCode.class))).thenReturn(false);
         
         // When & Then
         assertThatThrownBy(() -> useCase.execute(request))
@@ -276,7 +277,7 @@ class CreateSkuUseCaseTest {
                 .volumeUnit("cubic_cm")  // 소문자
                 .build();
                 
-        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        when(skuRepository.existsByCode(any(SkuCode.class))).thenReturn(false);
         when(skuRepository.save(any(Sku.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         // When
@@ -303,7 +304,7 @@ class CreateSkuUseCaseTest {
                 .weightUnit("KILOGRAM")
                 .build();
                 
-        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        when(skuRepository.existsByCode(any(SkuCode.class))).thenReturn(false);
         
         // When & Then
         assertThatThrownBy(() -> useCase.execute(request))
@@ -324,7 +325,7 @@ class CreateSkuUseCaseTest {
                 .volumeUnit("CUBIC_CM")
                 .build();
                 
-        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        when(skuRepository.existsByCode(any(SkuCode.class))).thenReturn(false);
         
         // When & Then
         assertThatThrownBy(() -> useCase.execute(request))
@@ -345,7 +346,7 @@ class CreateSkuUseCaseTest {
                 .weightUnit(null)
                 .build();
                 
-        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        when(skuRepository.existsByCode(any(SkuCode.class))).thenReturn(false);
         
         // When & Then
         assertThatThrownBy(() -> useCase.execute(request))
@@ -366,7 +367,7 @@ class CreateSkuUseCaseTest {
                 .weightUnit("KILOGRAM")
                 .build();
                 
-        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        when(skuRepository.existsByCode(any(SkuCode.class))).thenReturn(false);
         
         // When & Then
         assertThatThrownBy(() -> useCase.execute(request))
@@ -387,7 +388,7 @@ class CreateSkuUseCaseTest {
                 .volumeUnit(null)
                 .build();
                 
-        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        when(skuRepository.existsByCode(any(SkuCode.class))).thenReturn(false);
         
         // When & Then
         assertThatThrownBy(() -> useCase.execute(request))
@@ -408,7 +409,7 @@ class CreateSkuUseCaseTest {
                 .volumeUnit("CUBIC_CM")
                 .build();
                 
-        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        when(skuRepository.existsByCode(any(SkuCode.class))).thenReturn(false);
         
         // When & Then
         assertThatThrownBy(() -> useCase.execute(request))
@@ -427,7 +428,7 @@ class CreateSkuUseCaseTest {
                 .name("시간 테스트 상품")
                 .build();
                 
-        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        when(skuRepository.existsByCode(any(SkuCode.class))).thenReturn(false);
         when(skuRepository.save(any(Sku.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         LocalDateTime expectedTime = LocalDateTime.now(fixedClock);
@@ -451,7 +452,7 @@ class CreateSkuUseCaseTest {
                 .weightUnit("")
                 .build();
                 
-        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        when(skuRepository.existsByCode(any(SkuCode.class))).thenReturn(false);
         
         // When & Then
         assertThatThrownBy(() -> useCase.execute(request))
@@ -472,7 +473,7 @@ class CreateSkuUseCaseTest {
                 .weightUnit("   ")
                 .build();
                 
-        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        when(skuRepository.existsByCode(any(SkuCode.class))).thenReturn(false);
         
         // When & Then
         assertThatThrownBy(() -> useCase.execute(request))
@@ -493,7 +494,7 @@ class CreateSkuUseCaseTest {
                 .volumeUnit("")
                 .build();
                 
-        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        when(skuRepository.existsByCode(any(SkuCode.class))).thenReturn(false);
         
         // When & Then
         assertThatThrownBy(() -> useCase.execute(request))
@@ -514,7 +515,7 @@ class CreateSkuUseCaseTest {
                 .volumeUnit("   ")
                 .build();
                 
-        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        when(skuRepository.existsByCode(any(SkuCode.class))).thenReturn(false);
         
         // When & Then
         assertThatThrownBy(() -> useCase.execute(request))
@@ -522,5 +523,28 @@ class CreateSkuUseCaseTest {
                 .hasMessageContaining("부피와 부피 단위는 모두 제공되거나 모두 제공되지 않아야 합니다");
                 
         verify(skuRepository, never()).save(any(Sku.class));
+    }
+    
+    @Test
+    @DisplayName("데이터베이스 제약 조건 위반시 DuplicateSkuCodeException이 발생해야 한다")
+    void createSku_WithDataIntegrityViolation_ShouldThrowDuplicateSkuCodeException() {
+        // Given
+        CreateSkuRequest request = CreateSkuRequest.builder()
+                .code("SKU-RACE")
+                .name("동시성 테스트 상품")
+                .build();
+                
+        when(skuRepository.existsByCode(any(SkuCode.class))).thenReturn(false);
+        when(skuRepository.save(any(Sku.class)))
+                .thenThrow(new DataIntegrityViolationException("Unique constraint violation"));
+        
+        // When & Then
+        assertThatThrownBy(() -> useCase.execute(request))
+                .isInstanceOf(DuplicateSkuCodeException.class)
+                .hasMessageContaining("SKU 코드 'SKU-RACE'가 이미 존재하여 생성에 실패했습니다.")
+                .hasCauseInstanceOf(DataIntegrityViolationException.class);
+                
+        verify(skuRepository).existsByCode(any(SkuCode.class));
+        verify(skuRepository).save(any(Sku.class));
     }
 }

@@ -8,6 +8,7 @@ import com.commerce.inventory.domain.model.*;
 import com.commerce.inventory.domain.repository.SkuRepository;
 import com.commerce.common.application.usecase.UseCase;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -22,22 +23,21 @@ public class CreateSkuUseCase implements UseCase<CreateSkuRequest, CreateSkuResp
     public CreateSkuResponse execute(CreateSkuRequest request) {
         SkuCode skuCode = SkuCode.of(request.getCode());
         
-        checkDuplicateCode(skuCode);
+        // 빠른 실패(fast-fail)를 위한 사전 검사
+        if (skuRepository.existsByCode(skuCode)) {
+            throw new DuplicateSkuCodeException("이미 존재하는 SKU 코드입니다: " + skuCode.value());
+        }
         
         CreateSkuCommand command = buildCreateCommand(request, skuCode);
-        
         Sku sku = Sku.create(command, LocalDateTime.now(clock));
         
-        Sku savedSku = skuRepository.save(sku);
-        
-        return mapToResponse(savedSku);
-    }
-    
-    private void checkDuplicateCode(SkuCode skuCode) {
-        skuRepository.findByCode(skuCode)
-                .ifPresent(sku -> {
-                    throw new DuplicateSkuCodeException("이미 존재하는 SKU 코드입니다: " + skuCode.value());
-                });
+        try {
+            Sku savedSku = skuRepository.save(sku);
+            return mapToResponse(savedSku);
+        } catch (DataIntegrityViolationException e) {
+            // 데이터베이스 제약 조건 위반으로 인한 예외 처리
+            throw new DuplicateSkuCodeException("SKU 코드 '" + skuCode.value() + "'가 이미 존재하여 생성에 실패했습니다.", e);
+        }
     }
     
     private CreateSkuCommand buildCreateCommand(CreateSkuRequest request, SkuCode skuCode) {
