@@ -6,6 +6,10 @@ public class InvalidVolumeException extends InventoryDomainException {
         super(message);
     }
     
+    public InvalidVolumeException(String message, Throwable cause) {
+        super(message, cause);
+    }
+    
     @Override
     public String getErrorCode() {
         return "INVENTORY_INVALID_VOLUME";

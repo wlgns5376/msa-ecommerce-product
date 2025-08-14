@@ -8,10 +8,13 @@ public enum WeightUnit {
     MILLIGRAM;
     
     public static WeightUnit fromString(String unit) {
+        if (unit == null) {
+            throw new InvalidWeightException("무게 단위는 null일 수 없습니다.");
+        }
         try {
             return WeightUnit.valueOf(unit.toUpperCase());
-        } catch (IllegalArgumentException | NullPointerException e) {
-            throw new InvalidWeightException("유효하지 않은 무게 단위입니다: " + unit);
+        } catch (IllegalArgumentException e) {
+            throw new InvalidWeightException("유효하지 않은 무게 단위입니다: " + unit, e);
         }
     }
 }
