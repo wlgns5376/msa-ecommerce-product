@@ -96,10 +96,9 @@ class InventoryTest {
         // given
         Inventory inventory = Inventory.createEmpty(SkuId.generate());
         Quantity receiveQuantity = Quantity.of(50);
-        String reference = "PO-2024-001";
 
         // when
-        inventory.receive(receiveQuantity, reference);
+        inventory.receive(receiveQuantity);
 
         // then
         assertThat(inventory.getTotalQuantity()).isEqualTo(receiveQuantity);
@@ -115,8 +114,8 @@ class InventoryTest {
         Quantity secondReceive = Quantity.of(30);
 
         // when
-        inventory.receive(firstReceive, "PO-2024-001");
-        inventory.receive(secondReceive, "PO-2024-002");
+        inventory.receive(firstReceive);
+        inventory.receive(secondReceive);
 
         // then
         assertThat(inventory.getTotalQuantity()).isEqualTo(Quantity.of(180));

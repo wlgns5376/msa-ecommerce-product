@@ -2,13 +2,13 @@ package com.commerce.inventory.domain.model;
 
 import com.commerce.common.domain.model.Quantity;
 import com.commerce.inventory.domain.exception.InvalidStockMovementException;
-import com.commerce.common.domain.model.BaseEntity;
+import com.commerce.common.domain.model.AggregateRoot;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
 
 @Getter
-public class StockMovement extends BaseEntity {
+public class StockMovement extends AggregateRoot<MovementId> {
     
     private final MovementId id;
     private final SkuId skuId;
@@ -125,6 +125,7 @@ public class StockMovement extends BaseEntity {
         }
     }
     
+    @Override
     public MovementId getId() {
         return id;
     }
