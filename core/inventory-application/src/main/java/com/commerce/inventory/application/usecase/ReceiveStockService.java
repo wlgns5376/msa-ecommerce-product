@@ -10,7 +10,6 @@ import com.commerce.inventory.application.port.out.SaveStockMovementPort;
 import com.commerce.inventory.domain.exception.InvalidSkuException;
 import com.commerce.inventory.domain.model.Inventory;
 import com.commerce.inventory.domain.model.MovementType;
-import com.commerce.inventory.domain.model.Sku;
 import com.commerce.inventory.domain.model.SkuId;
 import com.commerce.inventory.domain.model.StockMovement;
 import lombok.RequiredArgsConstructor;
@@ -38,7 +37,7 @@ public class ReceiveStockService implements ReceiveStockUseCase {
         SkuId skuId = SkuId.of(command.getSkuId());
         
         // SKU 존재 확인
-        Sku sku = loadSkuPort.load(skuId)
+        loadSkuPort.load(skuId)
             .orElseThrow(() -> new InvalidSkuException("존재하지 않는 SKU입니다: " + skuId.value()));
         
         // 재고 조회 또는 생성
