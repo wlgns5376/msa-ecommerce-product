@@ -34,6 +34,21 @@ public record SkuMapping(Map<String, Integer> mappings) implements ValueObject {
         
         return new SkuMapping(mappings);
     }
+    
+    public static SkuMapping of(Map<String, Integer> mappings) {
+        if (mappings == null || mappings.isEmpty()) {
+            throw new InvalidSkuMappingException("SKU mappings cannot be null or empty");
+        }
+        
+        if (mappings.size() == 1) {
+            Map.Entry<String, Integer> entry = mappings.entrySet().iterator().next();
+            if (entry.getValue() == 1) {
+                return single(entry.getKey());
+            }
+        }
+        
+        return new SkuMapping(mappings);
+    }
 
     private static void validate(Map<String, Integer> mappings) {
         if (mappings == null || mappings.isEmpty()) {
