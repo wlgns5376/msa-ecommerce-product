@@ -238,4 +238,5 @@ class ReceiveStockUseCaseTest {
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("SKU ID는 필수입니다");
     }
+    
 }
