@@ -16,6 +16,11 @@ public abstract class BaseEntity {
         this.updatedAt = LocalDateTime.now(clock);
     }
     
+    protected BaseEntity(LocalDateTime createdAt, LocalDateTime updatedAt) {
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+    
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }

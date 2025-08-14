@@ -16,6 +16,8 @@ import com.commerce.inventory.domain.model.SkuId;
 import com.commerce.inventory.domain.model.StockMovement;
 import com.commerce.inventory.domain.model.Weight;
 import com.commerce.inventory.domain.model.WeightUnit;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,9 +34,12 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -54,6 +59,9 @@ class ReceiveStockUseCaseTest {
     @Mock
     private SaveStockMovementPort saveStockMovementPort;
     
+    @Mock
+    private Validator validator;
+    
     private Clock fixedClock;
     private ReceiveStockUseCase useCase;
     
@@ -65,7 +73,8 @@ class ReceiveStockUseCaseTest {
             loadInventoryPort,
             saveInventoryPort,
             saveStockMovementPort,
-            fixedClock
+            fixedClock,
+            validator
         );
     }
     
@@ -87,6 +96,7 @@ class ReceiveStockUseCaseTest {
         
         when(loadSkuPort.load(skuId)).thenReturn(Optional.of(sku));
         when(loadInventoryPort.load(skuId)).thenReturn(Optional.of(inventory));
+        when(validator.validate(command)).thenReturn(Set.of());
         
         // When
         useCase.receive(command);
@@ -121,6 +131,7 @@ class ReceiveStockUseCaseTest {
             .build();
         
         when(loadSkuPort.load(skuId)).thenReturn(Optional.empty());
+        when(validator.validate(command)).thenReturn(Set.of());
         
         // When & Then
         assertThatThrownBy(() -> useCase.receive(command))
@@ -144,6 +155,7 @@ class ReceiveStockUseCaseTest {
         
         when(loadSkuPort.load(skuId)).thenReturn(Optional.of(sku));
         when(loadInventoryPort.load(skuId)).thenReturn(Optional.empty());
+        when(validator.validate(command)).thenReturn(Set.of());
         
         // When
         useCase.receive(command);
@@ -171,6 +183,11 @@ class ReceiveStockUseCaseTest {
             .reference("PO-2024-003")
             .build();
         
+        // Mock validation failure
+        ConstraintViolation<ReceiveStockCommand> violation = mock(ConstraintViolation.class);
+        when(violation.getMessage()).thenReturn("입고 수량은 0보다 커야 합니다");
+        when(validator.validate(command)).thenReturn(Set.of(violation));
+        
         // When & Then
         assertThatThrownBy(() -> useCase.receive(command))
             .isInstanceOf(IllegalArgumentException.class)
@@ -189,6 +206,11 @@ class ReceiveStockUseCaseTest {
             .reference(invalidReference)
             .build();
         
+        // Mock validation failure
+        ConstraintViolation<ReceiveStockCommand> violation = mock(ConstraintViolation.class);
+        when(violation.getMessage()).thenReturn("참조 번호는 필수입니다");
+        when(validator.validate(command)).thenReturn(Set.of(violation));
+        
         // When & Then
         assertThatThrownBy(() -> useCase.receive(command))
             .isInstanceOf(IllegalArgumentException.class)
@@ -205,6 +227,11 @@ class ReceiveStockUseCaseTest {
             .quantity(50)
             .reference("PO-2024-004")
             .build();
+        
+        // Mock validation failure
+        ConstraintViolation<ReceiveStockCommand> violation = mock(ConstraintViolation.class);
+        when(violation.getMessage()).thenReturn("SKU ID는 필수입니다");
+        when(validator.validate(command)).thenReturn(Set.of(violation));
         
         // When & Then
         assertThatThrownBy(() -> useCase.receive(command))

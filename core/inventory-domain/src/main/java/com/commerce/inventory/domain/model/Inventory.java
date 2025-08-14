@@ -6,6 +6,8 @@ import com.commerce.inventory.domain.exception.InvalidInventoryException;
 import com.commerce.common.domain.model.AggregateRoot;
 import lombok.Getter;
 
+import java.time.LocalDateTime;
+
 @Getter
 public class Inventory extends AggregateRoot<SkuId> {
     
@@ -19,6 +21,17 @@ public class Inventory extends AggregateRoot<SkuId> {
     }
     
     private Inventory(SkuId skuId, Quantity totalQuantity, Quantity reservedQuantity, Long version) {
+        super();
+        validateCreate(skuId, totalQuantity, reservedQuantity);
+        
+        this.skuId = skuId;
+        this.totalQuantity = totalQuantity;
+        this.reservedQuantity = reservedQuantity;
+        this.version = version;
+    }
+    
+    private Inventory(SkuId skuId, Quantity totalQuantity, Quantity reservedQuantity, Long version, LocalDateTime createdAt, LocalDateTime updatedAt) {
+        super(createdAt, updatedAt);
         validateCreate(skuId, totalQuantity, reservedQuantity);
         
         this.skuId = skuId;
@@ -41,6 +54,10 @@ public class Inventory extends AggregateRoot<SkuId> {
     
     public static Inventory restore(SkuId skuId, Quantity totalQuantity, Quantity reservedQuantity, Long version) {
         return new Inventory(skuId, totalQuantity, reservedQuantity, version);
+    }
+    
+    public static Inventory restore(SkuId skuId, Quantity totalQuantity, Quantity reservedQuantity, Long version, LocalDateTime createdAt, LocalDateTime updatedAt) {
+        return new Inventory(skuId, totalQuantity, reservedQuantity, version, createdAt, updatedAt);
     }
     
     public Quantity getAvailableQuantity() {

@@ -47,7 +47,9 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
                 SkuId.of(entity.getSkuId()),
                 Quantity.of(entity.getTotalQuantity()),
                 Quantity.of(entity.getReservedQuantity()),
-                entity.getVersion()
+                entity.getVersion(),
+                entity.getCreatedAt(),
+                entity.getUpdatedAt()
         );
     }
     
@@ -57,6 +59,8 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
                 .totalQuantity(inventory.getTotalQuantity().value())
                 .reservedQuantity(inventory.getReservedQuantity().value())
                 .version(inventory.getVersion())
+                .createdAt(inventory.getCreatedAt())
+                .updatedAt(inventory.getUpdatedAt())
                 .build();
     }
 }

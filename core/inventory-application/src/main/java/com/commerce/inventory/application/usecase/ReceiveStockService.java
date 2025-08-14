@@ -12,6 +12,8 @@ import com.commerce.inventory.domain.model.Inventory;
 import com.commerce.inventory.domain.model.MovementType;
 import com.commerce.inventory.domain.model.SkuId;
 import com.commerce.inventory.domain.model.StockMovement;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
@@ -21,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +35,7 @@ public class ReceiveStockService implements ReceiveStockUseCase {
     private final SaveInventoryPort saveInventoryPort;
     private final SaveStockMovementPort saveStockMovementPort;
     private final Clock clock;
+    private final Validator validator;
     
     @Override
     @Retryable(
@@ -40,7 +44,12 @@ public class ReceiveStockService implements ReceiveStockUseCase {
         backoff = @Backoff(delay = 100, multiplier = 2)
     )
     public void receive(ReceiveStockCommand command) {
-        command.validate();
+        // Bean Validation을 사용한 유효성 검사
+        Set<ConstraintViolation<ReceiveStockCommand>> violations = validator.validate(command);
+        if (!violations.isEmpty()) {
+            ConstraintViolation<ReceiveStockCommand> violation = violations.iterator().next();
+            throw new IllegalArgumentException(violation.getMessage());
+        }
         
         SkuId skuId = SkuId.of(command.getSkuId());
         
