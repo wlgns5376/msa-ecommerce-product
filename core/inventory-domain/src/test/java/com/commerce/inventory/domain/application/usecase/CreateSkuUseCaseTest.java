@@ -106,7 +106,7 @@ class CreateSkuUseCaseTest {
                 
         // When & Then
         assertThatThrownBy(() -> useCase.execute(requestWithoutCode))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(InvalidSkuCodeException.class)
                 .hasMessageContaining("SKU 코드는 필수입니다");
                 
         verify(skuRepository, never()).save(any(Sku.class));
@@ -122,7 +122,7 @@ class CreateSkuUseCaseTest {
                 
         // When & Then
         assertThatThrownBy(() -> useCase.execute(requestWithoutName))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(InvalidSkuException.class)
                 .hasMessageContaining("SKU 이름은 필수입니다");
                 
         verify(skuRepository, never()).save(any(Sku.class));
@@ -181,7 +181,7 @@ class CreateSkuUseCaseTest {
                 .code("SKU-003")
                 .name("테스트 상품")
                 .weight(-1.0)
-                .weightUnit("KG")
+                .weightUnit("KILOGRAM")
                 .build();
                 
         when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
@@ -284,5 +284,47 @@ class CreateSkuUseCaseTest {
         assertThat(response.getVolumeUnit()).isEqualTo("CUBIC_CM");
         
         verify(skuRepository).save(any(Sku.class));
+    }
+    
+    @Test
+    @DisplayName("0 무게로 생성 요청시 예외가 발생해야 한다")
+    void createSku_WithZeroWeight_ShouldThrowException() {
+        // Given
+        CreateSkuRequest request = CreateSkuRequest.builder()
+                .code("SKU-008")
+                .name("테스트 상품")
+                .weight(0.0)
+                .weightUnit("KILOGRAM")
+                .build();
+                
+        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        
+        // When & Then
+        assertThatThrownBy(() -> useCase.execute(request))
+                .isInstanceOf(InvalidWeightException.class)
+                .hasMessageContaining("무게는 0보다 커야 합니다");
+                
+        verify(skuRepository, never()).save(any(Sku.class));
+    }
+    
+    @Test
+    @DisplayName("0 부피로 생성 요청시 예외가 발생해야 한다")
+    void createSku_WithZeroVolume_ShouldThrowException() {
+        // Given
+        CreateSkuRequest request = CreateSkuRequest.builder()
+                .code("SKU-009")
+                .name("테스트 상품")
+                .volume(0.0)
+                .volumeUnit("CUBIC_CM")
+                .build();
+                
+        when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.empty());
+        
+        // When & Then
+        assertThatThrownBy(() -> useCase.execute(request))
+                .isInstanceOf(InvalidVolumeException.class)
+                .hasMessageContaining("부피는 0보다 커야 합니다");
+                
+        verify(skuRepository, never()).save(any(Sku.class));
     }
 }

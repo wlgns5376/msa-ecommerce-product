@@ -18,8 +18,6 @@ public class CreateSkuUseCase implements UseCase<CreateSkuRequest, CreateSkuResp
     
     @Override
     public CreateSkuResponse execute(CreateSkuRequest request) {
-        validateRequest(request);
-        
         SkuCode skuCode = createSkuCode(request.getCode());
         
         checkDuplicateCode(skuCode);
@@ -31,16 +29,6 @@ public class CreateSkuUseCase implements UseCase<CreateSkuRequest, CreateSkuResp
         Sku savedSku = skuRepository.save(sku);
         
         return mapToResponse(savedSku);
-    }
-    
-    private void validateRequest(CreateSkuRequest request) {
-        if (request.getCode() == null || request.getCode().trim().isEmpty()) {
-            throw new IllegalArgumentException("SKU 코드는 필수입니다");
-        }
-        
-        if (request.getName() == null || request.getName().trim().isEmpty()) {
-            throw new IllegalArgumentException("SKU 이름은 필수입니다");
-        }
     }
     
     private SkuCode createSkuCode(String code) {
@@ -62,40 +50,16 @@ public class CreateSkuUseCase implements UseCase<CreateSkuRequest, CreateSkuResp
                 .description(request.getDescription());
         
         if (request.getWeight() != null && request.getWeightUnit() != null) {
-            validateWeight(request.getWeight());
-            WeightUnit weightUnit;
-            try {
-                weightUnit = WeightUnit.valueOf(request.getWeightUnit().toUpperCase());
-            } catch (IllegalArgumentException e) {
-                throw new InvalidWeightException("유효하지 않은 무게 단위입니다: " + request.getWeightUnit());
-            }
+            WeightUnit weightUnit = WeightUnit.fromString(request.getWeightUnit());
             builder.weight(Weight.of(request.getWeight(), weightUnit));
         }
         
         if (request.getVolume() != null && request.getVolumeUnit() != null) {
-            validateVolume(request.getVolume());
-            VolumeUnit volumeUnit;
-            try {
-                volumeUnit = VolumeUnit.valueOf(request.getVolumeUnit().toUpperCase());
-            } catch (IllegalArgumentException e) {
-                throw new InvalidVolumeException("유효하지 않은 부피 단위입니다: " + request.getVolumeUnit());
-            }
+            VolumeUnit volumeUnit = VolumeUnit.fromString(request.getVolumeUnit());
             builder.volume(Volume.of(request.getVolume(), volumeUnit));
         }
         
         return builder.build();
-    }
-    
-    private void validateWeight(Double weight) {
-        if (weight <= 0) {
-            throw new InvalidWeightException("무게는 0보다 커야 합니다");
-        }
-    }
-    
-    private void validateVolume(Double volume) {
-        if (volume <= 0) {
-            throw new InvalidVolumeException("부피는 0보다 커야 합니다");
-        }
     }
     
     private CreateSkuResponse mapToResponse(Sku sku) {
