@@ -36,7 +36,7 @@ class VolumeTest {
         // when & then
         assertThatThrownBy(() -> new Volume(negativeValue, VolumeUnit.CUBIC_CM))
                 .isInstanceOf(InvalidVolumeException.class)
-                .hasMessage("부피는 0 이상이어야 합니다");
+                .hasMessage("부피는 0보다 커야 합니다");
     }
 
     @Test

@@ -37,10 +37,10 @@ class StockAvailabilityServiceConcurrencyTest {
     private InventoryRepository inventoryRepository;
     
     @Mock
-    private LockRepository lockRepository;
+    private ProductRepository productRepository;
     
     @Mock
-    private ProductRepository productRepository;
+    private LockRepository lockRepository;
     
     @Mock
     private SagaRepository sagaRepository;

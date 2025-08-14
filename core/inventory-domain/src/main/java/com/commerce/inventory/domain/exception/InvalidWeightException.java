@@ -6,6 +6,10 @@ public class InvalidWeightException extends InventoryDomainException {
         super(message);
     }
     
+    public InvalidWeightException(String message, Throwable cause) {
+        super(message, cause);
+    }
+    
     @Override
     public String getErrorCode() {
         return "INVENTORY_INVALID_WEIGHT";

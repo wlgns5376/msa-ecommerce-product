@@ -1,4 +1,4 @@
-package com.commerce.product.domain.application.usecase;
+package com.commerce.common.application.usecase;
 
 /**
  * 유스케이스의 기본 인터페이스
