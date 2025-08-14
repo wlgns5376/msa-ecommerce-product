@@ -69,7 +69,7 @@ public class Inventory extends AggregateRoot<SkuId> {
     }
     
     public void receive(Quantity quantity) {
-        if (quantity == null || quantity.value() == 0) {
+        if (quantity == null || quantity.value() <= 0) {
             throw new InvalidInventoryException("입고 수량은 0보다 커야 합니다");
         }
         

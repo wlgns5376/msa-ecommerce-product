@@ -122,6 +122,43 @@ class InventoryTest {
     }
 
     @Test
+    @DisplayName("입고 수량이 0이면 예외가 발생한다")
+    void shouldThrowExceptionWhenReceiveQuantityIsZero() {
+        // given
+        Inventory inventory = Inventory.createEmpty(SkuId.generate());
+        Quantity zeroQuantity = Quantity.of(0);
+
+        // when & then
+        assertThatThrownBy(() -> inventory.receive(zeroQuantity))
+                .isInstanceOf(InvalidInventoryException.class)
+                .hasMessage("입고 수량은 0보다 커야 합니다");
+    }
+
+    @Test
+    @DisplayName("입고 수량이 음수이면 Quantity 생성 시 예외가 발생한다")
+    void shouldThrowExceptionWhenReceiveQuantityIsNegative() {
+        // given
+        Inventory inventory = Inventory.createEmpty(SkuId.generate());
+
+        // when & then
+        assertThatThrownBy(() -> Quantity.of(-10))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Quantity cannot be negative");
+    }
+
+    @Test
+    @DisplayName("입고 수량이 null이면 예외가 발생한다")
+    void shouldThrowExceptionWhenReceiveQuantityIsNull() {
+        // given
+        Inventory inventory = Inventory.createEmpty(SkuId.generate());
+
+        // when & then
+        assertThatThrownBy(() -> inventory.receive(null))
+                .isInstanceOf(InvalidInventoryException.class)
+                .hasMessage("입고 수량은 0보다 커야 합니다");
+    }
+
+    @Test
     @DisplayName("가용 재고를 확인할 수 있다")
     void shouldCheckAvailableStock() {
         // given
