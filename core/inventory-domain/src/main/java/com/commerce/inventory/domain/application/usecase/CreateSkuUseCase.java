@@ -47,6 +47,13 @@ public class CreateSkuUseCase implements UseCase<CreateSkuRequest, CreateSkuResp
                 .name(request.getName())
                 .description(request.getDescription());
         
+        addWeightToCommand(builder, request);
+        addVolumeToCommand(builder, request);
+        
+        return builder.build();
+    }
+    
+    private void addWeightToCommand(CreateSkuCommand.CreateSkuCommandBuilder builder, CreateSkuRequest request) {
         boolean weightValueProvided = request.getWeight() != null;
         boolean weightUnitProvided = request.getWeightUnit() != null;
         if (weightValueProvided != weightUnitProvided) {
@@ -56,7 +63,9 @@ public class CreateSkuUseCase implements UseCase<CreateSkuRequest, CreateSkuResp
             WeightUnit weightUnit = WeightUnit.fromString(request.getWeightUnit());
             builder.weight(Weight.of(request.getWeight(), weightUnit));
         }
-
+    }
+    
+    private void addVolumeToCommand(CreateSkuCommand.CreateSkuCommandBuilder builder, CreateSkuRequest request) {
         boolean volumeValueProvided = request.getVolume() != null;
         boolean volumeUnitProvided = request.getVolumeUnit() != null;
         if (volumeValueProvided != volumeUnitProvided) {
@@ -66,8 +75,6 @@ public class CreateSkuUseCase implements UseCase<CreateSkuRequest, CreateSkuResp
             VolumeUnit volumeUnit = VolumeUnit.fromString(request.getVolumeUnit());
             builder.volume(Volume.of(request.getVolume(), volumeUnit));
         }
-        
-        return builder.build();
     }
     
     private CreateSkuResponse mapToResponse(Sku sku) {

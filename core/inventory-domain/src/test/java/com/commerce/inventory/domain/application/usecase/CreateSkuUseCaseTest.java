@@ -88,7 +88,7 @@ class CreateSkuUseCaseTest {
                         .code(SkuCode.of("SKU-001"))
                         .name("기존 상품")
                         .build(),
-                LocalDateTime.now()
+                LocalDateTime.now(fixedClock)
         );
         
         when(skuRepository.findByCode(any(SkuCode.class))).thenReturn(Optional.of(existingSku));
