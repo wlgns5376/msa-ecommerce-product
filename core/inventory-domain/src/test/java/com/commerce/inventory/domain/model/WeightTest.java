@@ -36,7 +36,7 @@ class WeightTest {
         // when & then
         assertThatThrownBy(() -> new Weight(negativeValue, WeightUnit.GRAM))
                 .isInstanceOf(InvalidWeightException.class)
-                .hasMessage("무게는 0 이상이어야 합니다");
+                .hasMessage("무게는 0보다 커야 합니다");
     }
 
     @Test
