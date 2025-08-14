@@ -278,4 +278,36 @@ class InventoryTest {
                 .isInstanceOf(InvalidInventoryException.class)
                 .hasMessage("확정할 예약 수량이 부족합니다. 현재 예약: 30, 확정 요청: 50");
     }
+    
+    @Test
+    @DisplayName("새로 생성된 Inventory의 version은 0이다")
+    void shouldHaveInitialVersionZero() {
+        // given
+        SkuId skuId = SkuId.generate();
+        
+        // when
+        Inventory inventory = Inventory.createEmpty(skuId);
+        
+        // then
+        assertThat(inventory.getVersion()).isEqualTo(0L);
+    }
+    
+    @Test
+    @DisplayName("restore 메소드로 특정 version의 Inventory를 복원할 수 있다")
+    void shouldRestoreInventoryWithSpecificVersion() {
+        // given
+        SkuId skuId = SkuId.generate();
+        Quantity totalQuantity = Quantity.of(100);
+        Quantity reservedQuantity = Quantity.of(20);
+        Long version = 5L;
+        
+        // when
+        Inventory inventory = Inventory.restore(skuId, totalQuantity, reservedQuantity, version);
+        
+        // then
+        assertThat(inventory.getSkuId()).isEqualTo(skuId);
+        assertThat(inventory.getTotalQuantity()).isEqualTo(totalQuantity);
+        assertThat(inventory.getReservedQuantity()).isEqualTo(reservedQuantity);
+        assertThat(inventory.getVersion()).isEqualTo(version);
+    }
 }

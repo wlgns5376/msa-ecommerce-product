@@ -12,13 +12,19 @@ public class Inventory extends AggregateRoot<SkuId> {
     private final SkuId skuId;
     private Quantity totalQuantity;
     private Quantity reservedQuantity;
+    private Long version;
     
     private Inventory(SkuId skuId, Quantity totalQuantity, Quantity reservedQuantity) {
+        this(skuId, totalQuantity, reservedQuantity, 0L);
+    }
+    
+    private Inventory(SkuId skuId, Quantity totalQuantity, Quantity reservedQuantity, Long version) {
         validateCreate(skuId, totalQuantity, reservedQuantity);
         
         this.skuId = skuId;
         this.totalQuantity = totalQuantity;
         this.reservedQuantity = reservedQuantity;
+        this.version = version;
     }
     
     public static Inventory create(SkuId skuId, Quantity totalQuantity, Quantity reservedQuantity) {
@@ -31,6 +37,10 @@ public class Inventory extends AggregateRoot<SkuId> {
     
     public static Inventory createEmpty(SkuId skuId) {
         return new Inventory(skuId, Quantity.zero(), Quantity.zero());
+    }
+    
+    public static Inventory restore(SkuId skuId, Quantity totalQuantity, Quantity reservedQuantity, Long version) {
+        return new Inventory(skuId, totalQuantity, reservedQuantity, version);
     }
     
     public Quantity getAvailableQuantity() {

@@ -194,4 +194,21 @@ class ReceiveStockUseCaseTest {
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("참조 번호는 필수입니다");
     }
+    
+    @ParameterizedTest
+    @NullAndEmptySource
+    @DisplayName("SKU ID 없이 재고 입고 시 예외 발생")
+    void receiveStock_WithoutSkuId_ShouldThrowException(String invalidSkuId) {
+        // Given
+        ReceiveStockCommand command = ReceiveStockCommand.builder()
+            .skuId(invalidSkuId)
+            .quantity(50)
+            .reference("PO-2024-004")
+            .build();
+        
+        // When & Then
+        assertThatThrownBy(() -> useCase.receive(command))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("SKU ID는 필수입니다");
+    }
 }

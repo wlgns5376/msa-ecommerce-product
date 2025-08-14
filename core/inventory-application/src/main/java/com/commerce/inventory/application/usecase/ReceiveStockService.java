@@ -13,6 +13,9 @@ import com.commerce.inventory.domain.model.MovementType;
 import com.commerce.inventory.domain.model.SkuId;
 import com.commerce.inventory.domain.model.StockMovement;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +34,11 @@ public class ReceiveStockService implements ReceiveStockUseCase {
     private final Clock clock;
     
     @Override
+    @Retryable(
+        value = {OptimisticLockingFailureException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 100, multiplier = 2)
+    )
     public void receive(ReceiveStockCommand command) {
         command.validate();
         

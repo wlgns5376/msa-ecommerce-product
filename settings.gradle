@@ -18,6 +18,9 @@ project(':inventory-application').projectDir = file('core/inventory-application'
 include 'product-persistence'
 project(':product-persistence').projectDir = file('infrastructure/product-persistence')
 
+include 'inventory-persistence'
+project(':inventory-persistence').projectDir = file('infrastructure/inventory-persistence')
+
 include 'product-kafka'
 project(':product-kafka').projectDir = file('infrastructure/product-kafka')
 
