@@ -24,7 +24,4 @@ public record Quantity(int value) implements ValueObject {
         return this.value >= other.value;
     }
     
-    public int getValue() {
-        return value;
-    }
 }

@@ -50,7 +50,7 @@ public class CreateSkuUseCase implements UseCase<CreateSkuRequest, CreateSkuResp
     private void checkDuplicateCode(SkuCode skuCode) {
         skuRepository.findByCode(skuCode)
                 .ifPresent(sku -> {
-                    throw new DuplicateSkuCodeException("이미 존재하는 SKU 코드입니다: " + skuCode.getValue());
+                    throw new DuplicateSkuCodeException("이미 존재하는 SKU 코드입니다: " + skuCode.value());
                 });
     }
     
@@ -100,20 +100,20 @@ public class CreateSkuUseCase implements UseCase<CreateSkuRequest, CreateSkuResp
     
     private CreateSkuResponse mapToResponse(Sku sku) {
         CreateSkuResponse.CreateSkuResponseBuilder builder = CreateSkuResponse.builder()
-                .id(sku.getId().getValue())
-                .code(sku.getCode().getValue())
+                .id(sku.getId().value())
+                .code(sku.getCode().value())
                 .name(sku.getName())
                 .description(sku.getDescription())
                 .createdAt(sku.getCreatedAt());
         
         if (sku.getWeight() != null) {
-            builder.weight(sku.getWeight().getValue())
-                   .weightUnit(sku.getWeight().getUnit().name());
+            builder.weight(sku.getWeight().value())
+                   .weightUnit(sku.getWeight().unit().name());
         }
         
         if (sku.getVolume() != null) {
-            builder.volume(sku.getVolume().getValue())
-                   .volumeUnit(sku.getVolume().getUnit().name());
+            builder.volume(sku.getVolume().value())
+                   .volumeUnit(sku.getVolume().unit().name());
         }
         
         return builder.build();

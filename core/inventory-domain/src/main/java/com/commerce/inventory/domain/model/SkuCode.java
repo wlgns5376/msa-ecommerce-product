@@ -19,7 +19,4 @@ public record SkuCode(String value) implements ValueObject {
         return new SkuCode(value);
     }
     
-    public String getValue() {
-        return value;
-    }
 }

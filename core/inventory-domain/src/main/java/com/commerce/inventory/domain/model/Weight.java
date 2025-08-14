@@ -18,11 +18,4 @@ public record Weight(double value, WeightUnit unit) implements ValueObject {
         return new Weight(value, unit);
     }
     
-    public double getValue() {
-        return value;
-    }
-    
-    public WeightUnit getUnit() {
-        return unit;
-    }
 }

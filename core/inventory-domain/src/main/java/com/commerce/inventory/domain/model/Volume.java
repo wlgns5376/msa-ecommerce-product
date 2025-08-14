@@ -18,11 +18,4 @@ public record Volume(double value, VolumeUnit unit) implements ValueObject {
         return new Volume(value, unit);
     }
     
-    public double getValue() {
-        return value;
-    }
-    
-    public VolumeUnit getUnit() {
-        return unit;
-    }
 }
