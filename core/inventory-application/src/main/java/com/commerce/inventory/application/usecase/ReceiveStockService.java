@@ -50,7 +50,7 @@ public class ReceiveStockService implements ReceiveStockUseCase {
         
         // SKU 존재 확인
         if (!loadSkuPort.exists(skuId)) {
-            throw new InvalidSkuException("존재하지 않는 SKU입니다: " + skuId.value());
+            throw InvalidSkuException.notFound(skuId);
         }
         
         // 재고 조회 또는 생성

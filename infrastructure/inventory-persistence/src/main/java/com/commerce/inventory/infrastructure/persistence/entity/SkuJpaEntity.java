@@ -25,6 +25,9 @@ public class SkuJpaEntity {
     @Column(name = "name", nullable = false)
     private String name;
     
+    @Column(name = "description")
+    private String description;
+    
     @Column(name = "weight_value")
     private Double weightValue;
     
@@ -53,12 +56,14 @@ public class SkuJpaEntity {
                 .id(sku.getId().value())
                 .code(sku.getCode().value())
                 .name(sku.getName())
+                .description(sku.getDescription())
                 .weightValue(sku.getWeight() != null ? sku.getWeight().value() : null)
                 .weightUnit(sku.getWeight() != null ? sku.getWeight().unit() : null)
                 .volumeValue(sku.getVolume() != null ? sku.getVolume().value() : null)
                 .volumeUnit(sku.getVolume() != null ? sku.getVolume().unit() : null)
                 .createdAt(sku.getCreatedAt())
                 .updatedAt(sku.getUpdatedAt())
+                .version(sku.getVersion())
                 .build();
     }
     
@@ -73,13 +78,16 @@ public class SkuJpaEntity {
             volume = Volume.of(volumeValue, volumeUnit);
         }
         
-        return Sku.create(
-                new SkuId(id),
-                new SkuCode(code),
+        return Sku.restore(
+                SkuId.of(id),
+                SkuCode.of(code),
                 name,
+                description,
                 weight,
                 volume,
-                createdAt
+                createdAt,
+                updatedAt,
+                version
         );
     }
 }

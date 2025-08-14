@@ -17,6 +17,7 @@ public class Sku extends AggregateRoot<SkuId> {
     private Volume volume;
     private final LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Long version;
     
     private Sku(CreateSkuCommand command, LocalDateTime currentTime) {
         validateCreate(command);
@@ -29,6 +30,7 @@ public class Sku extends AggregateRoot<SkuId> {
         this.volume = command.getVolume();
         this.createdAt = currentTime;
         this.updatedAt = currentTime;
+        this.version = 0L;
     }
     
     public static Sku create(CreateSkuCommand command, LocalDateTime currentTime) {
@@ -44,6 +46,33 @@ public class Sku extends AggregateRoot<SkuId> {
             .volume(volume)
             .build();
         return new Sku(command, currentTime);
+    }
+    
+    public static Sku restore(
+            SkuId id,
+            SkuCode code,
+            String name,
+            String description,
+            Weight weight,
+            Volume volume,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt,
+            Long version
+    ) {
+        Sku sku = new Sku(
+                CreateSkuCommand.builder()
+                        .id(id)
+                        .code(code)
+                        .name(name)
+                        .description(description)
+                        .weight(weight)
+                        .volume(volume)
+                        .build(),
+                createdAt
+        );
+        sku.updatedAt = updatedAt;
+        sku.version = version;
+        return sku;
     }
     
     public void update(UpdateSkuCommand command, LocalDateTime currentTime) {
@@ -86,5 +115,9 @@ public class Sku extends AggregateRoot<SkuId> {
     @Override
     public SkuId getId() {
         return id;
+    }
+    
+    public Long getVersion() {
+        return version;
     }
 }
