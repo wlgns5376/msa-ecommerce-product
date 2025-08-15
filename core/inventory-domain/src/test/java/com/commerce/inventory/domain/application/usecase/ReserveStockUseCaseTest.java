@@ -19,7 +19,10 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -56,7 +59,9 @@ class ReserveStockUseCaseTest {
         // Given
         SkuId skuId = new SkuId("SKU-001");
         Inventory inventory = createInventoryWithStock(skuId, 100, 10);
-        when(inventoryRepository.findBySkuIdWithLock(skuId)).thenReturn(Optional.of(inventory));
+        Map<SkuId, Inventory> inventoryMap = new HashMap<>();
+        inventoryMap.put(skuId, inventory);
+        when(inventoryRepository.findBySkuIdsWithLock(any(Set.class))).thenReturn(inventoryMap);
         when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         ReserveStockRequest request = ReserveStockRequest.builder()
@@ -99,8 +104,10 @@ class ReserveStockUseCaseTest {
         Inventory inventory1 = createInventoryWithStock(skuId1, 100, 10);
         Inventory inventory2 = createInventoryWithStock(skuId2, 50, 5);
         
-        when(inventoryRepository.findBySkuIdWithLock(skuId1)).thenReturn(Optional.of(inventory1));
-        when(inventoryRepository.findBySkuIdWithLock(skuId2)).thenReturn(Optional.of(inventory2));
+        Map<SkuId, Inventory> inventoryMap = new HashMap<>();
+        inventoryMap.put(skuId1, inventory1);
+        inventoryMap.put(skuId2, inventory2);
+        when(inventoryRepository.findBySkuIdsWithLock(any(Set.class))).thenReturn(inventoryMap);
         when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         ReserveStockRequest request = ReserveStockRequest.builder()
@@ -138,7 +145,9 @@ class ReserveStockUseCaseTest {
         // Given
         SkuId skuId = new SkuId("SKU-001");
         Inventory inventory = createInventoryWithStock(skuId, 10, 5);
-        when(inventoryRepository.findBySkuIdWithLock(skuId)).thenReturn(Optional.of(inventory));
+        Map<SkuId, Inventory> inventoryMap = new HashMap<>();
+        inventoryMap.put(skuId, inventory);
+        when(inventoryRepository.findBySkuIdsWithLock(any(Set.class))).thenReturn(inventoryMap);
         
         ReserveStockRequest request = ReserveStockRequest.builder()
                 .items(Arrays.asList(
@@ -167,7 +176,7 @@ class ReserveStockUseCaseTest {
         when(clock.instant()).thenReturn(fixedTime.atZone(ZoneId.systemDefault()).toInstant());
         when(clock.getZone()).thenReturn(ZoneId.systemDefault());
         // Given
-        when(inventoryRepository.findBySkuIdWithLock(any())).thenReturn(Optional.empty());
+        when(inventoryRepository.findBySkuIdsWithLock(any(Set.class))).thenReturn(new HashMap<>());
         
         ReserveStockRequest request = ReserveStockRequest.builder()
                 .items(Arrays.asList(
@@ -187,34 +196,42 @@ class ReserveStockUseCaseTest {
     }
     
     @Test
-    @DisplayName("잘못된 요청 데이터로 예약 시도 시 예외가 발생한다")
-    void failWhenInvalidRequest() {
-        // Given - null items
-        ReserveStockRequest request1 = ReserveStockRequest.builder()
+    @DisplayName("예약 항목이 null일 때 예외가 발생한다")
+    void failWhenItemsAreNull() {
+        // Given
+        ReserveStockRequest request = ReserveStockRequest.builder()
                 .items(null)
                 .orderId("ORDER-001")
                 .ttlSeconds(900)
                 .build();
         
         // When/Then
-        assertThatThrownBy(() -> useCase.execute(request1))
+        assertThatThrownBy(() -> useCase.execute(request))
                 .isInstanceOf(InvalidReservationException.class)
                 .hasMessageContaining("예약 항목이 비어있습니다");
-        
-        // Given - empty items
-        ReserveStockRequest request2 = ReserveStockRequest.builder()
+    }
+    
+    @Test
+    @DisplayName("예약 항목이 비어있을 때 예외가 발생한다")
+    void failWhenItemsAreEmpty() {
+        // Given
+        ReserveStockRequest request = ReserveStockRequest.builder()
                 .items(Arrays.asList())
                 .orderId("ORDER-001")
                 .ttlSeconds(900)
                 .build();
         
         // When/Then
-        assertThatThrownBy(() -> useCase.execute(request2))
+        assertThatThrownBy(() -> useCase.execute(request))
                 .isInstanceOf(InvalidReservationException.class)
                 .hasMessageContaining("예약 항목이 비어있습니다");
-        
-        // Given - null orderId
-        ReserveStockRequest request3 = ReserveStockRequest.builder()
+    }
+    
+    @Test
+    @DisplayName("주문 ID가 null일 때 예외가 발생한다")
+    void failWhenOrderIdIsNull() {
+        // Given
+        ReserveStockRequest request = ReserveStockRequest.builder()
                 .items(Arrays.asList(
                         ReserveStockRequest.ReservationItem.builder()
                                 .skuId("SKU-001")
@@ -226,7 +243,7 @@ class ReserveStockUseCaseTest {
                 .build();
         
         // When/Then
-        assertThatThrownBy(() -> useCase.execute(request3))
+        assertThatThrownBy(() -> useCase.execute(request))
                 .isInstanceOf(InvalidReservationException.class)
                 .hasMessageContaining("주문 ID는 필수입니다");
     }
@@ -240,7 +257,9 @@ class ReserveStockUseCaseTest {
         // Given
         SkuId skuId = new SkuId("SKU-001");
         Inventory inventory = createInventoryWithStock(skuId, 100, 10);
-        when(inventoryRepository.findBySkuIdWithLock(skuId)).thenReturn(Optional.of(inventory));
+        Map<SkuId, Inventory> inventoryMap = new HashMap<>();
+        inventoryMap.put(skuId, inventory);
+        when(inventoryRepository.findBySkuIdsWithLock(any(Set.class))).thenReturn(inventoryMap);
         when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         ReserveStockRequest request = ReserveStockRequest.builder()
@@ -277,8 +296,10 @@ class ReserveStockUseCaseTest {
         Inventory inventory1 = createInventoryWithStock(skuId1, 100, 10);
         Inventory inventory2 = createInventoryWithStock(skuId2, 5, 3); // 부족한 재고
         
-        when(inventoryRepository.findBySkuIdWithLock(skuId1)).thenReturn(Optional.of(inventory1));
-        when(inventoryRepository.findBySkuIdWithLock(skuId2)).thenReturn(Optional.of(inventory2));
+        Map<SkuId, Inventory> inventoryMap = new HashMap<>();
+        inventoryMap.put(skuId1, inventory1);
+        inventoryMap.put(skuId2, inventory2);
+        when(inventoryRepository.findBySkuIdsWithLock(any(Set.class))).thenReturn(inventoryMap);
         
         ReserveStockRequest request = ReserveStockRequest.builder()
                 .items(Arrays.asList(

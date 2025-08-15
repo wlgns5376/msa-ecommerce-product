@@ -15,10 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -38,12 +38,37 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
         LocalDateTime currentTime = LocalDateTime.now(clock);
         int ttlSeconds = request.getTtlSeconds() != null ? request.getTtlSeconds() : DEFAULT_TTL_SECONDS;
         
-        // 먼저 모든 재고를 검증하고 Map에 저장
+        // 재고 확인 및 잠금
+        Map<String, Inventory> inventoryMap = lockAndVerifyInventories(request.getItems());
+        
+        // 예약 처리
+        List<ReserveStockResponse.ReservationResult> results = performReservations(
+                request, inventoryMap, ttlSeconds, currentTime
+        );
+        
+        return ReserveStockResponse.builder()
+                .reservations(results)
+                .allSuccessful(true)
+                .build();
+    }
+    
+    private Map<String, Inventory> lockAndVerifyInventories(List<ReserveStockRequest.ReservationItem> items) {
+        // 모든 SKU ID를 수집하여 한 번의 쿼리로 조회
+        Set<SkuId> skuIds = items.stream()
+                .map(item -> new SkuId(item.getSkuId()))
+                .collect(Collectors.toSet());
+        
+        Map<SkuId, Inventory> inventoryMapBySkuId = inventoryRepository.findBySkuIdsWithLock(skuIds);
+        
+        // 재고 검증
         Map<String, Inventory> inventoryMap = new HashMap<>();
-        for (ReserveStockRequest.ReservationItem item : request.getItems()) {
+        for (ReserveStockRequest.ReservationItem item : items) {
             SkuId skuId = new SkuId(item.getSkuId());
-            Inventory inventory = inventoryRepository.findBySkuIdWithLock(skuId)
-                    .orElseThrow(() -> new InvalidSkuIdException("SKU를 찾을 수 없습니다: " + item.getSkuId()));
+            Inventory inventory = inventoryMapBySkuId.get(skuId);
+            
+            if (inventory == null) {
+                throw new InvalidSkuIdException("SKU를 찾을 수 없습니다: " + item.getSkuId());
+            }
 
             if (!inventory.canReserve(Quantity.of(item.getQuantity()))) {
                 throw new InsufficientStockException(
@@ -53,9 +78,17 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
             }
             inventoryMap.put(item.getSkuId(), inventory);
         }
-
-        // 모든 재고가 충분하면 예약 진행
-        List<ReserveStockResponse.ReservationResult> results = request.getItems().stream()
+        
+        return inventoryMap;
+    }
+    
+    private List<ReserveStockResponse.ReservationResult> performReservations(
+            ReserveStockRequest request,
+            Map<String, Inventory> inventoryMap,
+            int ttlSeconds,
+            LocalDateTime currentTime
+    ) {
+        return request.getItems().stream()
                 .map(item -> reserveSingleItem(
                         item,
                         inventoryMap.get(item.getSkuId()),
@@ -64,11 +97,6 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
                         currentTime
                 ))
                 .collect(Collectors.toList());
-        
-        return ReserveStockResponse.builder()
-                .reservations(results)
-                .allSuccessful(true)
-                .build();
     }
     
     private ReserveStockResponse.ReservationResult reserveSingleItem(
@@ -78,13 +106,12 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
             int ttlSeconds,
             LocalDateTime currentTime
     ) {
-        SkuId skuId = new SkuId(item.getSkuId());
         Quantity requestedQuantity = Quantity.of(item.getQuantity());
         
         inventory.reserve(requestedQuantity, orderId, ttlSeconds);
         
         Reservation reservation = Reservation.createWithTTL(
-                skuId,
+                inventory.getId(),
                 requestedQuantity,
                 orderId,
                 ttlSeconds,
