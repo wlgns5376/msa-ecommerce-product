@@ -329,8 +329,8 @@ class ReserveStockUseCaseTest {
                 .isInstanceOf(InsufficientStockException.class);
         
         // 첫 번째 예약도 저장되지 않아야 함
-        verify(inventoryRepository, never()).save(any());
-        verify(reservationRepository, never()).save(any());
+        verify(inventoryRepository, never()).saveAll(any());
+        verify(reservationRepository, never()).saveAll(any());
     }
     
     private Inventory createInventoryWithStock(SkuId skuId, int totalQuantity, int reservedQuantity) {
@@ -367,7 +367,7 @@ class ReserveStockUseCaseTest {
                 .hasMessageContaining("가용 재고: 8")
                 .hasMessageContaining("요청 수량: 10");
         
-        verify(inventoryRepository, never()).save(any());
-        verify(reservationRepository, never()).save(any());
+        verify(inventoryRepository, never()).saveAll(any());
+        verify(reservationRepository, never()).saveAll(any());
     }
 }
