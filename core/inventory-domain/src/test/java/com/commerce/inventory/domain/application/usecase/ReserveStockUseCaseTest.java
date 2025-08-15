@@ -18,11 +18,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -410,5 +413,94 @@ class ReserveStockUseCaseTest {
         
         verify(inventoryRepository, never()).saveAll(any());
         verify(reservationRepository, never()).saveAll(any());
+    }
+    
+    @Test
+    @DisplayName("예약 항목 중 null이 포함되어 있으면 예외가 발생한다")
+    void failWhenItemIsNull() {
+        // Given
+        List<ReserveStockRequest.ReservationItem> items = new ArrayList<>();
+        items.add(ReserveStockRequest.ReservationItem.builder()
+                .skuId("SKU-001")
+                .quantity(5)
+                .build());
+        items.add(null); // null 항목 추가
+        
+        ReserveStockRequest request = ReserveStockRequest.builder()
+                .items(items)
+                .orderId("ORDER-001")
+                .ttlSeconds(900)
+                .build();
+        
+        // When/Then
+        assertThatThrownBy(() -> useCase.execute(request))
+                .isInstanceOf(InvalidReservationException.class)
+                .hasMessageContaining("예약 항목은 null일 수 없습니다");
+    }
+    
+    @Test
+    @DisplayName("대량의 SKU(1000개 초과)를 배치로 나누어 조회한다")
+    @SuppressWarnings("unchecked")
+    void reserveLargeBatchOfSkus() {
+        // Given
+        setupClock();
+        int totalSkus = 2500; // BATCH_SIZE(1000)를 초과하는 수량
+        
+        // 2500개의 SKU와 재고를 생성
+        Map<SkuId, Inventory> allInventories = new HashMap<>();
+        List<ReserveStockRequest.ReservationItem> items = IntStream.range(1, totalSkus + 1)
+                .mapToObj(i -> {
+                    SkuId skuId = new SkuId("SKU-" + String.format("%04d", i));
+                    Inventory inventory = createInventoryWithStock(skuId, 100, 10);
+                    allInventories.put(skuId, inventory);
+                    return ReserveStockRequest.ReservationItem.builder()
+                            .skuId(skuId.value())
+                            .quantity(1)
+                            .build();
+                })
+                .collect(Collectors.toList());
+        
+        // Mock 설정: 어떤 Set이 들어와도 해당 SKU에 대한 재고만 반환
+        when(inventoryRepository.findBySkuIdsWithLock(any(Set.class))).thenAnswer(invocation -> {
+            Set<SkuId> requestedSkuIds = invocation.getArgument(0);
+            return requestedSkuIds.stream()
+                    .filter(allInventories::containsKey)
+                    .collect(Collectors.toMap(
+                            skuId -> skuId,
+                            allInventories::get
+                    ));
+        });
+        
+        when(reservationRepository.saveAll(any(List.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(inventoryRepository.saveAll(any(List.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
+        ReserveStockRequest request = ReserveStockRequest.builder()
+                .items(items)
+                .orderId("ORDER-LARGE")
+                .ttlSeconds(900)
+                .build();
+        
+        // When
+        ReserveStockResponse response = useCase.execute(request);
+        
+        // Then
+        assertThat(response.getReservations()).hasSize(totalSkus);
+        
+        // findBySkuIdsWithLock이 3번 호출되었는지 확인 (2500 / 1000 = 3 배치)
+        verify(inventoryRepository, times(3)).findBySkuIdsWithLock(any(Set.class));
+        
+        // 각 배치 호출의 크기 검증
+        ArgumentCaptor<Set<SkuId>> skuIdCaptor = ArgumentCaptor.forClass(Set.class);
+        verify(inventoryRepository, times(3)).findBySkuIdsWithLock(skuIdCaptor.capture());
+        
+        List<Set<SkuId>> capturedSets = skuIdCaptor.getAllValues();
+        assertThat(capturedSets.get(0)).hasSize(1000); // 첫 번째 배치
+        assertThat(capturedSets.get(1)).hasSize(1000); // 두 번째 배치
+        assertThat(capturedSets.get(2)).hasSize(500);  // 마지막 배치
+        
+        // 모든 재고가 저장되었는지 확인
+        ArgumentCaptor<List<Inventory>> inventoryCaptor = ArgumentCaptor.forClass(List.class);
+        verify(inventoryRepository).saveAll(inventoryCaptor.capture());
+        assertThat(inventoryCaptor.getValue()).hasSize(totalSkus);
     }
 }

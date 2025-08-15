@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 public class ReserveStockUseCase implements UseCase<ReserveStockRequest, ReserveStockResponse> {
     
     private static final int DEFAULT_TTL_SECONDS = 900; // 15분
+    private static final int BATCH_SIZE = 1000; // IN 절 제한을 위한 배치 크기
     
     private final InventoryRepository inventoryRepository;
     private final ReservationRepository reservationRepository;
@@ -72,12 +73,26 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
                         Collectors.summingInt(ReserveStockRequest.ReservationItem::getQuantity)
                 ));
         
-        // 모든 SKU ID를 수집하여 한 번의 쿼리로 조회
+        // 모든 SKU ID를 수집
         Set<SkuId> skuIds = totalQuantityBySku.keySet().stream()
                 .map(SkuId::new)
                 .collect(Collectors.toSet());
         
-        Map<SkuId, Inventory> inventoryMapBySkuId = inventoryRepository.findBySkuIdsWithLock(skuIds);
+        // 대량의 SKU를 배치로 나누어 조회
+        Map<SkuId, Inventory> inventoryMapBySkuId = new HashMap<>();
+        if (skuIds.size() <= BATCH_SIZE) {
+            // SKU 개수가 배치 크기보다 작으면 한 번에 조회
+            inventoryMapBySkuId = inventoryRepository.findBySkuIdsWithLock(skuIds);
+        } else {
+            // SKU 개수가 배치 크기보다 크면 나누어서 조회
+            List<SkuId> skuIdList = new ArrayList<>(skuIds);
+            for (int i = 0; i < skuIdList.size(); i += BATCH_SIZE) {
+                int endIndex = Math.min(i + BATCH_SIZE, skuIdList.size());
+                Set<SkuId> batchSkuIds = new HashSet<>(skuIdList.subList(i, endIndex));
+                Map<SkuId, Inventory> batchResult = inventoryRepository.findBySkuIdsWithLock(batchSkuIds);
+                inventoryMapBySkuId.putAll(batchResult);
+            }
+        }
         
         // 존재하지 않는 SKU를 일괄 검증
         Set<SkuId> foundSkuIds = inventoryMapBySkuId.keySet();
@@ -172,6 +187,9 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
         }
         
         for (ReserveStockRequest.ReservationItem item : request.getItems()) {
+            if (item == null) {
+                throw new InvalidReservationException("예약 항목은 null일 수 없습니다");
+            }
             if (item.getSkuId() == null || item.getSkuId().trim().isEmpty()) {
                 throw new InvalidReservationException("SKU ID는 필수입니다");
             }
