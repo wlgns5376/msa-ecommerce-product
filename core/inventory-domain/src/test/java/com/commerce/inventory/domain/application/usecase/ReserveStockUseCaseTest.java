@@ -438,7 +438,43 @@ class ReserveStockUseCaseTest {
         // When/Then
         assertThatThrownBy(() -> useCase.execute(request))
                 .isInstanceOf(InvalidReservationException.class)
-                .hasMessageContaining("예약 항목은 null일 수 없습니다");
+                .hasMessageContaining("예약 항목 중에 null 값이 포함될 수 없습니다.");
+    }
+    
+    @Test
+    @DisplayName("존재하지 않는 SKU가 10개를 초과하면 메시지가 제한된다")
+    void shouldLimitMissingSkuIdsInExceptionMessage() {
+        // Given
+        setupClock();
+        
+        // 15개의 존재하지 않는 SKU 준비
+        List<ReserveStockRequest.ReservationItem> items = IntStream.range(1, 16)
+                .mapToObj(i -> ReserveStockRequest.ReservationItem.builder()
+                        .skuId("MISSING-SKU-" + i)
+                        .quantity(1)
+                        .build())
+                .collect(Collectors.toList());
+        
+        // 빈 Map 반환하여 모든 SKU가 존재하지 않도록 설정
+        when(inventoryRepository.findBySkuIdsWithLock(any(Set.class))).thenReturn(new HashMap<>());
+        
+        ReserveStockRequest request = ReserveStockRequest.builder()
+                .items(items)
+                .orderId("ORDER-001")
+                .ttlSeconds(900)
+                .build();
+        
+        // When/Then
+        assertThatThrownBy(() -> useCase.execute(request))
+                .isInstanceOf(InvalidSkuIdException.class)
+                .hasMessageContaining("다음 SKU를 찾을 수 없습니다:")
+                .hasMessageContaining("외 5개")
+                .satisfies(throwable -> {
+                    String message = throwable.getMessage();
+                    // 메시지에 SKU가 10개만 나열되는지 확인
+                    int skuCount = message.split("MISSING-SKU-").length - 1;
+                    assertThat(skuCount).isEqualTo(10);
+                });
     }
     
     @Test

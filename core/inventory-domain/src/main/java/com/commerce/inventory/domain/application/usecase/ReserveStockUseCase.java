@@ -93,10 +93,14 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
         if (foundSkuIds.size() != skuIds.size()) {
             Set<SkuId> missingSkuIds = new HashSet<>(skuIds);
             missingSkuIds.removeAll(foundSkuIds);
-            String missingIds = missingSkuIds.stream()
+            String missingIdsStr = missingSkuIds.stream()
                     .map(SkuId::value)
+                    .limit(10)
                     .collect(Collectors.joining(", "));
-            throw new InvalidSkuIdException("다음 SKU를 찾을 수 없습니다: " + missingIds);
+            if (missingSkuIds.size() > 10) {
+                missingIdsStr += " 외 " + (missingSkuIds.size() - 10) + "개";
+            }
+            throw new InvalidSkuIdException("다음 SKU를 찾을 수 없습니다: " + missingIdsStr);
         }
         
         // 합산된 수량으로 재고 검증
@@ -182,14 +186,14 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
         
         for (ReserveStockRequest.ReservationItem item : request.getItems()) {
             if (item == null) {
-                throw new InvalidReservationException("예약 항목은 null일 수 없습니다");
+                throw new InvalidReservationException("예약 항목 중에 null 값이 포함될 수 없습니다.");
             }
             if (item.getSkuId() == null || item.getSkuId().trim().isEmpty()) {
-                throw new InvalidReservationException("SKU ID는 필수입니다");
+                throw new InvalidReservationException("SKU ID가 누락된 예약 항목이 있습니다.");
             }
             
             if (item.getQuantity() == null || item.getQuantity() <= 0) {
-                throw new InvalidReservationException("수량은 0보다 커야 합니다");
+                throw new InvalidReservationException(String.format("SKU [%s]의 예약 수량은 0보다 커야 합니다.", item.getSkuId()));
             }
         }
     }
