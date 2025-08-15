@@ -11,7 +11,6 @@ import java.util.List;
 public class ReserveStockResponse {
     
     private final List<ReservationResult> reservations;
-    private final boolean allSuccessful;
     
     @Getter
     @Builder

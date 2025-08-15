@@ -47,18 +47,21 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
                 request, inventoryMap, ttlSeconds, currentTime
         );
         
+        // 변경된 모든 재고를 한 번에 저장
+        inventoryMap.values().forEach(inventoryRepository::save);
+        
         return ReserveStockResponse.builder()
                 .reservations(results)
-                .allSuccessful(true)
                 .build();
     }
     
     private Map<String, Inventory> lockAndVerifyInventories(List<ReserveStockRequest.ReservationItem> items) {
         // SKU별로 요청 수량을 합산
-        Map<String, Integer> totalQuantityBySku = new HashMap<>();
-        for (ReserveStockRequest.ReservationItem item : items) {
-            totalQuantityBySku.merge(item.getSkuId(), item.getQuantity(), Integer::sum);
-        }
+        Map<String, Integer> totalQuantityBySku = items.stream()
+                .collect(Collectors.groupingBy(
+                        ReserveStockRequest.ReservationItem::getSkuId,
+                        Collectors.summingInt(ReserveStockRequest.ReservationItem::getQuantity)
+                ));
         
         // 모든 SKU ID를 수집하여 한 번의 쿼리로 조회
         Set<SkuId> skuIds = totalQuantityBySku.keySet().stream()
@@ -129,7 +132,6 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
         );
         
         Reservation savedReservation = reservationRepository.save(reservation);
-        inventoryRepository.save(inventory);
         
         return ReserveStockResponse.ReservationResult.builder()
                 .reservationId(savedReservation.getId().value())
