@@ -18,6 +18,7 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,6 +79,17 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
         
         Map<SkuId, Inventory> inventoryMapBySkuId = inventoryRepository.findBySkuIdsWithLock(skuIds);
         
+        // 존재하지 않는 SKU를 일괄 검증
+        Set<SkuId> foundSkuIds = inventoryMapBySkuId.keySet();
+        if (foundSkuIds.size() != skuIds.size()) {
+            Set<SkuId> missingSkuIds = new HashSet<>(skuIds);
+            missingSkuIds.removeAll(foundSkuIds);
+            String missingIds = missingSkuIds.stream()
+                    .map(SkuId::value)
+                    .collect(Collectors.joining(", "));
+            throw new InvalidSkuIdException("다음 SKU를 찾을 수 없습니다: " + missingIds);
+        }
+        
         // 합산된 수량으로 재고 검증
         Map<String, Inventory> inventoryMap = new HashMap<>();
         for (Map.Entry<String, Integer> entry : totalQuantityBySku.entrySet()) {
@@ -85,10 +97,6 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
             Integer totalQuantity = entry.getValue();
             SkuId skuId = new SkuId(skuIdStr);
             Inventory inventory = inventoryMapBySkuId.get(skuId);
-            
-            if (inventory == null) {
-                throw new InvalidSkuIdException("SKU를 찾을 수 없습니다: " + skuIdStr);
-            }
 
             if (!inventory.canReserve(Quantity.of(totalQuantity))) {
                 throw new InsufficientStockException(

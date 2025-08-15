@@ -57,6 +57,7 @@ class ReserveStockUseCaseTest {
     
     @Test
     @DisplayName("단일 SKU 재고 예약에 성공한다")
+    @SuppressWarnings("unchecked")
     void reserveSingleSku() {
         // Given
         setupClock();
@@ -91,7 +92,7 @@ class ReserveStockUseCaseTest {
         assertThat(result.getStatus()).isEqualTo("ACTIVE");
         assertThat(result.getExpiresAt()).isEqualTo(fixedTime.plusSeconds(900));
         
-        ArgumentCaptor<List> inventoryCaptor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<Inventory>> inventoryCaptor = ArgumentCaptor.forClass(List.class);
         verify(inventoryRepository).saveAll(inventoryCaptor.capture());
         List<Inventory> savedInventories = inventoryCaptor.getValue();
         assertThat(savedInventories).hasSize(1);
@@ -101,6 +102,7 @@ class ReserveStockUseCaseTest {
     
     @Test
     @DisplayName("복수 SKU 재고 예약에 성공한다")
+    @SuppressWarnings("unchecked")
     void reserveMultipleSkus() {
         // Given
         setupClock();
@@ -138,13 +140,13 @@ class ReserveStockUseCaseTest {
         assertThat(response.getReservations()).hasSize(2);
         
         // 모든 재고가 일괄 저장되는지 확인
-        ArgumentCaptor<List> inventoryCaptor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<Inventory>> inventoryCaptor = ArgumentCaptor.forClass(List.class);
         verify(inventoryRepository).saveAll(inventoryCaptor.capture());
         List<Inventory> savedInventories = inventoryCaptor.getValue();
         assertThat(savedInventories).hasSize(2);
         assertThat(savedInventories).containsExactlyInAnyOrder(inventory1, inventory2);
         
-        ArgumentCaptor<List> reservationCaptor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<Reservation>> reservationCaptor = ArgumentCaptor.forClass(List.class);
         verify(reservationRepository).saveAll(reservationCaptor.capture());
         List<Reservation> savedReservations = reservationCaptor.getValue();
         assertThat(savedReservations).hasSize(2);
@@ -202,7 +204,45 @@ class ReserveStockUseCaseTest {
         // When/Then
         assertThatThrownBy(() -> useCase.execute(request))
                 .isInstanceOf(InvalidSkuIdException.class)
-                .hasMessageContaining("SKU를 찾을 수 없습니다");
+                .hasMessageContaining("다음 SKU를 찾을 수 없습니다: SKU-999");
+    }
+    
+    @Test
+    @DisplayName("여러 개의 존재하지 않는 SKU로 예약 시도 시 모든 SKU를 보고한다")
+    void failWhenMultipleSkusNotFound() {
+        // Given
+        setupClock();
+        SkuId skuId1 = new SkuId("SKU-001");
+        Inventory inventory1 = createInventoryWithStock(skuId1, 100, 10);
+        Map<SkuId, Inventory> inventoryMap = new HashMap<>();
+        inventoryMap.put(skuId1, inventory1);
+        when(inventoryRepository.findBySkuIdsWithLock(any(Set.class))).thenReturn(inventoryMap);
+        
+        ReserveStockRequest request = ReserveStockRequest.builder()
+                .items(Arrays.asList(
+                        ReserveStockRequest.ReservationItem.builder()
+                                .skuId("SKU-001")
+                                .quantity(5)
+                                .build(),
+                        ReserveStockRequest.ReservationItem.builder()
+                                .skuId("SKU-999")
+                                .quantity(3)
+                                .build(),
+                        ReserveStockRequest.ReservationItem.builder()
+                                .skuId("SKU-888")
+                                .quantity(2)
+                                .build()
+                ))
+                .orderId("ORDER-001")
+                .ttlSeconds(900)
+                .build();
+        
+        // When/Then
+        assertThatThrownBy(() -> useCase.execute(request))
+                .isInstanceOf(InvalidSkuIdException.class)
+                .hasMessageContaining("다음 SKU를 찾을 수 없습니다")
+                .hasMessageContaining("SKU-999")
+                .hasMessageContaining("SKU-888");
     }
     
     @Test
@@ -260,6 +300,7 @@ class ReserveStockUseCaseTest {
     
     @Test
     @DisplayName("TTL이 없으면 기본값을 사용한다")
+    @SuppressWarnings("unchecked")
     void useDefaultTtlWhenNotProvided() {
         // Given
         setupClock();
@@ -286,7 +327,7 @@ class ReserveStockUseCaseTest {
         ReserveStockResponse response = useCase.execute(request);
         
         // Then
-        ArgumentCaptor<List> captor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<Reservation>> captor = ArgumentCaptor.forClass(List.class);
         verify(reservationRepository).saveAll(captor.capture());
         
         List<Reservation> savedReservations = captor.getValue();
