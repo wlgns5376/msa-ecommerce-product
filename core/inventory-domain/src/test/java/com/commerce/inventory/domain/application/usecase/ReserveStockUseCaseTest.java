@@ -12,6 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -43,6 +44,15 @@ class ReserveStockUseCaseTest {
     @Mock
     private Clock clock;
     
+    @Captor
+    private ArgumentCaptor<List<Inventory>> inventoryCaptor;
+    
+    @Captor
+    private ArgumentCaptor<List<Reservation>> reservationCaptor;
+    
+    @Captor
+    private ArgumentCaptor<Set<SkuId>> skuIdCaptor;
+    
     private ReserveStockUseCase useCase;
     
     private LocalDateTime fixedTime;
@@ -60,7 +70,6 @@ class ReserveStockUseCaseTest {
     
     @Test
     @DisplayName("단일 SKU 재고 예약에 성공한다")
-    @SuppressWarnings("unchecked")
     void reserveSingleSku() {
         // Given
         setupClock();
@@ -95,7 +104,6 @@ class ReserveStockUseCaseTest {
         assertThat(result.getStatus()).isEqualTo("ACTIVE");
         assertThat(result.getExpiresAt()).isEqualTo(fixedTime.plusSeconds(900));
         
-        ArgumentCaptor<List<Inventory>> inventoryCaptor = ArgumentCaptor.forClass(List.class);
         verify(inventoryRepository).saveAll(inventoryCaptor.capture());
         List<Inventory> savedInventories = inventoryCaptor.getValue();
         assertThat(savedInventories).hasSize(1);
@@ -105,7 +113,6 @@ class ReserveStockUseCaseTest {
     
     @Test
     @DisplayName("복수 SKU 재고 예약에 성공한다")
-    @SuppressWarnings("unchecked")
     void reserveMultipleSkus() {
         // Given
         setupClock();
@@ -143,13 +150,11 @@ class ReserveStockUseCaseTest {
         assertThat(response.getReservations()).hasSize(2);
         
         // 모든 재고가 일괄 저장되는지 확인
-        ArgumentCaptor<List<Inventory>> inventoryCaptor = ArgumentCaptor.forClass(List.class);
         verify(inventoryRepository).saveAll(inventoryCaptor.capture());
         List<Inventory> savedInventories = inventoryCaptor.getValue();
         assertThat(savedInventories).hasSize(2);
         assertThat(savedInventories).containsExactlyInAnyOrder(inventory1, inventory2);
         
-        ArgumentCaptor<List<Reservation>> reservationCaptor = ArgumentCaptor.forClass(List.class);
         verify(reservationRepository).saveAll(reservationCaptor.capture());
         List<Reservation> savedReservations = reservationCaptor.getValue();
         assertThat(savedReservations).hasSize(2);
@@ -303,7 +308,6 @@ class ReserveStockUseCaseTest {
     
     @Test
     @DisplayName("TTL이 없으면 기본값을 사용한다")
-    @SuppressWarnings("unchecked")
     void useDefaultTtlWhenNotProvided() {
         // Given
         setupClock();
@@ -330,10 +334,9 @@ class ReserveStockUseCaseTest {
         ReserveStockResponse response = useCase.execute(request);
         
         // Then
-        ArgumentCaptor<List<Reservation>> captor = ArgumentCaptor.forClass(List.class);
-        verify(reservationRepository).saveAll(captor.capture());
+        verify(reservationRepository).saveAll(reservationCaptor.capture());
         
-        List<Reservation> savedReservations = captor.getValue();
+        List<Reservation> savedReservations = reservationCaptor.getValue();
         assertThat(savedReservations).hasSize(1);
         assertThat(savedReservations.get(0).getExpiresAt()).isEqualTo(fixedTime.plusSeconds(900)); // 기본값 900초
     }
@@ -440,7 +443,6 @@ class ReserveStockUseCaseTest {
     
     @Test
     @DisplayName("대량의 SKU(1000개 초과)를 배치로 나누어 조회한다")
-    @SuppressWarnings("unchecked")
     void reserveLargeBatchOfSkus() {
         // Given
         setupClock();
@@ -490,7 +492,6 @@ class ReserveStockUseCaseTest {
         verify(inventoryRepository, times(3)).findBySkuIdsWithLock(any(Set.class));
         
         // 각 배치 호출의 크기 검증
-        ArgumentCaptor<Set<SkuId>> skuIdCaptor = ArgumentCaptor.forClass(Set.class);
         verify(inventoryRepository, times(3)).findBySkuIdsWithLock(skuIdCaptor.capture());
         
         List<Set<SkuId>> capturedSets = skuIdCaptor.getAllValues();

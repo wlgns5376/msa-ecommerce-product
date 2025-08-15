@@ -80,18 +80,12 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
         
         // 대량의 SKU를 배치로 나누어 조회
         Map<SkuId, Inventory> inventoryMapBySkuId = new HashMap<>();
-        if (skuIds.size() <= BATCH_SIZE) {
-            // SKU 개수가 배치 크기보다 작으면 한 번에 조회
-            inventoryMapBySkuId = inventoryRepository.findBySkuIdsWithLock(skuIds);
-        } else {
-            // SKU 개수가 배치 크기보다 크면 나누어서 조회
-            List<SkuId> skuIdList = new ArrayList<>(skuIds);
-            for (int i = 0; i < skuIdList.size(); i += BATCH_SIZE) {
-                int endIndex = Math.min(i + BATCH_SIZE, skuIdList.size());
-                Set<SkuId> batchSkuIds = new HashSet<>(skuIdList.subList(i, endIndex));
-                Map<SkuId, Inventory> batchResult = inventoryRepository.findBySkuIdsWithLock(batchSkuIds);
-                inventoryMapBySkuId.putAll(batchResult);
-            }
+        List<SkuId> skuIdList = new ArrayList<>(skuIds);
+        for (int i = 0; i < skuIdList.size(); i += BATCH_SIZE) {
+            int endIndex = Math.min(i + BATCH_SIZE, skuIdList.size());
+            Set<SkuId> batchSkuIds = new HashSet<>(skuIdList.subList(i, endIndex));
+            Map<SkuId, Inventory> batchResult = inventoryRepository.findBySkuIdsWithLock(batchSkuIds);
+            inventoryMapBySkuId.putAll(batchResult);
         }
         
         // 존재하지 않는 SKU를 일괄 검증
