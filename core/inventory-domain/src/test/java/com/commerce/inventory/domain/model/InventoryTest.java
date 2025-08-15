@@ -96,10 +96,9 @@ class InventoryTest {
         // given
         Inventory inventory = Inventory.createEmpty(SkuId.generate());
         Quantity receiveQuantity = Quantity.of(50);
-        String reference = "PO-2024-001";
 
         // when
-        inventory.receive(receiveQuantity, reference);
+        inventory.receive(receiveQuantity);
 
         // then
         assertThat(inventory.getTotalQuantity()).isEqualTo(receiveQuantity);
@@ -115,11 +114,48 @@ class InventoryTest {
         Quantity secondReceive = Quantity.of(30);
 
         // when
-        inventory.receive(firstReceive, "PO-2024-001");
-        inventory.receive(secondReceive, "PO-2024-002");
+        inventory.receive(firstReceive);
+        inventory.receive(secondReceive);
 
         // then
         assertThat(inventory.getTotalQuantity()).isEqualTo(Quantity.of(180));
+    }
+
+    @Test
+    @DisplayName("입고 수량이 0이면 예외가 발생한다")
+    void shouldThrowExceptionWhenReceiveQuantityIsZero() {
+        // given
+        Inventory inventory = Inventory.createEmpty(SkuId.generate());
+        Quantity zeroQuantity = Quantity.of(0);
+
+        // when & then
+        assertThatThrownBy(() -> inventory.receive(zeroQuantity))
+                .isInstanceOf(InvalidInventoryException.class)
+                .hasMessage("입고 수량은 0보다 커야 합니다");
+    }
+
+    @Test
+    @DisplayName("입고 수량이 음수이면 Quantity 생성 시 예외가 발생한다")
+    void shouldThrowExceptionWhenReceiveQuantityIsNegative() {
+        // given
+        Inventory inventory = Inventory.createEmpty(SkuId.generate());
+
+        // when & then
+        assertThatThrownBy(() -> Quantity.of(-10))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Quantity cannot be negative");
+    }
+
+    @Test
+    @DisplayName("입고 수량이 null이면 예외가 발생한다")
+    void shouldThrowExceptionWhenReceiveQuantityIsNull() {
+        // given
+        Inventory inventory = Inventory.createEmpty(SkuId.generate());
+
+        // when & then
+        assertThatThrownBy(() -> inventory.receive(null))
+                .isInstanceOf(InvalidInventoryException.class)
+                .hasMessage("입고 수량은 0보다 커야 합니다");
     }
 
     @Test
@@ -278,5 +314,37 @@ class InventoryTest {
         assertThatThrownBy(() -> inventory.confirmReservedQuantity(Quantity.of(50)))
                 .isInstanceOf(InvalidInventoryException.class)
                 .hasMessage("확정할 예약 수량이 부족합니다. 현재 예약: 30, 확정 요청: 50");
+    }
+    
+    @Test
+    @DisplayName("새로 생성된 Inventory의 version은 0이다")
+    void shouldHaveInitialVersionZero() {
+        // given
+        SkuId skuId = SkuId.generate();
+        
+        // when
+        Inventory inventory = Inventory.createEmpty(skuId);
+        
+        // then
+        assertThat(inventory.getVersion()).isEqualTo(0L);
+    }
+    
+    @Test
+    @DisplayName("restore 메소드로 특정 version의 Inventory를 복원할 수 있다")
+    void shouldRestoreInventoryWithSpecificVersion() {
+        // given
+        SkuId skuId = SkuId.generate();
+        Quantity totalQuantity = Quantity.of(100);
+        Quantity reservedQuantity = Quantity.of(20);
+        Long version = 5L;
+        
+        // when
+        Inventory inventory = Inventory.restore(skuId, totalQuantity, reservedQuantity, version);
+        
+        // then
+        assertThat(inventory.getSkuId()).isEqualTo(skuId);
+        assertThat(inventory.getTotalQuantity()).isEqualTo(totalQuantity);
+        assertThat(inventory.getReservedQuantity()).isEqualTo(reservedQuantity);
+        assertThat(inventory.getVersion()).isEqualTo(version);
     }
 }

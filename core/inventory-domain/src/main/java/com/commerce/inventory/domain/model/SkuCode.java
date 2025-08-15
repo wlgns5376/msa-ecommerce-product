@@ -22,5 +22,4 @@ public record SkuCode(String value) implements ValueObject {
     public static SkuCode of(String value) {
         return new SkuCode(value);
     }
-    
 }
