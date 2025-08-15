@@ -17,5 +17,4 @@ public record Weight(double value, WeightUnit unit) implements ValueObject {
     public static Weight of(double value, WeightUnit unit) {
         return new Weight(value, unit);
     }
-    
 }

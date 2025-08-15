@@ -11,9 +11,15 @@ project(':product-domain').projectDir = file('core/product-domain')
 include 'inventory-domain'
 project(':inventory-domain').projectDir = file('core/inventory-domain')
 
+include 'inventory-application'
+project(':inventory-application').projectDir = file('core/inventory-application')
+
 // Infrastructure modules
 include 'product-persistence'
 project(':product-persistence').projectDir = file('infrastructure/product-persistence')
+
+include 'inventory-persistence'
+project(':inventory-persistence').projectDir = file('infrastructure/inventory-persistence')
 
 include 'product-kafka'
 project(':product-kafka').projectDir = file('infrastructure/product-kafka')

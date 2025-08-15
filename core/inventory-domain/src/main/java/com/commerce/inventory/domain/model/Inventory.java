@@ -3,8 +3,10 @@ package com.commerce.inventory.domain.model;
 import com.commerce.common.domain.model.Quantity;
 import com.commerce.inventory.domain.exception.InsufficientStockException;
 import com.commerce.inventory.domain.exception.InvalidInventoryException;
-import com.commerce.product.domain.model.AggregateRoot;
+import com.commerce.common.domain.model.AggregateRoot;
 import lombok.Getter;
+
+import java.time.LocalDateTime;
 
 @Getter
 public class Inventory extends AggregateRoot<SkuId> {
@@ -12,13 +14,30 @@ public class Inventory extends AggregateRoot<SkuId> {
     private final SkuId skuId;
     private Quantity totalQuantity;
     private Quantity reservedQuantity;
+    private Long version;
     
     private Inventory(SkuId skuId, Quantity totalQuantity, Quantity reservedQuantity) {
+        this(skuId, totalQuantity, reservedQuantity, 0L);
+    }
+    
+    private Inventory(SkuId skuId, Quantity totalQuantity, Quantity reservedQuantity, Long version) {
+        super();
         validateCreate(skuId, totalQuantity, reservedQuantity);
         
         this.skuId = skuId;
         this.totalQuantity = totalQuantity;
         this.reservedQuantity = reservedQuantity;
+        this.version = version;
+    }
+    
+    private Inventory(SkuId skuId, Quantity totalQuantity, Quantity reservedQuantity, Long version, LocalDateTime createdAt, LocalDateTime updatedAt) {
+        super(createdAt, updatedAt);
+        validateCreate(skuId, totalQuantity, reservedQuantity);
+        
+        this.skuId = skuId;
+        this.totalQuantity = totalQuantity;
+        this.reservedQuantity = reservedQuantity;
+        this.version = version;
     }
     
     public static Inventory create(SkuId skuId, Quantity totalQuantity, Quantity reservedQuantity) {
@@ -33,6 +52,14 @@ public class Inventory extends AggregateRoot<SkuId> {
         return new Inventory(skuId, Quantity.zero(), Quantity.zero());
     }
     
+    public static Inventory restore(SkuId skuId, Quantity totalQuantity, Quantity reservedQuantity, Long version) {
+        return new Inventory(skuId, totalQuantity, reservedQuantity, version);
+    }
+    
+    public static Inventory restore(SkuId skuId, Quantity totalQuantity, Quantity reservedQuantity, Long version, LocalDateTime createdAt, LocalDateTime updatedAt) {
+        return new Inventory(skuId, totalQuantity, reservedQuantity, version, createdAt, updatedAt);
+    }
+    
     public Quantity getAvailableQuantity() {
         return totalQuantity.subtract(reservedQuantity);
     }
@@ -41,15 +68,16 @@ public class Inventory extends AggregateRoot<SkuId> {
         return getAvailableQuantity().isGreaterThanOrEqualTo(quantity);
     }
     
-    public void receive(Quantity quantity, String reference) {
-        if (quantity == null || quantity.value() == 0) {
+    public void receive(Quantity quantity) {
+        if (quantity == null || quantity.value() <= 0) {
             throw new InvalidInventoryException("입고 수량은 0보다 커야 합니다");
         }
         
         this.totalQuantity = this.totalQuantity.add(quantity);
+        updateTimestamp();
         
         // 도메인 이벤트 발생 (추후 구현)
-        // this.raise(new StockReceivedEvent(this.skuId, quantity, reference));
+        // this.raise(new StockReceivedEvent(this.skuId, quantity));
     }
     
     public ReservationId reserve(Quantity quantity) {
