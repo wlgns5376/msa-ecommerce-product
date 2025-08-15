@@ -332,4 +332,35 @@ class ReserveStockUseCaseTest {
                 Quantity.of(reservedQuantity)
         );
     }
+    
+    @Test
+    @DisplayName("중복 SKU 요청의 총량이 재고를 초과하면 예외가 발생한다")
+    void failWhenTotalQuantityOfDuplicateSkusExceedsStock() {
+        // Given
+        when(clock.instant()).thenReturn(fixedTime.atZone(ZoneId.systemDefault()).toInstant());
+        when(clock.getZone()).thenReturn(ZoneId.systemDefault());
+        SkuId skuId = new SkuId("SKU-001");
+        Inventory inventory = createInventoryWithStock(skuId, 10, 2); // 가용 재고: 8
+        Map<SkuId, Inventory> inventoryMap = new HashMap<>();
+        inventoryMap.put(skuId, inventory);
+        when(inventoryRepository.findBySkuIdsWithLock(any(Set.class))).thenReturn(inventoryMap);
+
+        ReserveStockRequest request = ReserveStockRequest.builder()
+                .items(Arrays.asList(
+                        ReserveStockRequest.ReservationItem.builder().skuId("SKU-001").quantity(5).build(),
+                        ReserveStockRequest.ReservationItem.builder().skuId("SKU-001").quantity(5).build()
+                ))
+                .orderId("ORDER-001")
+                .build();
+
+        // When/Then
+        assertThatThrownBy(() -> useCase.execute(request))
+                .isInstanceOf(InsufficientStockException.class)
+                .hasMessageContaining("재고가 부족합니다")
+                .hasMessageContaining("가용 재고: 8")
+                .hasMessageContaining("요청 수량: 10");
+        
+        verify(inventoryRepository, never()).save(any());
+        verify(reservationRepository, never()).save(any());
+    }
 }

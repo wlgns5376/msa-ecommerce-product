@@ -7,6 +7,7 @@ import com.commerce.inventory.domain.exception.InvalidReservationException;
 import com.commerce.inventory.domain.exception.InvalidSkuIdException;
 import com.commerce.inventory.domain.model.Inventory;
 import com.commerce.inventory.domain.model.Reservation;
+import com.commerce.inventory.domain.model.ReservationId;
 import com.commerce.inventory.domain.model.SkuId;
 import com.commerce.inventory.domain.repository.InventoryRepository;
 import com.commerce.inventory.domain.repository.ReservationRepository;
@@ -53,30 +54,38 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
     }
     
     private Map<String, Inventory> lockAndVerifyInventories(List<ReserveStockRequest.ReservationItem> items) {
+        // SKU별로 요청 수량을 합산
+        Map<String, Integer> totalQuantityBySku = new HashMap<>();
+        for (ReserveStockRequest.ReservationItem item : items) {
+            totalQuantityBySku.merge(item.getSkuId(), item.getQuantity(), Integer::sum);
+        }
+        
         // 모든 SKU ID를 수집하여 한 번의 쿼리로 조회
-        Set<SkuId> skuIds = items.stream()
-                .map(item -> new SkuId(item.getSkuId()))
+        Set<SkuId> skuIds = totalQuantityBySku.keySet().stream()
+                .map(SkuId::new)
                 .collect(Collectors.toSet());
         
         Map<SkuId, Inventory> inventoryMapBySkuId = inventoryRepository.findBySkuIdsWithLock(skuIds);
         
-        // 재고 검증
+        // 합산된 수량으로 재고 검증
         Map<String, Inventory> inventoryMap = new HashMap<>();
-        for (ReserveStockRequest.ReservationItem item : items) {
-            SkuId skuId = new SkuId(item.getSkuId());
+        for (Map.Entry<String, Integer> entry : totalQuantityBySku.entrySet()) {
+            String skuIdStr = entry.getKey();
+            Integer totalQuantity = entry.getValue();
+            SkuId skuId = new SkuId(skuIdStr);
             Inventory inventory = inventoryMapBySkuId.get(skuId);
             
             if (inventory == null) {
-                throw new InvalidSkuIdException("SKU를 찾을 수 없습니다: " + item.getSkuId());
+                throw new InvalidSkuIdException("SKU를 찾을 수 없습니다: " + skuIdStr);
             }
 
-            if (!inventory.canReserve(Quantity.of(item.getQuantity()))) {
+            if (!inventory.canReserve(Quantity.of(totalQuantity))) {
                 throw new InsufficientStockException(
                         String.format("재고가 부족합니다. SKU: %s, 가용 재고: %d, 요청 수량: %d",
-                                item.getSkuId(), inventory.getAvailableQuantity().value(), item.getQuantity())
+                                skuIdStr, inventory.getAvailableQuantity().value(), totalQuantity)
                 );
             }
-            inventoryMap.put(item.getSkuId(), inventory);
+            inventoryMap.put(skuIdStr, inventory);
         }
         
         return inventoryMap;
@@ -108,13 +117,14 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
     ) {
         Quantity requestedQuantity = Quantity.of(item.getQuantity());
         
-        inventory.reserve(requestedQuantity, orderId, ttlSeconds);
+        ReservationId reservationId = inventory.reserve(requestedQuantity, orderId, ttlSeconds);
         
-        Reservation reservation = Reservation.createWithTTL(
+        Reservation reservation = Reservation.create(
+                reservationId,
                 inventory.getId(),
                 requestedQuantity,
                 orderId,
-                ttlSeconds,
+                currentTime.plusSeconds(ttlSeconds),
                 currentTime
         );
         
