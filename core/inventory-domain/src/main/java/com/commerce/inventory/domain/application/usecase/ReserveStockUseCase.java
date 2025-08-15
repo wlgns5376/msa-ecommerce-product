@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,16 +32,6 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
     private final ReservationRepository reservationRepository;
     private final Clock clock;
     
-    // 예약과 SKU ID를 함께 추적하기 위한 내부 클래스
-    private static class ReservationWithSkuId {
-        final Reservation reservation;
-        final String skuId;
-        
-        ReservationWithSkuId(Reservation reservation, String skuId) {
-            this.reservation = reservation;
-            this.skuId = skuId;
-        }
-    }
     
     @Override
     @Transactional
@@ -54,23 +45,18 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
         Map<String, Inventory> inventoryMap = lockAndVerifyInventories(request.getItems());
         
         // 예약 도메인 객체 생성
-        List<ReservationWithSkuId> reservationsWithSkuId = performReservations(
+        List<Reservation> reservations = performReservations(
                 request, inventoryMap, ttlSeconds, currentTime
         );
         
-        // 예약 저장 (향후 saveAll 구현 시 성능 개선 가능)
-        List<ReservationWithSkuId> savedReservationsWithSkuId = reservationsWithSkuId.stream()
-                .map(rwsi -> new ReservationWithSkuId(
-                        reservationRepository.save(rwsi.reservation), 
-                        rwsi.skuId
-                ))
-                .collect(Collectors.toList());
+        // 예약 저장 - 일괄 처리로 성능 개선
+        List<Reservation> savedReservations = reservationRepository.saveAll(reservations);
         
-        // 변경된 모든 재고를 한 번에 저장
-        inventoryMap.values().forEach(inventoryRepository::save);
+        // 변경된 모든 재고를 일괄 저장
+        inventoryRepository.saveAll(new ArrayList<>(inventoryMap.values()));
         
         // DTO 변환
-        List<ReserveStockResponse.ReservationResult> results = convertToResults(savedReservationsWithSkuId);
+        List<ReserveStockResponse.ReservationResult> results = convertToResults(savedReservations);
         
         return ReserveStockResponse.builder()
                 .reservations(results)
@@ -116,23 +102,20 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
         return inventoryMap;
     }
     
-    private List<ReservationWithSkuId> performReservations(
+    private List<Reservation> performReservations(
             ReserveStockRequest request,
             Map<String, Inventory> inventoryMap,
             int ttlSeconds,
             LocalDateTime currentTime
     ) {
         return request.getItems().stream()
-                .map(item -> {
-                    Reservation reservation = createReservation(
-                            item,
-                            inventoryMap.get(item.getSkuId()),
-                            request.getOrderId(),
-                            ttlSeconds,
-                            currentTime
-                    );
-                    return new ReservationWithSkuId(reservation, item.getSkuId());
-                })
+                .map(item -> createReservation(
+                        item,
+                        inventoryMap.get(item.getSkuId()),
+                        request.getOrderId(),
+                        ttlSeconds,
+                        currentTime
+                ))
                 .collect(Collectors.toList());
     }
     
@@ -158,15 +141,15 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
     }
     
     private List<ReserveStockResponse.ReservationResult> convertToResults(
-            List<ReservationWithSkuId> savedReservationsWithSkuId
+            List<Reservation> savedReservations
     ) {
-        return savedReservationsWithSkuId.stream()
-                .map(rwsi -> ReserveStockResponse.ReservationResult.builder()
-                        .reservationId(rwsi.reservation.getId().value())
-                        .skuId(rwsi.skuId)
-                        .quantity(rwsi.reservation.getQuantity().value())
-                        .expiresAt(rwsi.reservation.getExpiresAt())
-                        .status(rwsi.reservation.getStatus().name())
+        return savedReservations.stream()
+                .map(reservation -> ReserveStockResponse.ReservationResult.builder()
+                        .reservationId(reservation.getId().value())
+                        .skuId(reservation.getSkuId().value())
+                        .quantity(reservation.getQuantity().value())
+                        .expiresAt(reservation.getExpiresAt())
+                        .status(reservation.getStatus().name())
                         .build())
                 .collect(Collectors.toList());
     }

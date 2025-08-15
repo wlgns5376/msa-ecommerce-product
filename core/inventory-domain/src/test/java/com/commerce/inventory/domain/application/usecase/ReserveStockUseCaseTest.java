@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -64,7 +65,8 @@ class ReserveStockUseCaseTest {
         Map<SkuId, Inventory> inventoryMap = new HashMap<>();
         inventoryMap.put(skuId, inventory);
         when(inventoryRepository.findBySkuIdsWithLock(any(Set.class))).thenReturn(inventoryMap);
-        when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(reservationRepository.saveAll(any(List.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(inventoryRepository.saveAll(any(List.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         ReserveStockRequest request = ReserveStockRequest.builder()
                 .items(Arrays.asList(
@@ -89,11 +91,12 @@ class ReserveStockUseCaseTest {
         assertThat(result.getStatus()).isEqualTo("ACTIVE");
         assertThat(result.getExpiresAt()).isEqualTo(fixedTime.plusSeconds(900));
         
-        ArgumentCaptor<Inventory> inventoryCaptor = ArgumentCaptor.forClass(Inventory.class);
-        verify(inventoryRepository).save(inventoryCaptor.capture());
-        Inventory savedInventory = inventoryCaptor.getValue();
-        assertThat(savedInventory).isEqualTo(inventory);
-        assertThat(savedInventory.getAvailableQuantity().value()).isEqualTo(85);
+        ArgumentCaptor<List> inventoryCaptor = ArgumentCaptor.forClass(List.class);
+        verify(inventoryRepository).saveAll(inventoryCaptor.capture());
+        List<Inventory> savedInventories = inventoryCaptor.getValue();
+        assertThat(savedInventories).hasSize(1);
+        assertThat(savedInventories.get(0)).isEqualTo(inventory);
+        assertThat(savedInventories.get(0).getAvailableQuantity().value()).isEqualTo(85);
     }
     
     @Test
@@ -110,7 +113,8 @@ class ReserveStockUseCaseTest {
         inventoryMap.put(skuId1, inventory1);
         inventoryMap.put(skuId2, inventory2);
         when(inventoryRepository.findBySkuIdsWithLock(any(Set.class))).thenReturn(inventoryMap);
-        when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(reservationRepository.saveAll(any(List.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(inventoryRepository.saveAll(any(List.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         ReserveStockRequest request = ReserveStockRequest.builder()
                 .items(Arrays.asList(
@@ -133,12 +137,17 @@ class ReserveStockUseCaseTest {
         // Then
         assertThat(response.getReservations()).hasSize(2);
         
-        // 모든 재고가 한 번씩만 저장되는지 확인
-        ArgumentCaptor<Inventory> inventoryCaptor = ArgumentCaptor.forClass(Inventory.class);
-        verify(inventoryRepository, times(2)).save(inventoryCaptor.capture());
-        assertThat(inventoryCaptor.getAllValues()).containsExactlyInAnyOrder(inventory1, inventory2);
+        // 모든 재고가 일괄 저장되는지 확인
+        ArgumentCaptor<List> inventoryCaptor = ArgumentCaptor.forClass(List.class);
+        verify(inventoryRepository).saveAll(inventoryCaptor.capture());
+        List<Inventory> savedInventories = inventoryCaptor.getValue();
+        assertThat(savedInventories).hasSize(2);
+        assertThat(savedInventories).containsExactlyInAnyOrder(inventory1, inventory2);
         
-        verify(reservationRepository, times(2)).save(any(Reservation.class));
+        ArgumentCaptor<List> reservationCaptor = ArgumentCaptor.forClass(List.class);
+        verify(reservationRepository).saveAll(reservationCaptor.capture());
+        List<Reservation> savedReservations = reservationCaptor.getValue();
+        assertThat(savedReservations).hasSize(2);
     }
     
     @Test
@@ -168,8 +177,8 @@ class ReserveStockUseCaseTest {
                 .isInstanceOf(InsufficientStockException.class)
                 .hasMessageContaining("재고가 부족합니다");
         
-        verify(inventoryRepository, never()).save(any());
-        verify(reservationRepository, never()).save(any());
+        verify(inventoryRepository, never()).saveAll(any());
+        verify(reservationRepository, never()).saveAll(any());
     }
     
     @Test
@@ -259,7 +268,8 @@ class ReserveStockUseCaseTest {
         Map<SkuId, Inventory> inventoryMap = new HashMap<>();
         inventoryMap.put(skuId, inventory);
         when(inventoryRepository.findBySkuIdsWithLock(any(Set.class))).thenReturn(inventoryMap);
-        when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(reservationRepository.saveAll(any(List.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(inventoryRepository.saveAll(any(List.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         ReserveStockRequest request = ReserveStockRequest.builder()
                 .items(Arrays.asList(
@@ -276,11 +286,12 @@ class ReserveStockUseCaseTest {
         ReserveStockResponse response = useCase.execute(request);
         
         // Then
-        ArgumentCaptor<Reservation> captor = ArgumentCaptor.forClass(Reservation.class);
-        verify(reservationRepository).save(captor.capture());
+        ArgumentCaptor<List> captor = ArgumentCaptor.forClass(List.class);
+        verify(reservationRepository).saveAll(captor.capture());
         
-        Reservation savedReservation = captor.getValue();
-        assertThat(savedReservation.getExpiresAt()).isEqualTo(fixedTime.plusSeconds(900)); // 기본값 900초
+        List<Reservation> savedReservations = captor.getValue();
+        assertThat(savedReservations).hasSize(1);
+        assertThat(savedReservations.get(0).getExpiresAt()).isEqualTo(fixedTime.plusSeconds(900)); // 기본값 900초
     }
     
     @Test

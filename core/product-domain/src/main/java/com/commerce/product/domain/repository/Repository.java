@@ -17,6 +17,11 @@ public interface Repository<T, ID> {
     T save(T entity);
     
     /**
+     * 여러 엔티티를 일괄 저장합니다.
+     */
+    List<T> saveAll(List<T> entities);
+    
+    /**
      * ID로 엔티티를 조회합니다.
      */
     Optional<T> findById(ID id);
