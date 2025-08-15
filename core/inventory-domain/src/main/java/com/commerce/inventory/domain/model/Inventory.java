@@ -52,7 +52,7 @@ public class Inventory extends AggregateRoot<SkuId> {
         // this.raise(new StockReceivedEvent(this.skuId, quantity, reference));
     }
     
-    public ReservationId reserve(Quantity quantity, String orderId, int ttlSeconds) {
+    public ReservationId reserve(Quantity quantity) {
         if (!canReserve(quantity)) {
             throw new InsufficientStockException(
                 String.format("재고가 부족합니다. 가용 재고: %d, 요청 수량: %d", 
@@ -64,7 +64,7 @@ public class Inventory extends AggregateRoot<SkuId> {
         ReservationId reservationId = ReservationId.generate();
         
         // 도메인 이벤트 발생 (추후 구현)
-        // this.raise(new StockReservedEvent(this.skuId, reservationId, quantity, orderId));
+        // this.raise(new StockReservedEvent(this.skuId, reservationId, quantity));
         
         return reservationId;
     }

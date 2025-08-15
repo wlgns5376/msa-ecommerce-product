@@ -89,8 +89,11 @@ class ReserveStockUseCaseTest {
         assertThat(result.getStatus()).isEqualTo("ACTIVE");
         assertThat(result.getExpiresAt()).isEqualTo(fixedTime.plusSeconds(900));
         
-        verify(inventoryRepository).save(any(Inventory.class));
-        assertThat(inventory.getAvailableQuantity().value()).isEqualTo(85);
+        ArgumentCaptor<Inventory> inventoryCaptor = ArgumentCaptor.forClass(Inventory.class);
+        verify(inventoryRepository).save(inventoryCaptor.capture());
+        Inventory savedInventory = inventoryCaptor.getValue();
+        assertThat(savedInventory).isEqualTo(inventory);
+        assertThat(savedInventory.getAvailableQuantity().value()).isEqualTo(85);
     }
     
     @Test
@@ -131,7 +134,10 @@ class ReserveStockUseCaseTest {
         assertThat(response.getReservations()).hasSize(2);
         
         // 모든 재고가 한 번씩만 저장되는지 확인
-        verify(inventoryRepository, times(2)).save(any(Inventory.class));
+        ArgumentCaptor<Inventory> inventoryCaptor = ArgumentCaptor.forClass(Inventory.class);
+        verify(inventoryRepository, times(2)).save(inventoryCaptor.capture());
+        assertThat(inventoryCaptor.getAllValues()).containsExactlyInAnyOrder(inventory1, inventory2);
+        
         verify(reservationRepository, times(2)).save(any(Reservation.class));
     }
     

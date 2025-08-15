@@ -143,11 +143,9 @@ class InventoryTest {
         // given
         Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), Quantity.of(100));
         Quantity reserveQuantity = Quantity.of(30);
-        String orderId = "ORDER-2024-001";
-        int ttlSeconds = 3600;
 
         // when
-        ReservationId reservationId = inventory.reserve(reserveQuantity, orderId, ttlSeconds);
+        ReservationId reservationId = inventory.reserve(reserveQuantity);
 
         // then
         assertThat(reservationId).isNotNull();
@@ -163,7 +161,7 @@ class InventoryTest {
         Quantity reserveQuantity = Quantity.of(100);
 
         // when & then
-        assertThatThrownBy(() -> inventory.reserve(reserveQuantity, "ORDER-2024-001", 3600))
+        assertThatThrownBy(() -> inventory.reserve(reserveQuantity))
                 .isInstanceOf(InsufficientStockException.class)
                 .hasMessage("재고가 부족합니다. 가용 재고: 50, 요청 수량: 100");
     }
@@ -173,7 +171,7 @@ class InventoryTest {
     void shouldReleaseReservation() {
         // given
         Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), Quantity.of(100));
-        ReservationId reservationId = inventory.reserve(Quantity.of(30), "ORDER-2024-001", 3600);
+        ReservationId reservationId = inventory.reserve(Quantity.of(30));
 
         // when
         inventory.releaseReservedQuantity(Quantity.of(30));
@@ -188,7 +186,7 @@ class InventoryTest {
     void shouldConfirmReservation() {
         // given
         Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), Quantity.of(100));
-        ReservationId reservationId = inventory.reserve(Quantity.of(30), "ORDER-2024-001", 3600);
+        ReservationId reservationId = inventory.reserve(Quantity.of(30));
 
         // when
         inventory.confirmReservedQuantity(Quantity.of(30));
@@ -233,7 +231,7 @@ class InventoryTest {
     void shouldThrowExceptionWhenReleaseQuantityIsZero() {
         // given
         Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), Quantity.of(100));
-        inventory.reserve(Quantity.of(30), "ORDER-2024-001", 3600);
+        inventory.reserve(Quantity.of(30));
         
         // when & then
         assertThatThrownBy(() -> inventory.releaseReservedQuantity(Quantity.of(0)))
@@ -246,7 +244,7 @@ class InventoryTest {
     void shouldThrowExceptionWhenReleaseQuantityExceedsReserved() {
         // given
         Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), Quantity.of(100));
-        inventory.reserve(Quantity.of(30), "ORDER-2024-001", 3600);
+        inventory.reserve(Quantity.of(30));
         
         // when & then
         assertThatThrownBy(() -> inventory.releaseReservedQuantity(Quantity.of(50)))
@@ -259,7 +257,7 @@ class InventoryTest {
     void shouldThrowExceptionWhenConfirmQuantityIsZero() {
         // given
         Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), Quantity.of(100));
-        inventory.reserve(Quantity.of(30), "ORDER-2024-001", 3600);
+        inventory.reserve(Quantity.of(30));
         
         // when & then
         assertThatThrownBy(() -> inventory.confirmReservedQuantity(Quantity.of(0)))
@@ -272,7 +270,7 @@ class InventoryTest {
     void shouldThrowExceptionWhenConfirmQuantityExceedsReserved() {
         // given
         Inventory inventory = Inventory.createWithInitialStock(SkuId.generate(), Quantity.of(100));
-        inventory.reserve(Quantity.of(30), "ORDER-2024-001", 3600);
+        inventory.reserve(Quantity.of(30));
         
         // when & then
         assertThatThrownBy(() -> inventory.confirmReservedQuantity(Quantity.of(50)))

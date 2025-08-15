@@ -120,7 +120,7 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
     ) {
         Quantity requestedQuantity = Quantity.of(item.getQuantity());
         
-        ReservationId reservationId = inventory.reserve(requestedQuantity, orderId, ttlSeconds);
+        ReservationId reservationId = inventory.reserve(requestedQuantity);
         
         Reservation reservation = Reservation.create(
                 reservationId,
