@@ -2,6 +2,7 @@ package com.commerce.inventory.domain.application.usecase;
 
 import com.commerce.common.application.usecase.UseCase;
 import com.commerce.common.domain.model.Quantity;
+import com.commerce.inventory.domain.application.usecase.validation.RequestValidator;
 import com.commerce.inventory.domain.exception.InsufficientStockException;
 import com.commerce.inventory.domain.exception.InvalidReservationException;
 import com.commerce.inventory.domain.exception.InvalidSkuIdException;
@@ -176,25 +177,14 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
     }
     
     private void validateRequest(ReserveStockRequest request) {
-        if (request.getItems() == null || request.getItems().isEmpty()) {
-            throw new InvalidReservationException("예약 항목이 비어있습니다");
-        }
-        
-        if (request.getOrderId() == null || request.getOrderId().trim().isEmpty()) {
-            throw new InvalidReservationException("주문 ID는 필수입니다");
-        }
-        
-        for (ReserveStockRequest.ReservationItem item : request.getItems()) {
-            if (item == null) {
-                throw new InvalidReservationException("예약 항목 중에 null 값이 포함될 수 없습니다.");
-            }
-            if (item.getSkuId() == null || item.getSkuId().trim().isEmpty()) {
-                throw new InvalidReservationException("SKU ID가 누락된 예약 항목이 있습니다.");
-            }
-            
-            if (item.getQuantity() == null || item.getQuantity() <= 0) {
-                throw new InvalidReservationException(String.format("SKU [%s]의 예약 수량은 0보다 커야 합니다.", item.getSkuId()));
-            }
-        }
+        RequestValidator.of(request)
+                .notEmptyList(ReserveStockRequest::getItems, "예약 항목")
+                .notEmpty(ReserveStockRequest::getOrderId, "주문 ID")
+                .validateEach(ReserveStockRequest::getItems, itemValidator -> itemValidator
+                        .validate(item -> item != null, "예약 항목 중에 null 값이 포함될 수 없습니다.")
+                        .notEmpty(ReserveStockRequest.ReservationItem::getSkuId, "SKU ID")
+                        .positive(ReserveStockRequest.ReservationItem::getQuantity, "예약 수량")
+                )
+                .execute();
     }
 }

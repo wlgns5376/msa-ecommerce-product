@@ -266,7 +266,7 @@ class ReserveStockUseCaseTest {
         // When/Then
         assertThatThrownBy(() -> useCase.execute(request))
                 .isInstanceOf(InvalidReservationException.class)
-                .hasMessageContaining("예약 항목이 비어있습니다");
+                .hasMessageContaining("예약 항목이(가) 비어있습니다");
     }
     
     @Test
@@ -282,7 +282,7 @@ class ReserveStockUseCaseTest {
         // When/Then
         assertThatThrownBy(() -> useCase.execute(request))
                 .isInstanceOf(InvalidReservationException.class)
-                .hasMessageContaining("예약 항목이 비어있습니다");
+                .hasMessageContaining("예약 항목이(가) 비어있습니다");
     }
     
     @Test
@@ -303,7 +303,7 @@ class ReserveStockUseCaseTest {
         // When/Then
         assertThatThrownBy(() -> useCase.execute(request))
                 .isInstanceOf(InvalidReservationException.class)
-                .hasMessageContaining("주문 ID는 필수입니다");
+                .hasMessageContaining("주문 ID은(는) 필수입니다");
     }
     
     @Test
