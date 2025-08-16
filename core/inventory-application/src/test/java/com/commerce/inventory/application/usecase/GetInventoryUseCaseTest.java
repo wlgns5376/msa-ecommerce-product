@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -89,9 +90,10 @@ class GetInventoryUseCaseTest {
         verify(loadInventoryPort).load(skuId);
     }
     
-    @DisplayName("재고 조회 - null 또는 빈 문자열 SKU ID로 조회 시 예외 발생")
+    @DisplayName("재고 조회 - null, 빈 문자열, 공백으로만 이루어진 SKU ID로 조회 시 예외 발생")
     @ParameterizedTest
     @NullAndEmptySource
+    @ValueSource(strings = {" ", "   "})
     void getInventory_WithBlankSkuId_ThrowsException(String invalidSkuId) {
         // Given
         GetInventoryQuery query = new GetInventoryQuery(invalidSkuId);
