@@ -1,0 +1,51 @@
+package com.commerce.inventory.application.usecase;
+
+import com.commerce.inventory.application.port.in.GetInventoryQuery;
+import com.commerce.inventory.application.port.in.GetInventoryUseCase;
+import com.commerce.inventory.application.port.in.InventoryResponse;
+import com.commerce.inventory.application.port.out.LoadInventoryPort;
+import com.commerce.inventory.domain.model.Inventory;
+import com.commerce.inventory.domain.model.SkuId;
+import jakarta.validation.Validator;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@Transactional(readOnly = true)
+public class GetInventoryService implements GetInventoryUseCase {
+    
+    private final LoadInventoryPort loadInventoryPort;
+    private final Validator validator;
+    
+    public GetInventoryService(LoadInventoryPort loadInventoryPort, Validator validator) {
+        this.loadInventoryPort = loadInventoryPort;
+        this.validator = validator;
+    }
+    
+    @Override
+    public InventoryResponse execute(GetInventoryQuery query) {
+        var violations = validator.validate(query);
+        if (!violations.isEmpty()) {
+            throw new jakarta.validation.ConstraintViolationException(violations);
+        }
+        
+        SkuId skuId = new SkuId(query.getSkuId());
+        
+        return loadInventoryPort.load(skuId)
+            .map(this::toResponse)
+            .orElseGet(() -> createEmptyResponse(query.getSkuId()));
+    }
+    
+    private InventoryResponse toResponse(Inventory inventory) {
+        return new InventoryResponse(
+            inventory.getSkuId().value(),
+            inventory.getTotalQuantity().value(),
+            inventory.getReservedQuantity().value(),
+            inventory.getAvailableQuantity().value()
+        );
+    }
+    
+    private InventoryResponse createEmptyResponse(String skuId) {
+        return new InventoryResponse(skuId, 0, 0, 0);
+    }
+}
