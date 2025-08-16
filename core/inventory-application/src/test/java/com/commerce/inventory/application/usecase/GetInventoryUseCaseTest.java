@@ -7,9 +7,6 @@ import com.commerce.inventory.application.port.in.InventoryResponse;
 import com.commerce.inventory.application.port.out.LoadInventoryPort;
 import com.commerce.inventory.domain.model.Inventory;
 import com.commerce.inventory.domain.model.SkuId;
-import jakarta.validation.ConstraintViolationException;
-import jakarta.validation.Validator;
-import jakarta.validation.ValidatorFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,7 +17,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -58,7 +54,7 @@ class GetInventoryUseCaseTest {
             Quantity.of(30)
         );
         
-        when(loadInventoryPort.load(any(SkuId.class)))
+        when(loadInventoryPort.load(new SkuId(skuId)))
             .thenReturn(Optional.of(inventory));
         
         // When
@@ -71,7 +67,7 @@ class GetInventoryUseCaseTest {
         assertThat(response.reservedQuantity()).isEqualTo(30);
         assertThat(response.availableQuantity()).isEqualTo(70);
         
-        verify(loadInventoryPort).load(any(SkuId.class));
+        verify(loadInventoryPort).load(new SkuId(skuId));
     }
     
     @Test
@@ -81,7 +77,7 @@ class GetInventoryUseCaseTest {
         String skuId = "SKU-999";
         GetInventoryQuery query = new GetInventoryQuery(skuId);
         
-        when(loadInventoryPort.load(any(SkuId.class)))
+        when(loadInventoryPort.load(new SkuId(skuId)))
             .thenReturn(Optional.empty());
         
         // When
@@ -94,7 +90,7 @@ class GetInventoryUseCaseTest {
         assertThat(response.reservedQuantity()).isEqualTo(0);
         assertThat(response.availableQuantity()).isEqualTo(0);
         
-        verify(loadInventoryPort).load(any(SkuId.class));
+        verify(loadInventoryPort).load(new SkuId(skuId));
     }
     
     @DisplayName("재고 조회 - null 또는 빈 문자열 SKU ID로 조회 시 예외 발생")
@@ -126,7 +122,7 @@ class GetInventoryUseCaseTest {
             Quantity.of(50)
         );
         
-        when(loadInventoryPort.load(any(SkuId.class)))
+        when(loadInventoryPort.load(new SkuId(skuId)))
             .thenReturn(Optional.of(inventory));
         
         // When
@@ -139,7 +135,7 @@ class GetInventoryUseCaseTest {
         assertThat(response.reservedQuantity()).isEqualTo(50);
         assertThat(response.availableQuantity()).isEqualTo(0);
         
-        verify(loadInventoryPort).load(any(SkuId.class));
+        verify(loadInventoryPort).load(new SkuId(skuId));
     }
     
     @Test
