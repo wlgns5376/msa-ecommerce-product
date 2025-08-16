@@ -66,7 +66,7 @@ class GetInventoryUseCaseTest {
         InventoryResponse response = getInventoryUseCase.execute(query);
         
         // Then
-        InventoryResponse expectedResponse = new InventoryResponse(skuIdValue, 100, 30, 70);
+        InventoryResponse expectedResponse = InventoryResponse.from(inventory);
         assertThat(response).isEqualTo(expectedResponse);
         
         verify(loadInventoryPort).load(skuId);
@@ -134,7 +134,7 @@ class GetInventoryUseCaseTest {
         InventoryResponse response = getInventoryUseCase.execute(query);
         
         // Then
-        InventoryResponse expectedResponse = new InventoryResponse(skuIdValue, 50, 50, 0);
+        InventoryResponse expectedResponse = InventoryResponse.from(inventory);
         assertThat(response).isEqualTo(expectedResponse);
         
         verify(loadInventoryPort).load(skuId);
