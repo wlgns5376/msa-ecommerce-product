@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -80,33 +81,55 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
                 .map(SkuId::new)
                 .collect(Collectors.toSet());
         
-        // 대량의 SKU를 배치로 나누어 조회
-        Map<SkuId, Inventory> inventoryMapBySkuId = new HashMap<>();
+        // 대량의 SKU를 배치로 나누어 조회 (간소화된 로직)
+        Map<SkuId, Inventory> inventoryMapBySkuId = fetchInventoriesInBatches(skuIds);
+        
+        // 존재하지 않는 SKU를 일괄 검증
+        validateAllSkusExist(skuIds, inventoryMapBySkuId.keySet());
+        
+        // 합산된 수량으로 재고 검증 및 결과 맵 생성
+        return validateAndBuildInventoryMap(totalQuantityBySku, inventoryMapBySkuId);
+    }
+    
+    private Map<SkuId, Inventory> fetchInventoriesInBatches(Set<SkuId> skuIds) {
+        Map<SkuId, Inventory> result = new HashMap<>();
         List<SkuId> skuIdList = new ArrayList<>(skuIds);
+        
         for (int i = 0; i < skuIdList.size(); i += BATCH_SIZE) {
             int endIndex = Math.min(i + BATCH_SIZE, skuIdList.size());
             Set<SkuId> batchSkuIds = new HashSet<>(skuIdList.subList(i, endIndex));
-            Map<SkuId, Inventory> batchResult = inventoryRepository.findBySkuIdsWithLock(batchSkuIds);
-            inventoryMapBySkuId.putAll(batchResult);
+            result.putAll(inventoryRepository.findBySkuIdsWithLock(batchSkuIds));
         }
         
-        // 존재하지 않는 SKU를 일괄 검증
-        Set<SkuId> foundSkuIds = inventoryMapBySkuId.keySet();
-        if (foundSkuIds.size() != skuIds.size()) {
-            Set<SkuId> missingSkuIds = new HashSet<>(skuIds);
-            missingSkuIds.removeAll(foundSkuIds);
-            String missingIdsStr = missingSkuIds.stream()
-                    .map(SkuId::value)
-                    .limit(10)
-                    .collect(Collectors.joining(", "));
-            if (missingSkuIds.size() > 10) {
-                missingIdsStr += " 외 " + (missingSkuIds.size() - 10) + "개";
-            }
-            throw new InvalidSkuIdException("다음 SKU를 찾을 수 없습니다: " + missingIdsStr);
+        return result;
+    }
+    
+    private void validateAllSkusExist(Set<SkuId> requestedSkuIds, Set<SkuId> foundSkuIds) {
+        if (foundSkuIds.size() == requestedSkuIds.size()) {
+            return;
         }
         
-        // 합산된 수량으로 재고 검증
-        Map<String, Inventory> inventoryMap = new HashMap<>();
+        Set<SkuId> missingSkuIds = new HashSet<>(requestedSkuIds);
+        missingSkuIds.removeAll(foundSkuIds);
+        
+        String missingIdsStr = missingSkuIds.stream()
+                .map(SkuId::value)
+                .limit(10)
+                .collect(Collectors.joining(", "));
+                
+        if (missingSkuIds.size() > 10) {
+            missingIdsStr += " 외 " + (missingSkuIds.size() - 10) + "개";
+        }
+        
+        throw new InvalidSkuIdException("다음 SKU를 찾을 수 없습니다: " + missingIdsStr);
+    }
+    
+    private Map<String, Inventory> validateAndBuildInventoryMap(
+            Map<String, Integer> totalQuantityBySku,
+            Map<SkuId, Inventory> inventoryMapBySkuId) {
+        
+        Map<String, Inventory> result = new HashMap<>();
+        
         for (Map.Entry<String, Integer> entry : totalQuantityBySku.entrySet()) {
             String skuIdStr = entry.getKey();
             Integer totalQuantity = entry.getValue();
@@ -119,10 +142,10 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
                                 skuIdStr, inventory.getAvailableQuantity().value(), totalQuantity)
                 );
             }
-            inventoryMap.put(skuIdStr, inventory);
+            result.put(skuIdStr, inventory);
         }
         
-        return inventoryMap;
+        return result;
     }
     
     private List<Reservation> performReservations(
@@ -179,14 +202,17 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
     
     private void validateRequest(ReserveStockRequest request) {
         RequestValidator.of(request)
-                .validate(r -> r != null, "예약 요청이 null일 수 없습니다")
+                .validate(Objects::nonNull, "예약 요청이 null일 수 없습니다")
                 .notEmpty(ReserveStockRequest::getOrderId, "주문 ID")
                 .notEmptyList(ReserveStockRequest::getItems, "예약 항목")
-                .validateEach(ReserveStockRequest::getItems, item -> item
-                        .validate(i -> i != null, "예약 항목에 null이 포함될 수 없습니다")
-                        .notEmpty(ReserveStockRequest.ReservationItem::getSkuId, "SKU ID")
-                        .positive(ReserveStockRequest.ReservationItem::getQuantity, "수량")
-                )
+                .validateEach(ReserveStockRequest::getItems, this::validateReservationItem)
                 .execute();
+    }
+    
+    private void validateReservationItem(RequestValidator<ReserveStockRequest.ReservationItem> validator) {
+        validator
+                .validate(Objects::nonNull, "예약 항목에 null이 포함될 수 없습니다")
+                .notEmpty(ReserveStockRequest.ReservationItem::getSkuId, "SKU ID")
+                .positive(ReserveStockRequest.ReservationItem::getQuantity, "수량");
     }
 }
