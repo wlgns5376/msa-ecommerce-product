@@ -1,17 +1,6 @@
 package com.commerce.inventory.application.port.in;
 
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 
-public class GetInventoryQuery {
-    
-    @NotNull(message = "SKU ID is required")
-    private final String skuId;
-    
-    public GetInventoryQuery(String skuId) {
-        this.skuId = skuId;
-    }
-    
-    public String getSkuId() {
-        return skuId;
-    }
+public record GetInventoryQuery(@NotBlank(message = "SKU ID is required") String skuId) {
 }

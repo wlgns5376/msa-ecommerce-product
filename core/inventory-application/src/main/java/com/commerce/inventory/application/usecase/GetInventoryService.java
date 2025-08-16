@@ -29,11 +29,11 @@ public class GetInventoryService implements GetInventoryUseCase {
             throw new jakarta.validation.ConstraintViolationException(violations);
         }
         
-        SkuId skuId = new SkuId(query.getSkuId());
+        SkuId skuId = new SkuId(query.skuId());
         
         return loadInventoryPort.load(skuId)
             .map(this::toResponse)
-            .orElseGet(() -> createEmptyResponse(query.getSkuId()));
+            .orElseGet(() -> createEmptyResponse(query.skuId()));
     }
     
     private InventoryResponse toResponse(Inventory inventory) {

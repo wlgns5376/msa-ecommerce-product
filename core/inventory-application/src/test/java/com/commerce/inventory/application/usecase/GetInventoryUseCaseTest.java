@@ -65,10 +65,10 @@ class GetInventoryUseCaseTest {
         
         // Then
         assertThat(response).isNotNull();
-        assertThat(response.getSkuId()).isEqualTo(skuId);
-        assertThat(response.getTotalQuantity()).isEqualTo(100);
-        assertThat(response.getReservedQuantity()).isEqualTo(30);
-        assertThat(response.getAvailableQuantity()).isEqualTo(70);
+        assertThat(response.skuId()).isEqualTo(skuId);
+        assertThat(response.totalQuantity()).isEqualTo(100);
+        assertThat(response.reservedQuantity()).isEqualTo(30);
+        assertThat(response.availableQuantity()).isEqualTo(70);
         
         verify(loadInventoryPort).load(any(SkuId.class));
         verify(validator).validate(query);
@@ -90,10 +90,10 @@ class GetInventoryUseCaseTest {
         
         // Then
         assertThat(response).isNotNull();
-        assertThat(response.getSkuId()).isEqualTo(skuId);
-        assertThat(response.getTotalQuantity()).isEqualTo(0);
-        assertThat(response.getReservedQuantity()).isEqualTo(0);
-        assertThat(response.getAvailableQuantity()).isEqualTo(0);
+        assertThat(response.skuId()).isEqualTo(skuId);
+        assertThat(response.totalQuantity()).isEqualTo(0);
+        assertThat(response.reservedQuantity()).isEqualTo(0);
+        assertThat(response.availableQuantity()).isEqualTo(0);
         
         verify(loadInventoryPort).load(any(SkuId.class));
         verify(validator).validate(query);
@@ -118,18 +118,18 @@ class GetInventoryUseCaseTest {
     }
     
     @Test
-    @DisplayName("재고 조회 - 잘못된 형식의 SKU ID로 조회 시 예외 발생")
+    @DisplayName("재고 조회 - 빈 문자열 SKU ID로 조회 시 예외 발생")
     void getInventory_WithInvalidSkuIdFormat_ThrowsException() {
         // Given
-        String invalidSkuId = "";
-        GetInventoryQuery query = new GetInventoryQuery(invalidSkuId);
+        GetInventoryQuery query = new GetInventoryQuery("");
         
-        when(validator.validate(query)).thenReturn(Set.of());
+        ConstraintViolation<GetInventoryQuery> violation = mock(ConstraintViolation.class);
+        when(violation.getMessage()).thenReturn("SKU ID is required");
+        when(validator.validate(query)).thenReturn(Set.of(violation));
         
         // When & Then
         assertThatThrownBy(() -> getInventoryUseCase.execute(query))
-            .isInstanceOf(InvalidSkuIdException.class)
-            .hasMessageContaining("SKU ID는 필수입니다");
+            .isInstanceOf(ConstraintViolationException.class);
         
         verify(validator).validate(query);
         verify(loadInventoryPort, never()).load(any());
@@ -158,10 +158,10 @@ class GetInventoryUseCaseTest {
         
         // Then
         assertThat(response).isNotNull();
-        assertThat(response.getSkuId()).isEqualTo(skuId);
-        assertThat(response.getTotalQuantity()).isEqualTo(50);
-        assertThat(response.getReservedQuantity()).isEqualTo(50);
-        assertThat(response.getAvailableQuantity()).isEqualTo(0);
+        assertThat(response.skuId()).isEqualTo(skuId);
+        assertThat(response.totalQuantity()).isEqualTo(50);
+        assertThat(response.reservedQuantity()).isEqualTo(50);
+        assertThat(response.availableQuantity()).isEqualTo(0);
         
         verify(loadInventoryPort).load(any(SkuId.class));
         verify(validator).validate(query);
