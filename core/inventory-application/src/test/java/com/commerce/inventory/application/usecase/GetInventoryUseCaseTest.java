@@ -15,6 +15,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -99,38 +101,20 @@ class GetInventoryUseCaseTest {
         verify(validator).validate(query);
     }
     
-    @Test
-    @DisplayName("재고 조회 - null SKU ID로 조회 시 예외 발생")
-    void getInventory_WithNullSkuId_ThrowsException() {
+    @DisplayName("재고 조회 - null 또는 빈 문자열 SKU ID로 조회 시 예외 발생")
+    @ParameterizedTest
+    @NullAndEmptySource
+    void getInventory_WithInvalidSkuId_ThrowsException(String invalidSkuId) {
         // Given
-        GetInventoryQuery query = new GetInventoryQuery(null);
-        
+        GetInventoryQuery query = new GetInventoryQuery(invalidSkuId);
+
         ConstraintViolation<GetInventoryQuery> violation = mock(ConstraintViolation.class);
-        when(violation.getMessage()).thenReturn("SKU ID is required");
         when(validator.validate(query)).thenReturn(Set.of(violation));
-        
+
         // When & Then
         assertThatThrownBy(() -> getInventoryUseCase.execute(query))
-            .isInstanceOf(ConstraintViolationException.class);
-        
-        verify(validator).validate(query);
-        verify(loadInventoryPort, never()).load(any());
-    }
-    
-    @Test
-    @DisplayName("재고 조회 - 빈 문자열 SKU ID로 조회 시 예외 발생")
-    void getInventory_WithInvalidSkuIdFormat_ThrowsException() {
-        // Given
-        GetInventoryQuery query = new GetInventoryQuery("");
-        
-        ConstraintViolation<GetInventoryQuery> violation = mock(ConstraintViolation.class);
-        when(violation.getMessage()).thenReturn("SKU ID is required");
-        when(validator.validate(query)).thenReturn(Set.of(violation));
-        
-        // When & Then
-        assertThatThrownBy(() -> getInventoryUseCase.execute(query))
-            .isInstanceOf(ConstraintViolationException.class);
-        
+                .isInstanceOf(ConstraintViolationException.class);
+
         verify(validator).validate(query);
         verify(loadInventoryPort, never()).load(any());
     }

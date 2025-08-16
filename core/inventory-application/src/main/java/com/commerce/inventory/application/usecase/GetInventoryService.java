@@ -4,8 +4,8 @@ import com.commerce.inventory.application.port.in.GetInventoryQuery;
 import com.commerce.inventory.application.port.in.GetInventoryUseCase;
 import com.commerce.inventory.application.port.in.InventoryResponse;
 import com.commerce.inventory.application.port.out.LoadInventoryPort;
-import com.commerce.inventory.domain.model.Inventory;
 import com.commerce.inventory.domain.model.SkuId;
+import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,28 +24,19 @@ public class GetInventoryService implements GetInventoryUseCase {
     
     @Override
     public InventoryResponse execute(GetInventoryQuery query) {
-        var violations = validator.validate(query);
-        if (!violations.isEmpty()) {
-            throw new jakarta.validation.ConstraintViolationException(violations);
-        }
+        validate(query);
         
         SkuId skuId = new SkuId(query.skuId());
         
         return loadInventoryPort.load(skuId)
-            .map(this::toResponse)
-            .orElseGet(() -> createEmptyResponse(query.skuId()));
+            .map(InventoryResponse::from)
+            .orElseGet(() -> InventoryResponse.empty(query.skuId()));
     }
     
-    private InventoryResponse toResponse(Inventory inventory) {
-        return new InventoryResponse(
-            inventory.getSkuId().value(),
-            inventory.getTotalQuantity().value(),
-            inventory.getReservedQuantity().value(),
-            inventory.getAvailableQuantity().value()
-        );
-    }
-    
-    private InventoryResponse createEmptyResponse(String skuId) {
-        return new InventoryResponse(skuId, 0, 0, 0);
+    private void validate(GetInventoryQuery query) {
+        var violations = validator.validate(query);
+        if (!violations.isEmpty()) {
+            throw new ConstraintViolationException(violations);
+        }
     }
 }
