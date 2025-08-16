@@ -24,6 +24,9 @@ public class GetInventoryService implements GetInventoryUseCase {
     
     @Override
     public InventoryResponse execute(GetInventoryQuery query) {
+        if (query == null) {
+            throw new IllegalArgumentException("GetInventoryQuery cannot be null.");
+        }
         validate(query);
         
         SkuId skuId = new SkuId(query.skuId());

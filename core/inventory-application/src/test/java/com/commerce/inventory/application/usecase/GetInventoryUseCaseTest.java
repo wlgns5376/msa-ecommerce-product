@@ -5,7 +5,6 @@ import com.commerce.inventory.application.port.in.GetInventoryQuery;
 import com.commerce.inventory.application.port.in.GetInventoryUseCase;
 import com.commerce.inventory.application.port.in.InventoryResponse;
 import com.commerce.inventory.application.port.out.LoadInventoryPort;
-import com.commerce.inventory.domain.exception.InvalidSkuIdException;
 import com.commerce.inventory.domain.model.Inventory;
 import com.commerce.inventory.domain.model.SkuId;
 import jakarta.validation.ConstraintViolation;
@@ -104,7 +103,7 @@ class GetInventoryUseCaseTest {
     @DisplayName("재고 조회 - null 또는 빈 문자열 SKU ID로 조회 시 예외 발생")
     @ParameterizedTest
     @NullAndEmptySource
-    void getInventory_WithInvalidSkuId_ThrowsException(String invalidSkuId) {
+    void getInventory_WithBlankSkuId_ThrowsException(String invalidSkuId) {
         // Given
         GetInventoryQuery query = new GetInventoryQuery(invalidSkuId);
 
@@ -149,5 +148,20 @@ class GetInventoryUseCaseTest {
         
         verify(loadInventoryPort).load(any(SkuId.class));
         verify(validator).validate(query);
+    }
+    
+    @Test
+    @DisplayName("재고 조회 - null query로 조회 시 IllegalArgumentException 발생")
+    void getInventory_WithNullQuery_ThrowsIllegalArgumentException() {
+        // Given
+        GetInventoryQuery query = null;
+        
+        // When & Then
+        assertThatThrownBy(() -> getInventoryUseCase.execute(query))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("GetInventoryQuery cannot be null.");
+        
+        verify(validator, never()).validate(any());
+        verify(loadInventoryPort, never()).load(any());
     }
 }
