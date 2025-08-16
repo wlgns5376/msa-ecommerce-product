@@ -5,6 +5,7 @@ import com.commerce.inventory.application.port.in.GetInventoryQuery;
 import com.commerce.inventory.application.port.in.GetInventoryUseCase;
 import com.commerce.inventory.application.port.in.InventoryResponse;
 import com.commerce.inventory.application.port.out.LoadInventoryPort;
+import com.commerce.inventory.domain.exception.InvalidSkuIdException;
 import com.commerce.inventory.domain.model.Inventory;
 import com.commerce.inventory.domain.model.SkuId;
 import org.junit.jupiter.api.BeforeEach;
@@ -101,7 +102,7 @@ class GetInventoryUseCaseTest {
         // When & Then
         // 단위 테스트에서는 Spring 컨텍스트가 없어 SkuId 생성 시 InvalidSkuIdException이 발생
         assertThatThrownBy(() -> getInventoryUseCase.execute(query))
-                .isInstanceOf(com.commerce.inventory.domain.exception.InvalidSkuIdException.class);
+                .isInstanceOf(InvalidSkuIdException.class);
 
         verify(loadInventoryPort, never()).load(any());
     }
