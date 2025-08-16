@@ -536,7 +536,6 @@ class ReserveStockUseCaseTest {
         assertThat(capturedSets.get(2)).hasSize(500);  // 마지막 배치
         
         // 모든 재고가 저장되었는지 확인
-        ArgumentCaptor<List<Inventory>> inventoryCaptor = ArgumentCaptor.forClass(List.class);
         verify(inventoryRepository).saveAll(inventoryCaptor.capture());
         assertThat(inventoryCaptor.getValue()).hasSize(totalSkus);
     }

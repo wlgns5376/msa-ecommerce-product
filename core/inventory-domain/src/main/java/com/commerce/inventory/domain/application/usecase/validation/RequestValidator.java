@@ -49,7 +49,7 @@ public class RequestValidator<T> {
     public RequestValidator<T> notEmpty(Function<T, String> fieldExtractor, String fieldName) {
         return validateField(
                 fieldExtractor,
-                value -> value != null && !value.trim().isEmpty(),
+                value -> value != null && !value.isBlank(),
                 fieldName + "은(는) 필수입니다"
         );
     }

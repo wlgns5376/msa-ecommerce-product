@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -42,7 +43,7 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
         validateRequest(request);
         
         LocalDateTime currentTime = LocalDateTime.now(clock);
-        int ttlSeconds = request.getTtlSeconds() != null ? request.getTtlSeconds() : DEFAULT_TTL_SECONDS;
+        int ttlSeconds = Optional.ofNullable(request.getTtlSeconds()).orElse(DEFAULT_TTL_SECONDS);
         
         // 재고 확인 및 잠금
         Map<String, Inventory> inventoryMap = lockAndVerifyInventories(request.getItems());
