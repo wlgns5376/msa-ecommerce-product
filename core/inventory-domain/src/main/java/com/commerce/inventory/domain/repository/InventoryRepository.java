@@ -17,5 +17,7 @@ public interface InventoryRepository extends Repository<Inventory, SkuId> {
     
     Map<SkuId, Inventory> findBySkuIdsAsMap(Set<SkuId> skuIds);
     
+    Map<SkuId, Inventory> findBySkuIdsWithLock(Set<SkuId> skuIds);
+    
     List<Inventory> findLowStockInventories(int threshold);
 }
