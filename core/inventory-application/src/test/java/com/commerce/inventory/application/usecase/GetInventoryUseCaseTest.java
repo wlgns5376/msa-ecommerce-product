@@ -62,11 +62,8 @@ class GetInventoryUseCaseTest {
         InventoryResponse response = getInventoryUseCase.execute(query);
         
         // Then
-        assertThat(response).isNotNull();
-        assertThat(response.skuId()).isEqualTo(skuIdValue);
-        assertThat(response.totalQuantity()).isEqualTo(100);
-        assertThat(response.reservedQuantity()).isEqualTo(30);
-        assertThat(response.availableQuantity()).isEqualTo(70);
+        InventoryResponse expectedResponse = new InventoryResponse(skuIdValue, 100, 30, 70);
+        assertThat(response).isEqualTo(expectedResponse);
         
         verify(loadInventoryPort).load(skuId);
     }
@@ -86,11 +83,8 @@ class GetInventoryUseCaseTest {
         InventoryResponse response = getInventoryUseCase.execute(query);
         
         // Then
-        assertThat(response).isNotNull();
-        assertThat(response.skuId()).isEqualTo(skuIdValue);
-        assertThat(response.totalQuantity()).isEqualTo(0);
-        assertThat(response.reservedQuantity()).isEqualTo(0);
-        assertThat(response.availableQuantity()).isEqualTo(0);
+        InventoryResponse expectedResponse = InventoryResponse.empty(skuIdValue);
+        assertThat(response).isEqualTo(expectedResponse);
         
         verify(loadInventoryPort).load(skuId);
     }
@@ -132,11 +126,8 @@ class GetInventoryUseCaseTest {
         InventoryResponse response = getInventoryUseCase.execute(query);
         
         // Then
-        assertThat(response).isNotNull();
-        assertThat(response.skuId()).isEqualTo(skuIdValue);
-        assertThat(response.totalQuantity()).isEqualTo(50);
-        assertThat(response.reservedQuantity()).isEqualTo(50);
-        assertThat(response.availableQuantity()).isEqualTo(0);
+        InventoryResponse expectedResponse = new InventoryResponse(skuIdValue, 50, 50, 0);
+        assertThat(response).isEqualTo(expectedResponse);
         
         verify(loadInventoryPort).load(skuId);
     }
