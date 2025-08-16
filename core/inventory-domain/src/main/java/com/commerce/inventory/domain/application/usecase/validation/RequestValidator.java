@@ -131,8 +131,11 @@ public class RequestValidator<T> {
     /**
      * 리스트의 각 항목에 대해 검증을 수행합니다.
      * 
+     * <p>이 메서드는 리스트의 각 항목에 대해 주어진 검증 규칙을 적용합니다.
+     * 검증 실패 시 어떤 항목에서 실패했는지 명확하게 표시합니다.
+     * 
      * @param listExtractor 리스트를 추출하는 함수
-     * @param itemValidator 각 항목에 적용할 검증 규칙
+     * @param itemValidator 각 항목에 적용할 검증 규칙을 정의하는 Consumer
      * @return 체이닝을 위한 현재 인스턴스
      */
     public <U> RequestValidator<T> validateEach(
@@ -142,38 +145,52 @@ public class RequestValidator<T> {
         Objects.requireNonNull(listExtractor, "리스트 추출 함수는 null일 수 없습니다");
         Objects.requireNonNull(itemValidator, "항목 검증기는 null일 수 없습니다");
         
+        // 리스트 검증을 위한 규칙 추가
         validate(t -> {
             if (t == null) {
-                return true; // null 대상에 대해서는 validateEach를 건너뜀
+                return true;
             }
             
-            List<U> items;
-            try {
-                items = listExtractor.apply(t);
-            } catch (NullPointerException e) {
-                return true; // 리스트 추출 실패 시 건너뜀
-            }
-            
+            List<U> items = extractList(t, listExtractor);
             if (items == null) {
-                return true; // null 리스트는 건너뜀
+                return true;
             }
             
-            for (int i = 0; i < items.size(); i++) {
-                U item = items.get(i);
-                try {
-                    RequestValidator<U> validator = RequestValidator.of(item);
-                    itemValidator.accept(validator);
-                    validator.execute();
-                } catch (InvalidReservationException e) {
-                    throw new InvalidReservationException(
-                            String.format("항목 %d번째 검증 실패: %s", i + 1, e.getMessage())
-                    );
-                }
-            }
+            // 각 항목에 대해 검증 수행
+            validateListItems(items, itemValidator);
             return true;
-        }, "리스트 항목 검증 실패");
+        }, "리스트 항목 검증");
         
         return this;
+    }
+    
+    /**
+     * 안전하게 리스트를 추출합니다.
+     */
+    private <U> List<U> extractList(T target, Function<T, List<U>> listExtractor) {
+        try {
+            return listExtractor.apply(target);
+        } catch (NullPointerException e) {
+            return null;
+        }
+    }
+    
+    /**
+     * 리스트의 각 항목을 검증합니다.
+     */
+    private <U> void validateListItems(List<U> items, Consumer<RequestValidator<U>> itemValidator) {
+        for (int i = 0; i < items.size(); i++) {
+            U item = items.get(i);
+            try {
+                RequestValidator<U> validator = RequestValidator.of(item);
+                itemValidator.accept(validator);
+                validator.execute();
+            } catch (InvalidReservationException e) {
+                throw new InvalidReservationException(
+                        String.format("항목 %d번째 검증 실패: %s", i + 1, e.getMessage())
+                );
+            }
+        }
     }
     
     /**
