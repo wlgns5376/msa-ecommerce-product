@@ -7,9 +7,9 @@ import com.commerce.inventory.application.port.in.InventoryResponse;
 import com.commerce.inventory.application.port.out.LoadInventoryPort;
 import com.commerce.inventory.domain.model.Inventory;
 import com.commerce.inventory.domain.model.SkuId;
-import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,7 +25,9 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("GetInventoryUseCase 테스트")
@@ -34,13 +36,14 @@ class GetInventoryUseCaseTest {
     @Mock
     private LoadInventoryPort loadInventoryPort;
     
-    @Mock
     private Validator validator;
     
     private GetInventoryUseCase getInventoryUseCase;
     
     @BeforeEach
     void setUp() {
+        ValidatorFactory factory = jakarta.validation.Validation.buildDefaultValidatorFactory();
+        validator = factory.getValidator();
         getInventoryUseCase = new GetInventoryService(loadInventoryPort, validator);
     }
     
@@ -57,7 +60,6 @@ class GetInventoryUseCaseTest {
             Quantity.of(30)
         );
         
-        when(validator.validate(query)).thenReturn(Set.of());
         when(loadInventoryPort.load(any(SkuId.class)))
             .thenReturn(Optional.of(inventory));
         
@@ -72,7 +74,6 @@ class GetInventoryUseCaseTest {
         assertThat(response.availableQuantity()).isEqualTo(70);
         
         verify(loadInventoryPort).load(any(SkuId.class));
-        verify(validator).validate(query);
     }
     
     @Test
@@ -82,7 +83,6 @@ class GetInventoryUseCaseTest {
         String skuId = "SKU-999";
         GetInventoryQuery query = new GetInventoryQuery(skuId);
         
-        when(validator.validate(query)).thenReturn(Set.of());
         when(loadInventoryPort.load(any(SkuId.class)))
             .thenReturn(Optional.empty());
         
@@ -97,7 +97,6 @@ class GetInventoryUseCaseTest {
         assertThat(response.availableQuantity()).isEqualTo(0);
         
         verify(loadInventoryPort).load(any(SkuId.class));
-        verify(validator).validate(query);
     }
     
     @DisplayName("재고 조회 - null 또는 빈 문자열 SKU ID로 조회 시 예외 발생")
@@ -107,14 +106,10 @@ class GetInventoryUseCaseTest {
         // Given
         GetInventoryQuery query = new GetInventoryQuery(invalidSkuId);
 
-        ConstraintViolation<GetInventoryQuery> violation = mock(ConstraintViolation.class);
-        when(validator.validate(query)).thenReturn(Set.of(violation));
-
         // When & Then
         assertThatThrownBy(() -> getInventoryUseCase.execute(query))
                 .isInstanceOf(ConstraintViolationException.class);
 
-        verify(validator).validate(query);
         verify(loadInventoryPort, never()).load(any());
     }
     
@@ -132,7 +127,6 @@ class GetInventoryUseCaseTest {
             Quantity.of(50)
         );
         
-        when(validator.validate(query)).thenReturn(Set.of());
         when(loadInventoryPort.load(any(SkuId.class)))
             .thenReturn(Optional.of(inventory));
         
@@ -147,7 +141,6 @@ class GetInventoryUseCaseTest {
         assertThat(response.availableQuantity()).isEqualTo(0);
         
         verify(loadInventoryPort).load(any(SkuId.class));
-        verify(validator).validate(query);
     }
     
     @Test
@@ -161,7 +154,6 @@ class GetInventoryUseCaseTest {
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("GetInventoryQuery cannot be null.");
         
-        verify(validator, never()).validate(any());
         verify(loadInventoryPort, never()).load(any());
     }
 }

@@ -24,9 +24,6 @@ public class GetInventoryService implements GetInventoryUseCase {
     
     @Override
     public InventoryResponse execute(GetInventoryQuery query) {
-        if (query == null) {
-            throw new IllegalArgumentException("GetInventoryQuery cannot be null.");
-        }
         validate(query);
         
         SkuId skuId = new SkuId(query.skuId());
@@ -37,6 +34,9 @@ public class GetInventoryService implements GetInventoryUseCase {
     }
     
     private void validate(GetInventoryQuery query) {
+        if (query == null) {
+            throw new IllegalArgumentException("GetInventoryQuery cannot be null.");
+        }
         var violations = validator.validate(query);
         if (!violations.isEmpty()) {
             throw new ConstraintViolationException(violations);
