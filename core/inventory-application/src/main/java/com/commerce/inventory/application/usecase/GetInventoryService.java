@@ -5,41 +5,29 @@ import com.commerce.inventory.application.port.in.GetInventoryUseCase;
 import com.commerce.inventory.application.port.in.InventoryResponse;
 import com.commerce.inventory.application.port.out.LoadInventoryPort;
 import com.commerce.inventory.domain.model.SkuId;
-import jakarta.validation.ConstraintViolationException;
-import jakarta.validation.Validator;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 
 @Service
+@Validated
 @Transactional(readOnly = true)
 public class GetInventoryService implements GetInventoryUseCase {
     
     private final LoadInventoryPort loadInventoryPort;
-    private final Validator validator;
     
-    public GetInventoryService(LoadInventoryPort loadInventoryPort, Validator validator) {
+    public GetInventoryService(LoadInventoryPort loadInventoryPort) {
         this.loadInventoryPort = loadInventoryPort;
-        this.validator = validator;
     }
     
     @Override
-    public InventoryResponse execute(GetInventoryQuery query) {
-        validate(query);
-        
+    public InventoryResponse execute(@Valid @NotNull(message = "GetInventoryQuery cannot be null.") GetInventoryQuery query) {
         SkuId skuId = new SkuId(query.skuId());
         
         return loadInventoryPort.load(skuId)
             .map(InventoryResponse::from)
             .orElseGet(() -> InventoryResponse.empty(query.skuId()));
-    }
-    
-    private void validate(GetInventoryQuery query) {
-        if (query == null) {
-            throw new IllegalArgumentException("GetInventoryQuery cannot be null.");
-        }
-        var violations = validator.validate(query);
-        if (!violations.isEmpty()) {
-            throw new ConstraintViolationException(violations);
-        }
     }
 }
