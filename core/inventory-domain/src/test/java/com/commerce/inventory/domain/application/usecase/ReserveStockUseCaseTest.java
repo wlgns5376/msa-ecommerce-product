@@ -438,7 +438,7 @@ class ReserveStockUseCaseTest {
         // When/Then
         assertThatThrownBy(() -> useCase.execute(request))
                 .isInstanceOf(InvalidReservationException.class)
-                .hasMessageContaining("예약 항목 중에 null 값이 포함될 수 없습니다.");
+                .hasMessageContaining("예약 항목에 null이 포함될 수 없습니다");
     }
     
     @Test

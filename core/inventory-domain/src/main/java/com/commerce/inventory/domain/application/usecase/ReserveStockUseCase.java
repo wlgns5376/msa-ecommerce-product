@@ -179,12 +179,13 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
     
     private void validateRequest(ReserveStockRequest request) {
         RequestValidator.of(request)
-                .notEmptyList(ReserveStockRequest::getItems, "예약 항목")
+                .validate(r -> r != null, "예약 요청이 null일 수 없습니다")
                 .notEmpty(ReserveStockRequest::getOrderId, "주문 ID")
-                .validateEach(ReserveStockRequest::getItems, itemValidator -> itemValidator
-                        .validate(item -> item != null, "예약 항목 중에 null 값이 포함될 수 없습니다.")
+                .notEmptyList(ReserveStockRequest::getItems, "예약 항목")
+                .validateEach(ReserveStockRequest::getItems, item -> item
+                        .validate(i -> i != null, "예약 항목에 null이 포함될 수 없습니다")
                         .notEmpty(ReserveStockRequest.ReservationItem::getSkuId, "SKU ID")
-                        .positive(ReserveStockRequest.ReservationItem::getQuantity, "예약 수량")
+                        .positive(ReserveStockRequest.ReservationItem::getQuantity, "수량")
                 )
                 .execute();
     }
