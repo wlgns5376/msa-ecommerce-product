@@ -45,16 +45,17 @@ class GetInventoryUseCaseTest {
     @DisplayName("정상적인 재고 조회 - 재고가 존재하는 경우")
     void getInventory_WithExistingInventory_ReturnsInventoryResponse() {
         // Given
-        String skuId = "SKU-001";
-        GetInventoryQuery query = new GetInventoryQuery(skuId);
+        String skuIdValue = "SKU-001";
+        SkuId skuId = new SkuId(skuIdValue);
+        GetInventoryQuery query = new GetInventoryQuery(skuIdValue);
         
         Inventory inventory = Inventory.create(
-            new SkuId(skuId),
+            skuId,
             Quantity.of(100),
             Quantity.of(30)
         );
         
-        when(loadInventoryPort.load(new SkuId(skuId)))
+        when(loadInventoryPort.load(skuId))
             .thenReturn(Optional.of(inventory));
         
         // When
@@ -62,22 +63,23 @@ class GetInventoryUseCaseTest {
         
         // Then
         assertThat(response).isNotNull();
-        assertThat(response.skuId()).isEqualTo(skuId);
+        assertThat(response.skuId()).isEqualTo(skuIdValue);
         assertThat(response.totalQuantity()).isEqualTo(100);
         assertThat(response.reservedQuantity()).isEqualTo(30);
         assertThat(response.availableQuantity()).isEqualTo(70);
         
-        verify(loadInventoryPort).load(new SkuId(skuId));
+        verify(loadInventoryPort).load(skuId);
     }
     
     @Test
     @DisplayName("재고 조회 - 재고가 존재하지 않는 경우 0으로 반환")
     void getInventory_WithNonExistingInventory_ReturnsZeroQuantities() {
         // Given
-        String skuId = "SKU-999";
-        GetInventoryQuery query = new GetInventoryQuery(skuId);
+        String skuIdValue = "SKU-999";
+        SkuId skuId = new SkuId(skuIdValue);
+        GetInventoryQuery query = new GetInventoryQuery(skuIdValue);
         
-        when(loadInventoryPort.load(new SkuId(skuId)))
+        when(loadInventoryPort.load(skuId))
             .thenReturn(Optional.empty());
         
         // When
@@ -85,12 +87,12 @@ class GetInventoryUseCaseTest {
         
         // Then
         assertThat(response).isNotNull();
-        assertThat(response.skuId()).isEqualTo(skuId);
+        assertThat(response.skuId()).isEqualTo(skuIdValue);
         assertThat(response.totalQuantity()).isEqualTo(0);
         assertThat(response.reservedQuantity()).isEqualTo(0);
         assertThat(response.availableQuantity()).isEqualTo(0);
         
-        verify(loadInventoryPort).load(new SkuId(skuId));
+        verify(loadInventoryPort).load(skuId);
     }
     
     @DisplayName("재고 조회 - null 또는 빈 문자열 SKU ID로 조회 시 예외 발생")
@@ -112,17 +114,18 @@ class GetInventoryUseCaseTest {
     @DisplayName("재고 조회 - 모든 재고가 예약된 경우")
     void getInventory_WithAllQuantityReserved_ReturnsZeroAvailable() {
         // Given
-        String skuId = "SKU-001";
-        GetInventoryQuery query = new GetInventoryQuery(skuId);
+        String skuIdValue = "SKU-001";
+        SkuId skuId = new SkuId(skuIdValue);
+        GetInventoryQuery query = new GetInventoryQuery(skuIdValue);
         
         // 모든 재고가 예약된 상황
         Inventory inventory = Inventory.create(
-            new SkuId(skuId),
+            skuId,
             Quantity.of(50),
             Quantity.of(50)
         );
         
-        when(loadInventoryPort.load(new SkuId(skuId)))
+        when(loadInventoryPort.load(skuId))
             .thenReturn(Optional.of(inventory));
         
         // When
@@ -130,12 +133,12 @@ class GetInventoryUseCaseTest {
         
         // Then
         assertThat(response).isNotNull();
-        assertThat(response.skuId()).isEqualTo(skuId);
+        assertThat(response.skuId()).isEqualTo(skuIdValue);
         assertThat(response.totalQuantity()).isEqualTo(50);
         assertThat(response.reservedQuantity()).isEqualTo(50);
         assertThat(response.availableQuantity()).isEqualTo(0);
         
-        verify(loadInventoryPort).load(new SkuId(skuId));
+        verify(loadInventoryPort).load(skuId);
     }
     
     @Test
