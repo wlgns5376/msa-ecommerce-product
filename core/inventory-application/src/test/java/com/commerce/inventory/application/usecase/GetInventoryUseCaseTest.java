@@ -136,16 +136,15 @@ class GetInventoryUseCaseTest {
     }
     
     @Test
-    @DisplayName("재고 조회 - null query로 조회 시 NullPointerException 발생 (단위 테스트)")
-    void getInventory_WithNullQuery_ThrowsNullPointerException() {
+    @DisplayName("재고 조회 - null query로 조회 시 IllegalArgumentException 발생")
+    void getInventory_WithNullQuery_ThrowsIllegalArgumentException() {
         // Given
         GetInventoryQuery query = null;
         
         // When & Then
-        // 단위 테스트에서는 Spring 컨텍스트가 없어 선언적 유효성 검사가 작동하지 않음
-        // Spring 통합 테스트는 GetInventoryServiceSpringTest에서 수행
         assertThatThrownBy(() -> getInventoryUseCase.execute(query))
-            .isInstanceOf(NullPointerException.class);
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("GetInventoryQuery cannot be null.");
         
         verify(loadInventoryPort, never()).load(any());
     }
