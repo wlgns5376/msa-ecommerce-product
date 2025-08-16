@@ -38,8 +38,10 @@ class GetInventoryUseCaseTest {
     
     @BeforeEach
     void setUp() {
-        // 단위 테스트에서는 유효성 검사기를 직접 사용하지 않음
-        // Spring 통합 테스트는 GetInventoryServiceSpringTest에서 수행
+        // 단위 테스트에서는 Spring의 @Validated 기능이 적용되지 않음
+        // 실제 Spring 환경에서는 @NotNull, @NotBlank 등의 어노테이션이 먼저 적용되어
+        // ConstraintViolationException이 발생하게 됨
+        // Spring 통합 테스트는 별도로 작성하여 실제 환경의 동작을 검증해야 함
         getInventoryUseCase = new GetInventoryService(loadInventoryPort);
     }
     
@@ -100,7 +102,10 @@ class GetInventoryUseCaseTest {
         GetInventoryQuery query = new GetInventoryQuery(invalidSkuId);
 
         // When & Then
-        // 단위 테스트에서는 Spring 컨텍스트가 없어 SkuId 생성 시 InvalidSkuIdException이 발생
+        // 단위 테스트 환경: SkuId 생성자에서 InvalidSkuIdException 발생
+        // Spring 환경: GetInventoryQuery의 @NotBlank 검증으로 ConstraintViolationException 발생
+        // 이 테스트는 도메인 레이어의 유효성 검사를 확인하며,
+        // Spring 환경의 동작은 통합 테스트에서 별도로 검증해야 함
         assertThatThrownBy(() -> getInventoryUseCase.execute(query))
                 .isInstanceOf(InvalidSkuIdException.class);
 
@@ -133,19 +138,5 @@ class GetInventoryUseCaseTest {
         assertThat(response).isEqualTo(expectedResponse);
         
         verify(loadInventoryPort).load(skuId);
-    }
-    
-    @Test
-    @DisplayName("재고 조회 - null query로 조회 시 IllegalArgumentException 발생")
-    void getInventory_WithNullQuery_ThrowsIllegalArgumentException() {
-        // Given
-        GetInventoryQuery query = null;
-        
-        // When & Then
-        assertThatThrownBy(() -> getInventoryUseCase.execute(query))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("GetInventoryQuery cannot be null.");
-        
-        verify(loadInventoryPort, never()).load(any());
     }
 }
