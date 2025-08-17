@@ -246,29 +246,36 @@ class GetInventoryUseCaseTest {
         
         mockInventoryExists(skuId, inventory);
         
-        // When
-        for (int i = 0; i < threadCount; i++) {
-            executorService.execute(() -> {
-                try {
-                    InventoryResponse response = getInventoryUseCase.execute(query);
-                    if (response != null && response.equals(InventoryResponse.from(inventory))) {
-                        successCount.incrementAndGet();
+        try {
+            // When
+            for (int i = 0; i < threadCount; i++) {
+                executorService.execute(() -> {
+                    try {
+                        InventoryResponse response = getInventoryUseCase.execute(query);
+                        if (response != null && response.equals(InventoryResponse.from(inventory))) {
+                            successCount.incrementAndGet();
+                        }
+                    } catch (Exception e) {
+                        failureCount.incrementAndGet();
+                    } finally {
+                        latch.countDown();
                     }
-                } catch (Exception e) {
-                    failureCount.incrementAndGet();
-                } finally {
-                    latch.countDown();
-                }
-            });
+                });
+            }
+            
+            boolean completed = latch.await(5, TimeUnit.SECONDS);
+            assertThat(completed).isTrue().withFailMessage("동시성 테스트가 타임아웃 내에 완료되지 않았습니다");
+            
+            // Then
+            assertThat(successCount.get()).isEqualTo(threadCount);
+            assertThat(failureCount.get()).isZero();
+            verify(loadInventoryPort, times(threadCount)).load(skuId);
+        } finally {
+            executorService.shutdown();
+            if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
+                executorService.shutdownNow();
+            }
         }
-        
-        latch.await(5, TimeUnit.SECONDS);
-        executorService.shutdown();
-        
-        // Then
-        assertThat(successCount.get()).isEqualTo(threadCount);
-        assertThat(failureCount.get()).isZero();
-        verify(loadInventoryPort, times(threadCount)).load(skuId);
     }
     
     @Test

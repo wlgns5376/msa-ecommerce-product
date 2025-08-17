@@ -21,6 +21,11 @@ public class GetInventoryService implements GetInventoryUseCase {
     
     @Override
     public InventoryResponse execute(GetInventoryQuery query) {
+        // null 입력에 대한 명시적인 검사
+        if (query == null) {
+            throw new IllegalArgumentException("GetInventoryQuery는 null일 수 없습니다");
+        }
+        
         // Bean Validation을 사용한 유효성 검사
         ValidationHelper.validate(validator, query);
         
