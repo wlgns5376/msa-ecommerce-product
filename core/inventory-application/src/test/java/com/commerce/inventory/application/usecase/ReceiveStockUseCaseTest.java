@@ -222,12 +222,8 @@ class ReceiveStockUseCaseTest {
         SkuId skuId = SkuId.generate();
         ReceiveStockCommand command = createCommand(skuId.value(), invalidQuantity, REFERENCE_PO_003);
         
-        mockValidationFailure(command, ERROR_MSG_QUANTITY_POSITIVE);
-        
         // When & Then
-        assertThatThrownBy(() -> useCase.receive(command))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining(ERROR_MSG_QUANTITY_POSITIVE);
+        assertValidationFailure(command, ERROR_MSG_QUANTITY_POSITIVE);
     }
     
     @ParameterizedTest
@@ -238,12 +234,8 @@ class ReceiveStockUseCaseTest {
         SkuId skuId = SkuId.generate();
         ReceiveStockCommand command = createCommand(skuId.value(), DEFAULT_QUANTITY, invalidReference);
         
-        mockValidationFailure(command, ERROR_MSG_REFERENCE_REQUIRED);
-        
         // When & Then
-        assertThatThrownBy(() -> useCase.receive(command))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining(ERROR_MSG_REFERENCE_REQUIRED);
+        assertValidationFailure(command, ERROR_MSG_REFERENCE_REQUIRED);
     }
     
     @ParameterizedTest
@@ -253,12 +245,15 @@ class ReceiveStockUseCaseTest {
         // Given
         ReceiveStockCommand command = createCommand(invalidSkuId, DEFAULT_QUANTITY, REFERENCE_PO_004);
         
-        mockValidationFailure(command, ERROR_MSG_SKU_ID_REQUIRED);
-        
         // When & Then
-        assertThatThrownBy(() -> useCase.receive(command))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining(ERROR_MSG_SKU_ID_REQUIRED);
+        assertValidationFailure(command, ERROR_MSG_SKU_ID_REQUIRED);
     }
     
+    private void assertValidationFailure(ReceiveStockCommand command, String expectedMessage) {
+        mockValidationFailure(command, expectedMessage);
+        
+        assertThatThrownBy(() -> useCase.receive(command))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining(expectedMessage);
+    }
 }

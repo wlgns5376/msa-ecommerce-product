@@ -139,33 +139,14 @@ class GetInventoryUseCaseTest {
         GetInventoryQuery query = createQuery(invalidSkuId);
 
         // When & Then
-        assertThatThrownBy(() -> getInventoryUseCase.execute(query))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("SKU ID는 필수입니다");
-
-        verify(loadInventoryPort, never()).load(any());
+        assertValidationException(query, "SKU ID는 필수입니다");
     }
     
     @DisplayName("재고 조회 - 특수 문자가 포함된 SKU ID로 조회")
     @ParameterizedTest
     @ValueSource(strings = {"SKU@001", "SKU#123", "SKU$456", "SKU%789", "SKU&999", "SKU*000", "SKU!111", "SKU~222", "SKU`333"})
     void execute_WithSpecialCharacterSkuId_ShouldExecuteNormally(String skuIdWithSpecialChar) {
-        // Given
-        SkuId skuId = new SkuId(skuIdWithSpecialChar);
-        Inventory inventory = createInventory(skuId, DEFAULT_TOTAL_QUANTITY, DEFAULT_RESERVED_QUANTITY);
-        GetInventoryQuery query = createQuery(skuIdWithSpecialChar);
-        
-        mockInventoryExists(skuId, inventory);
-        
-        // When
-        InventoryResponse response = getInventoryUseCase.execute(query);
-        
-        // Then
-        assertThat(response)
-            .isNotNull()
-            .isEqualTo(InventoryResponse.from(inventory));
-        
-        verify(loadInventoryPort).load(skuId);
+        assertSuccessfulInventoryQuery(skuIdWithSpecialChar, DEFAULT_TOTAL_QUANTITY, DEFAULT_RESERVED_QUANTITY);
     }
     
     @DisplayName("재고 조회 - 매우 긴 SKU ID로 조회")
@@ -173,21 +154,9 @@ class GetInventoryUseCaseTest {
     void execute_WithVeryLongSkuId_ShouldExecuteNormally() {
         // Given
         String longSkuId = "SKU-" + "A".repeat(100) + "-001";
-        SkuId skuId = new SkuId(longSkuId);
-        Inventory inventory = createInventory(skuId, DEFAULT_TOTAL_QUANTITY, DEFAULT_RESERVED_QUANTITY);
-        GetInventoryQuery query = createQuery(longSkuId);
         
-        mockInventoryExists(skuId, inventory);
-        
-        // When
-        InventoryResponse response = getInventoryUseCase.execute(query);
-        
-        // Then
-        assertThat(response)
-            .isNotNull()
-            .isEqualTo(InventoryResponse.from(inventory));
-        
-        verify(loadInventoryPort).load(skuId);
+        // When & Then
+        assertSuccessfulInventoryQuery(longSkuId, DEFAULT_TOTAL_QUANTITY, DEFAULT_RESERVED_QUANTITY);
     }
     
     @DisplayName("재고 조회 - 한글이 포함된 SKU ID로 조회")
@@ -195,21 +164,9 @@ class GetInventoryUseCaseTest {
     void execute_WithKoreanCharacterSkuId_ShouldExecuteNormally() {
         // Given
         String koreanSkuId = "SKU-제품-001";
-        SkuId skuId = new SkuId(koreanSkuId);
-        Inventory inventory = createInventory(skuId, DEFAULT_TOTAL_QUANTITY, DEFAULT_RESERVED_QUANTITY);
-        GetInventoryQuery query = createQuery(koreanSkuId);
         
-        mockInventoryExists(skuId, inventory);
-        
-        // When
-        InventoryResponse response = getInventoryUseCase.execute(query);
-        
-        // Then
-        assertThat(response)
-            .isNotNull()
-            .isEqualTo(InventoryResponse.from(inventory));
-        
-        verify(loadInventoryPort).load(skuId);
+        // When & Then
+        assertSuccessfulInventoryQuery(koreanSkuId, DEFAULT_TOTAL_QUANTITY, DEFAULT_RESERVED_QUANTITY);
     }
     
     @DisplayName("재고 조회 - UUID 형식의 SKU ID로 조회")
@@ -217,21 +174,9 @@ class GetInventoryUseCaseTest {
     void execute_WithUuidFormatSkuId_ShouldExecuteNormally() {
         // Given
         String uuidSkuId = UUID.randomUUID().toString();
-        SkuId skuId = new SkuId(uuidSkuId);
-        Inventory inventory = createInventory(skuId, DEFAULT_TOTAL_QUANTITY, DEFAULT_RESERVED_QUANTITY);
-        GetInventoryQuery query = createQuery(uuidSkuId);
         
-        mockInventoryExists(skuId, inventory);
-        
-        // When
-        InventoryResponse response = getInventoryUseCase.execute(query);
-        
-        // Then
-        assertThat(response)
-            .isNotNull()
-            .isEqualTo(InventoryResponse.from(inventory));
-        
-        verify(loadInventoryPort).load(skuId);
+        // When & Then
+        assertSuccessfulInventoryQuery(uuidSkuId, DEFAULT_TOTAL_QUANTITY, DEFAULT_RESERVED_QUANTITY);
     }
     
     @Test
@@ -241,11 +186,7 @@ class GetInventoryUseCaseTest {
         GetInventoryQuery query = null;
 
         // When & Then
-        assertThatThrownBy(() -> getInventoryUseCase.execute(query))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("null");
-
-        verify(loadInventoryPort, never()).load(any());
+        assertValidationException(query, "null");
     }
     
     @Test
@@ -261,11 +202,7 @@ class GetInventoryUseCaseTest {
         assertThat(query.skuId()).isNull();
         
         // 유효성 검사 실행 시 실패 확인
-        assertThatThrownBy(() -> getInventoryUseCase.execute(query))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("SKU ID는 필수입니다");
-                
-        verify(loadInventoryPort, never()).load(any());
+        assertValidationException(query, "SKU ID는 필수입니다");
     }
     
     @Test
@@ -373,5 +310,32 @@ class GetInventoryUseCaseTest {
         
         assertThat(nullViolations).isNotEmpty();
         assertThat(nullViolations.iterator().next().getMessage()).isEqualTo("SKU ID는 필수입니다");
+    }
+    
+    private void assertValidationException(GetInventoryQuery query, String expectedMessage) {
+        assertThatThrownBy(() -> getInventoryUseCase.execute(query))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining(expectedMessage);
+                
+        verify(loadInventoryPort, never()).load(any());
+    }
+    
+    private void assertSuccessfulInventoryQuery(String skuIdValue, int totalQuantity, int reservedQuantity) {
+        // Given
+        SkuId skuId = new SkuId(skuIdValue);
+        Inventory inventory = createInventory(skuId, totalQuantity, reservedQuantity);
+        GetInventoryQuery query = createQuery(skuIdValue);
+        
+        mockInventoryExists(skuId, inventory);
+        
+        // When
+        InventoryResponse response = getInventoryUseCase.execute(query);
+        
+        // Then
+        assertThat(response)
+            .isNotNull()
+            .isEqualTo(InventoryResponse.from(inventory));
+        
+        verify(loadInventoryPort).load(skuId);
     }
 }
