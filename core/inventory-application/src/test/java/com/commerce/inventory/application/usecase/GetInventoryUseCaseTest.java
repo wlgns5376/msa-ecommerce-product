@@ -5,7 +5,6 @@ import com.commerce.inventory.application.port.in.GetInventoryQuery;
 import com.commerce.inventory.application.port.in.GetInventoryUseCase;
 import com.commerce.inventory.application.port.in.InventoryResponse;
 import com.commerce.inventory.application.port.out.LoadInventoryPort;
-import com.commerce.inventory.domain.exception.InvalidSkuIdException;
 import com.commerce.inventory.domain.model.Inventory;
 import com.commerce.inventory.domain.model.SkuId;
 import jakarta.validation.ConstraintViolation;
@@ -186,11 +185,14 @@ class GetInventoryUseCaseTest {
         GetInventoryQuery query = null;
 
         // When & Then
-        assertValidationException(query, "null");
+        assertThatThrownBy(() -> getInventoryUseCase.execute(query))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        verify(loadInventoryPort, never()).load(any());
     }
     
     @Test
-    @DisplayName("재고 조회 - null SKU ID로 쿼리 생성 시 예외 발생")
+    @DisplayName("재고 조회 - null SKU ID를 가진 쿼리 실행 시 유효성 검사 실패")
     void createQuery_WithNullSkuId_ShouldBeHandledByValidation() {
         // Given
         String nullSkuId = null;
