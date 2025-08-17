@@ -8,6 +8,10 @@ import com.commerce.inventory.application.port.out.LoadInventoryPort;
 import com.commerce.inventory.domain.exception.InvalidSkuIdException;
 import com.commerce.inventory.domain.model.Inventory;
 import com.commerce.inventory.domain.model.SkuId;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,6 +23,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -41,10 +46,13 @@ class GetInventoryUseCaseTest {
     private LoadInventoryPort loadInventoryPort;
     
     private GetInventoryUseCase getInventoryUseCase;
+    private Validator validator;
     
     @BeforeEach
     void setUp() {
-        getInventoryUseCase = new GetInventoryService(loadInventoryPort);
+        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
+        validator = factory.getValidator();
+        getInventoryUseCase = new GetInventoryService(loadInventoryPort, validator);
     }
     
     private Inventory createInventory(SkuId skuId, int totalQuantity, int reservedQuantity) {
@@ -116,18 +124,30 @@ class GetInventoryUseCaseTest {
         verify(loadInventoryPort).load(skuId);
     }
     
-    @DisplayName("재고 조회 - null, 빈 문자열, 공백으로만 이루어진 SKU ID로 조회 시 예외 발생")
+    @DisplayName("재고 조회 - 빈 문자열이나 공백으로만 이루어진 SKU ID로 조회 시 예외 발생")
     @ParameterizedTest
-    @NullAndEmptySource
-    @ValueSource(strings = {" ", "   "})
-    void execute_WithBlankSkuId_ShouldThrowInvalidSkuIdException(String invalidSkuId) {
+    @ValueSource(strings = {"", " ", "   "})
+    void execute_WithBlankSkuId_ShouldThrowIllegalArgumentException(String invalidSkuId) {
         // Given
         GetInventoryQuery query = createQuery(invalidSkuId);
 
         // When & Then
         assertThatThrownBy(() -> getInventoryUseCase.execute(query))
-                .isInstanceOf(InvalidSkuIdException.class)
-                .hasMessageContaining("SKU ID");
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("SKU ID is required");
+
+        verify(loadInventoryPort, never()).load(any());
+    }
+    
+    @Test
+    @DisplayName("재고 조회 - null query로 조회 시 예외 발생")
+    void execute_WithNullQuery_ShouldThrowIllegalArgumentException() {
+        // Given
+        GetInventoryQuery query = null;
+
+        // When & Then
+        assertThatThrownBy(() -> getInventoryUseCase.execute(query))
+                .isInstanceOf(IllegalArgumentException.class);
 
         verify(loadInventoryPort, never()).load(any());
     }

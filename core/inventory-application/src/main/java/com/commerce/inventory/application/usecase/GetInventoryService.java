@@ -4,26 +4,26 @@ import com.commerce.inventory.application.port.in.GetInventoryQuery;
 import com.commerce.inventory.application.port.in.GetInventoryUseCase;
 import com.commerce.inventory.application.port.in.InventoryResponse;
 import com.commerce.inventory.application.port.out.LoadInventoryPort;
+import com.commerce.inventory.application.util.ValidationHelper;
 import com.commerce.inventory.domain.model.SkuId;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.validation.annotation.Validated;
 
 @Service
 @RequiredArgsConstructor
-@Validated
 @Transactional(readOnly = true)
 public class GetInventoryService implements GetInventoryUseCase {
     
-    private static final String QUERY_NULL_MESSAGE = "GetInventoryQuery cannot be null.";
-    
     private final LoadInventoryPort loadInventoryPort;
+    private final Validator validator;
     
     @Override
-    public InventoryResponse execute(@Valid @NotNull(message = QUERY_NULL_MESSAGE) GetInventoryQuery query) {
+    public InventoryResponse execute(GetInventoryQuery query) {
+        // Bean Validation을 사용한 유효성 검사
+        ValidationHelper.validate(validator, query);
+        
         SkuId skuId = new SkuId(query.skuId());
         
         return loadInventoryPort.load(skuId)
