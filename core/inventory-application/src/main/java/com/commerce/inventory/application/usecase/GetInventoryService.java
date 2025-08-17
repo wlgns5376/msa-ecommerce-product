@@ -18,14 +18,20 @@ import org.springframework.validation.annotation.Validated;
 @Transactional(readOnly = true)
 public class GetInventoryService implements GetInventoryUseCase {
     
+    private static final String QUERY_NULL_MESSAGE = "GetInventoryQuery cannot be null.";
+    
     private final LoadInventoryPort loadInventoryPort;
     
     @Override
-    public InventoryResponse execute(@Valid @NotNull(message = "GetInventoryQuery cannot be null.") GetInventoryQuery query) {
-        SkuId skuId = new SkuId(query.skuId());
+    public InventoryResponse execute(@Valid @NotNull(message = QUERY_NULL_MESSAGE) GetInventoryQuery query) {
+        SkuId skuId = createSkuId(query);
         
         return loadInventoryPort.load(skuId)
             .map(InventoryResponse::from)
             .orElseGet(() -> InventoryResponse.empty(query.skuId()));
+    }
+    
+    private SkuId createSkuId(GetInventoryQuery query) {
+        return new SkuId(query.skuId());
     }
 }

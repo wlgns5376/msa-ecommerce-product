@@ -49,15 +49,19 @@ class GetInventoryUseCaseTest {
         getInventoryUseCase = new GetInventoryService(loadInventoryPort);
     }
     
+    private Inventory createInventory(int totalQuantity, int reservedQuantity) {
+        return Inventory.create(
+            SKU_ID,
+            Quantity.of(totalQuantity),
+            Quantity.of(reservedQuantity)
+        );
+    }
+    
     @Test
     @DisplayName("정상적인 재고 조회 - 재고가 존재하는 경우")
     void getInventory_WithExistingInventory_ReturnsInventoryResponse() {
         // Given
-        Inventory inventory = Inventory.create(
-            SKU_ID,
-            Quantity.of(100),
-            Quantity.of(30)
-        );
+        Inventory inventory = createInventory(100, 30);
         
         when(loadInventoryPort.load(SKU_ID))
             .thenReturn(Optional.of(inventory));
@@ -117,11 +121,7 @@ class GetInventoryUseCaseTest {
     void getInventory_WithAllQuantityReserved_ReturnsZeroAvailable() {
         // Given
         // 모든 재고가 예약된 상황
-        Inventory inventory = Inventory.create(
-            SKU_ID,
-            Quantity.of(50),
-            Quantity.of(50)
-        );
+        Inventory inventory = createInventory(50, 50);
         
         when(loadInventoryPort.load(SKU_ID))
             .thenReturn(Optional.of(inventory));
