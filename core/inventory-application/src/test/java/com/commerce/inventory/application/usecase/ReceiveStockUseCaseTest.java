@@ -47,7 +47,6 @@ import static org.mockito.Mockito.when;
 @DisplayName("ReceiveStockUseCase 테스트")
 class ReceiveStockUseCaseTest {
 
-    // 테스트 상수
     private static final String DEFAULT_SKU_CODE = "SKU-001";
     private static final String DEFAULT_REFERENCE = "PO-2024-001";
     private static final int DEFAULT_QUANTITY = 50;
@@ -85,7 +84,6 @@ class ReceiveStockUseCaseTest {
         );
     }
     
-    // 테스트 픽스처 메서드
     private ReceiveStockCommand createCommand(String skuId, int quantity, String reference) {
         return ReceiveStockCommand.builder()
             .skuId(skuId)

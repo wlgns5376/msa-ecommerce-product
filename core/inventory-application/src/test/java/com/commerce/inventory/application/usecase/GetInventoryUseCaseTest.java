@@ -44,14 +44,9 @@ class GetInventoryUseCaseTest {
     
     @BeforeEach
     void setUp() {
-        // 단위 테스트에서는 Spring의 @Validated 기능이 적용되지 않음
-        // 실제 Spring 환경에서는 @NotNull, @NotBlank 등의 어노테이션이 먼저 적용되어
-        // ConstraintViolationException이 발생하게 됨
-        // Spring 통합 테스트는 별도로 작성하여 실제 환경의 동작을 검증해야 함
         getInventoryUseCase = new GetInventoryService(loadInventoryPort);
     }
     
-    // 테스트 픽스처 메서드
     private Inventory createInventory(SkuId skuId, int totalQuantity, int reservedQuantity) {
         return Inventory.create(
             skuId,
@@ -64,8 +59,20 @@ class GetInventoryUseCaseTest {
         return createInventory(new SkuId(DEFAULT_SKU_ID), DEFAULT_TOTAL_QUANTITY, DEFAULT_RESERVED_QUANTITY);
     }
     
+    private GetInventoryQuery createDefaultQuery(SkuId skuId) {
+        return new GetInventoryQuery(skuId.value());
+    }
+    
     private GetInventoryQuery createQuery(String skuId) {
         return new GetInventoryQuery(skuId);
+    }
+    
+    private void mockInventoryExists(SkuId skuId, Inventory inventory) {
+        when(loadInventoryPort.load(skuId)).thenReturn(Optional.of(inventory));
+    }
+    
+    private void mockInventoryNotFound(SkuId skuId) {
+        when(loadInventoryPort.load(skuId)).thenReturn(Optional.empty());
     }
     
     @Test
@@ -73,11 +80,10 @@ class GetInventoryUseCaseTest {
     void execute_WithExistingInventory_ShouldReturnInventoryResponse() {
         // Given
         SkuId skuId = new SkuId(DEFAULT_SKU_ID);
-        GetInventoryQuery query = createQuery(DEFAULT_SKU_ID);
         Inventory inventory = createDefaultInventory();
+        GetInventoryQuery query = createDefaultQuery(skuId);
         
-        when(loadInventoryPort.load(skuId))
-            .thenReturn(Optional.of(inventory));
+        mockInventoryExists(skuId, inventory);
         
         // When
         InventoryResponse response = getInventoryUseCase.execute(query);
@@ -91,14 +97,13 @@ class GetInventoryUseCaseTest {
     }
     
     @Test
-    @DisplayName("재고 조회 - 재고가 존재하지 않는 경우 0으로 반환")
+    @DisplayName("정상적인 재고 조회 - 재고가 존재하지 않는 경우")
     void execute_WithNonExistingInventory_ShouldReturnZeroQuantities() {
         // Given
         SkuId skuId = new SkuId(NON_EXISTING_SKU_ID);
-        GetInventoryQuery query = createQuery(NON_EXISTING_SKU_ID);
+        GetInventoryQuery query = createDefaultQuery(skuId);
         
-        when(loadInventoryPort.load(skuId))
-            .thenReturn(Optional.empty());
+        mockInventoryNotFound(skuId);
         
         // When
         InventoryResponse response = getInventoryUseCase.execute(query);
@@ -120,10 +125,6 @@ class GetInventoryUseCaseTest {
         GetInventoryQuery query = createQuery(invalidSkuId);
 
         // When & Then
-        // 단위 테스트 환경: SkuId 생성자에서 InvalidSkuIdException 발생
-        // Spring 환경: GetInventoryQuery의 @NotBlank 검증으로 ConstraintViolationException 발생
-        // 이 테스트는 도메인 레이어의 유효성 검사를 확인하며,
-        // Spring 환경의 동작은 통합 테스트에서 별도로 검증해야 함
         assertThatThrownBy(() -> getInventoryUseCase.execute(query))
                 .isInstanceOf(InvalidSkuIdException.class)
                 .hasMessageContaining("SKU ID");
@@ -132,17 +133,16 @@ class GetInventoryUseCaseTest {
     }
     
     @Test
-    @DisplayName("재고 조회 - 모든 재고가 예약된 경우")
+    @DisplayName("정상적인 재고 조회 - 모든 재고가 예약된 경우")
     void execute_WithAllQuantityReserved_ShouldReturnZeroAvailable() {
         // Given
         final int totalQuantity = 50;
         final int reservedQuantity = 50;
         SkuId skuId = new SkuId(DEFAULT_SKU_ID);
-        GetInventoryQuery query = createQuery(DEFAULT_SKU_ID);
         Inventory inventory = createInventory(skuId, totalQuantity, reservedQuantity);
+        GetInventoryQuery query = createDefaultQuery(skuId);
         
-        when(loadInventoryPort.load(skuId))
-            .thenReturn(Optional.of(inventory));
+        mockInventoryExists(skuId, inventory);
         
         // When
         InventoryResponse response = getInventoryUseCase.execute(query);
