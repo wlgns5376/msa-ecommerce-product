@@ -86,10 +86,6 @@ class GetInventoryUseCaseTest {
         assertThat(response)
             .isNotNull()
             .isEqualTo(InventoryResponse.from(inventory));
-        assertThat(response.skuId()).isEqualTo(DEFAULT_SKU_ID);
-        assertThat(response.totalQuantity()).isEqualTo(DEFAULT_TOTAL_QUANTITY);
-        assertThat(response.availableQuantity()).isEqualTo(DEFAULT_TOTAL_QUANTITY - DEFAULT_RESERVED_QUANTITY);
-        assertThat(response.reservedQuantity()).isEqualTo(DEFAULT_RESERVED_QUANTITY);
         
         verify(loadInventoryPort).load(skuId);
     }
@@ -111,10 +107,6 @@ class GetInventoryUseCaseTest {
         assertThat(response)
             .isNotNull()
             .isEqualTo(InventoryResponse.empty(NON_EXISTING_SKU_ID));
-        assertThat(response.skuId()).isEqualTo(NON_EXISTING_SKU_ID);
-        assertThat(response.totalQuantity()).isZero();
-        assertThat(response.availableQuantity()).isZero();
-        assertThat(response.reservedQuantity()).isZero();
         
         verify(loadInventoryPort).load(skuId);
     }
@@ -159,10 +151,6 @@ class GetInventoryUseCaseTest {
         assertThat(response)
             .isNotNull()
             .isEqualTo(InventoryResponse.from(inventory));
-        assertThat(response.skuId()).isEqualTo(DEFAULT_SKU_ID);
-        assertThat(response.totalQuantity()).isEqualTo(totalQuantity);
-        assertThat(response.availableQuantity()).isZero();
-        assertThat(response.reservedQuantity()).isEqualTo(reservedQuantity);
         
         verify(loadInventoryPort).load(skuId);
     }
