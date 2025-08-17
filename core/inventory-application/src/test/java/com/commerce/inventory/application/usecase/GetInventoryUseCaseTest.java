@@ -25,11 +25,17 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -125,17 +131,17 @@ class GetInventoryUseCaseTest {
         verify(loadInventoryPort).load(skuId);
     }
     
-    @DisplayName("재고 조회 - 빈 문자열이나 공백으로만 이루어진 SKU ID로 조회 시 예외 발생")
+    @DisplayName("재고 조회 - 빈 문자열이나 공백으로만 이루어진 SKU ID로 조회 시 유효성 검사 실패")
     @ParameterizedTest
     @ValueSource(strings = {"", " ", "   "})
-    void execute_WithBlankSkuId_ShouldThrowIllegalArgumentException(String invalidSkuId) {
+    void execute_WithBlankSkuId_ShouldThrowValidationException(String invalidSkuId) {
         // Given
         GetInventoryQuery query = createQuery(invalidSkuId);
 
         // When & Then
         assertThatThrownBy(() -> getInventoryUseCase.execute(query))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("SKU ID is required");
+                .hasMessageContaining("SKU ID는 필수입니다");
 
         verify(loadInventoryPort, never()).load(any());
     }
@@ -229,21 +235,42 @@ class GetInventoryUseCaseTest {
     }
     
     @Test
-    @DisplayName("재고 조회 - null query로 조회 시 예외 발생")
-    void execute_WithNullQuery_ShouldThrowIllegalArgumentException() {
+    @DisplayName("재고 조회 - null query로 조회 시 유효성 검사 실패")
+    void execute_WithNullQuery_ShouldThrowValidationException() {
         // Given
         GetInventoryQuery query = null;
 
         // When & Then
         assertThatThrownBy(() -> getInventoryUseCase.execute(query))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("null");
 
         verify(loadInventoryPort, never()).load(any());
     }
     
     @Test
-    @DisplayName("정상적인 재고 조회 - 모든 재고가 예약된 경우")
-    void execute_WithAllQuantityReserved_ShouldReturnZeroAvailable() {
+    @DisplayName("재고 조회 - null SKU ID로 쿼리 생성 시 예외 발생")
+    void createQuery_WithNullSkuId_ShouldBeHandledByValidation() {
+        // Given
+        String nullSkuId = null;
+        
+        // When
+        GetInventoryQuery query = new GetInventoryQuery(nullSkuId);
+        
+        // Then - 쿼리 객체는 생성되지만 실행 시 유효성 검사에서 실패
+        assertThat(query.skuId()).isNull();
+        
+        // 유효성 검사 실행 시 실패 확인
+        assertThatThrownBy(() -> getInventoryUseCase.execute(query))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("SKU ID는 필수입니다");
+                
+        verify(loadInventoryPort, never()).load(any());
+    }
+    
+    @Test
+    @DisplayName("정상적인 재고 조회 - 모든 재고가 예약된 경우 (가용 재고 0)")
+    void execute_WithAllQuantityReserved_ShouldReturnZeroAvailableQuantity() {
         // Given
         final int totalQuantity = 50;
         final int reservedQuantity = 50;
@@ -262,5 +289,89 @@ class GetInventoryUseCaseTest {
             .isEqualTo(InventoryResponse.from(inventory));
         
         verify(loadInventoryPort).load(skuId);
+    }
+    
+    @Test
+    @DisplayName("재고 조회 - 동시 다발적인 조회 요청 처리")
+    void execute_WithConcurrentRequests_ShouldHandleCorrectly() throws InterruptedException {
+        // Given
+        final int threadCount = 10;
+        final CountDownLatch latch = new CountDownLatch(threadCount);
+        final ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
+        final AtomicInteger successCount = new AtomicInteger(0);
+        final AtomicInteger failureCount = new AtomicInteger(0);
+        
+        SkuId skuId = new SkuId(DEFAULT_SKU_ID);
+        Inventory inventory = createDefaultInventory();
+        GetInventoryQuery query = createDefaultQuery(skuId);
+        
+        mockInventoryExists(skuId, inventory);
+        
+        // When
+        for (int i = 0; i < threadCount; i++) {
+            executorService.execute(() -> {
+                try {
+                    InventoryResponse response = getInventoryUseCase.execute(query);
+                    if (response != null && response.equals(InventoryResponse.from(inventory))) {
+                        successCount.incrementAndGet();
+                    }
+                } catch (Exception e) {
+                    failureCount.incrementAndGet();
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        
+        latch.await(5, TimeUnit.SECONDS);
+        executorService.shutdown();
+        
+        // Then
+        assertThat(successCount.get()).isEqualTo(threadCount);
+        assertThat(failureCount.get()).isZero();
+        verify(loadInventoryPort, times(threadCount)).load(skuId);
+    }
+    
+    @Test
+    @DisplayName("재고 조회 - 재고가 0인 경우 정상 조회")
+    void execute_WithZeroInventory_ShouldReturnZeroQuantities() {
+        // Given
+        SkuId skuId = new SkuId(DEFAULT_SKU_ID);
+        Inventory inventory = createInventory(skuId, 0, 0);
+        GetInventoryQuery query = createDefaultQuery(skuId);
+        
+        mockInventoryExists(skuId, inventory);
+        
+        // When
+        InventoryResponse response = getInventoryUseCase.execute(query);
+        
+        // Then
+        assertThat(response)
+            .isNotNull()
+            .isEqualTo(InventoryResponse.from(inventory));
+        assertThat(response.totalQuantity()).isZero();
+        assertThat(response.reservedQuantity()).isZero();
+        assertThat(response.availableQuantity()).isZero();
+        
+        verify(loadInventoryPort).load(skuId);
+    }
+    
+    @Test
+    @DisplayName("GetInventoryQuery 유효성 검사 - 직접 검증")
+    void validateGetInventoryQuery_WithInvalidData_ShouldHaveViolations() {
+        // Given
+        GetInventoryQuery queryWithBlankSkuId = new GetInventoryQuery("   ");
+        GetInventoryQuery queryWithNullSkuId = new GetInventoryQuery(null);
+        
+        // When
+        Set<ConstraintViolation<GetInventoryQuery>> blankViolations = validator.validate(queryWithBlankSkuId);
+        Set<ConstraintViolation<GetInventoryQuery>> nullViolations = validator.validate(queryWithNullSkuId);
+        
+        // Then
+        assertThat(blankViolations).isNotEmpty();
+        assertThat(blankViolations.iterator().next().getMessage()).isEqualTo("SKU ID는 필수입니다");
+        
+        assertThat(nullViolations).isNotEmpty();
+        assertThat(nullViolations.iterator().next().getMessage()).isEqualTo("SKU ID는 필수입니다");
     }
 }
