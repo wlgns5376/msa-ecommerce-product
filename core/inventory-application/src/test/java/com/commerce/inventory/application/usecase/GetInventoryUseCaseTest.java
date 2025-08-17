@@ -32,8 +32,6 @@ import static org.mockito.Mockito.when;
 class GetInventoryUseCaseTest {
     
     private static final String SKU_ID_VALUE = "SKU-001";
-    private static final SkuId SKU_ID = new SkuId(SKU_ID_VALUE);
-    private static final GetInventoryQuery QUERY = new GetInventoryQuery(SKU_ID_VALUE);
     
     @Mock
     private LoadInventoryPort loadInventoryPort;
@@ -49,9 +47,9 @@ class GetInventoryUseCaseTest {
         getInventoryUseCase = new GetInventoryService(loadInventoryPort);
     }
     
-    private Inventory createInventory(int totalQuantity, int reservedQuantity) {
+    private Inventory createInventory(SkuId skuId, int totalQuantity, int reservedQuantity) {
         return Inventory.create(
-            SKU_ID,
+            skuId,
             Quantity.of(totalQuantity),
             Quantity.of(reservedQuantity)
         );
@@ -61,19 +59,21 @@ class GetInventoryUseCaseTest {
     @DisplayName("정상적인 재고 조회 - 재고가 존재하는 경우")
     void getInventory_WithExistingInventory_ReturnsInventoryResponse() {
         // Given
-        Inventory inventory = createInventory(100, 30);
+        SkuId skuId = new SkuId(SKU_ID_VALUE);
+        GetInventoryQuery query = new GetInventoryQuery(SKU_ID_VALUE);
+        Inventory inventory = createInventory(skuId, 100, 30);
         
-        when(loadInventoryPort.load(SKU_ID))
+        when(loadInventoryPort.load(skuId))
             .thenReturn(Optional.of(inventory));
         
         // When
-        InventoryResponse response = getInventoryUseCase.execute(QUERY);
+        InventoryResponse response = getInventoryUseCase.execute(query);
         
         // Then
         InventoryResponse expectedResponse = InventoryResponse.from(inventory);
         assertThat(response).isEqualTo(expectedResponse);
         
-        verify(loadInventoryPort).load(SKU_ID);
+        verify(loadInventoryPort).load(skuId);
     }
     
     @Test
@@ -121,18 +121,20 @@ class GetInventoryUseCaseTest {
     void getInventory_WithAllQuantityReserved_ReturnsZeroAvailable() {
         // Given
         // 모든 재고가 예약된 상황
-        Inventory inventory = createInventory(50, 50);
+        SkuId skuId = new SkuId(SKU_ID_VALUE);
+        GetInventoryQuery query = new GetInventoryQuery(SKU_ID_VALUE);
+        Inventory inventory = createInventory(skuId, 50, 50);
         
-        when(loadInventoryPort.load(SKU_ID))
+        when(loadInventoryPort.load(skuId))
             .thenReturn(Optional.of(inventory));
         
         // When
-        InventoryResponse response = getInventoryUseCase.execute(QUERY);
+        InventoryResponse response = getInventoryUseCase.execute(query);
         
         // Then
         InventoryResponse expectedResponse = InventoryResponse.from(inventory);
         assertThat(response).isEqualTo(expectedResponse);
         
-        verify(loadInventoryPort).load(SKU_ID);
+        verify(loadInventoryPort).load(skuId);
     }
 }
