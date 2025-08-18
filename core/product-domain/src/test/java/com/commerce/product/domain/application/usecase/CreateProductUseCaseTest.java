@@ -87,6 +87,7 @@ class CreateProductUseCaseTest {
         assertThat(response.getStatus()).isEqualTo(ProductStatus.DRAFT);
         
         verify(productRepository, times(1)).save(any());
+        verify(eventPublisher, times(1)).publish(any(ProductCreatedEvent.class));
     }
 
     @Test
@@ -101,8 +102,8 @@ class CreateProductUseCaseTest {
 
         // When & Then
         assertThatThrownBy(() -> createProductUseCase.createProduct(request))
-                .isInstanceOf(InvalidProductException.class)
-                .hasMessageContaining("Product name is required");
+                .isInstanceOf(InvalidProductNameException.class)
+                .hasMessageContaining("Product name cannot be null or empty");
 
         verify(productRepository, never()).save(any());
         verify(eventPublisher, never()).publish(any());

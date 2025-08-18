@@ -19,8 +19,6 @@ public class CreateProductService implements CreateProductUseCase {
 
     @Override
     public CreateProductResponse createProduct(CreateProductRequest request) {
-        validateRequest(request);
-        
         String description = request.getDescription() != null ? request.getDescription() : "";
         
         Product product = Product.create(
@@ -41,14 +39,5 @@ public class CreateProductService implements CreateProductUseCase {
                 .type(product.getType())
                 .status(product.getStatus())
                 .build();
-    }
-    
-    private void validateRequest(CreateProductRequest request) {
-        if (request.getName() == null) {
-            throw new InvalidProductException("Product name is required");
-        }
-        if (request.getType() == null) {
-            throw new InvalidProductException("Product type is required");
-        }
     }
 }
