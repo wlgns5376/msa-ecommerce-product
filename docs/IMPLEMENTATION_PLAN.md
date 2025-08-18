@@ -91,7 +91,7 @@ PRD 문서와 설계 문서를 기반으로 수립한 구현 작업 계획입니
 - [x] GetInventoryUseCase
 
 #### 5.2 Product UseCase
-- [ ] CreateProductUseCase
+- [x] CreateProductUseCase
 - [ ] UpdateProductUseCase
 - [ ] AddProductOptionUseCase
 - [ ] GetProductUseCase
