@@ -47,6 +47,32 @@ import static org.mockito.Mockito.when;
 @DisplayName("ReceiveStockUseCase 테스트")
 class ReceiveStockUseCaseTest {
 
+    // SKU 관련 상수
+    private static final String DEFAULT_SKU_CODE = "SKU-001";
+    private static final String TEST_PRODUCT_NAME = "테스트 상품";
+    private static final int DEFAULT_WEIGHT = 100;
+    
+    // 재고 관련 상수  
+    private static final int DEFAULT_QUANTITY = 50;
+    private static final int DEFAULT_INITIAL_STOCK = 100;
+    private static final int ZERO_QUANTITY = 0;
+    private static final int NEGATIVE_QUANTITY = -10;
+    
+    // 참조 번호 상수
+    private static final String DEFAULT_REFERENCE = "PO-2024-001";
+    private static final String REFERENCE_PO_002 = "PO-2024-002";
+    private static final String REFERENCE_PO_003 = "PO-2024-003";
+    private static final String REFERENCE_PO_004 = "PO-2024-004";
+    
+    // 에러 메시지 상수
+    private static final String ERROR_MSG_QUANTITY_POSITIVE = "입고 수량은 0보다 커야 합니다";
+    private static final String ERROR_MSG_REFERENCE_REQUIRED = "참조 번호는 필수입니다";
+    private static final String ERROR_MSG_SKU_ID_REQUIRED = "SKU ID는 필수입니다";
+    private static final String ERROR_MSG_SKU_NOT_FOUND = "존재하지 않는 SKU입니다";
+    
+    // 시간 관련 상수
+    private static final String FIXED_TIME_STRING = "2024-01-01T10:00:00Z";
+    
     @Mock
     private LoadSkuPort loadSkuPort;
     
@@ -67,7 +93,7 @@ class ReceiveStockUseCaseTest {
     
     @BeforeEach
     void setUp() {
-        fixedClock = Clock.fixed(Instant.parse("2024-01-01T10:00:00Z"), ZoneId.of("UTC"));
+        fixedClock = Clock.fixed(Instant.parse(FIXED_TIME_STRING), ZoneId.of("UTC"));
         useCase = new ReceiveStockService(
             loadSkuPort,
             loadInventoryPort,
@@ -78,25 +104,50 @@ class ReceiveStockUseCaseTest {
         );
     }
     
+    private ReceiveStockCommand createCommand(String skuId, int quantity, String reference) {
+        return ReceiveStockCommand.builder()
+            .skuId(skuId)
+            .quantity(quantity)
+            .reference(reference)
+            .build();
+    }
+    
+    private ReceiveStockCommand createDefaultCommand(SkuId skuId) {
+        return createCommand(skuId.value(), DEFAULT_QUANTITY, DEFAULT_REFERENCE);
+    }
+    
+    private Sku createDefaultSku(SkuId skuId) {
+        return Sku.create(
+            skuId,
+            SkuCode.of(DEFAULT_SKU_CODE),
+            TEST_PRODUCT_NAME,
+            Weight.of(DEFAULT_WEIGHT, WeightUnit.GRAM),
+            null,
+            LocalDateTime.now(fixedClock)
+        );
+    }
+    
+    private void mockValidationSuccess(ReceiveStockCommand command) {
+        when(validator.validate(command)).thenReturn(Set.of());
+    }
+    
+    private void mockValidationFailure(ReceiveStockCommand command, String errorMessage) {
+        ConstraintViolation<ReceiveStockCommand> violation = mock(ConstraintViolation.class);
+        when(violation.getMessage()).thenReturn(errorMessage);
+        when(validator.validate(command)).thenReturn(Set.of(violation));
+    }
+    
     @Test
     @DisplayName("정상적인 재고 입고 처리")
-    void receiveStock_WithValidData_ShouldSucceed() {
+    void receive_WithValidData_ShouldSucceed() {
         // Given
         SkuId skuId = SkuId.generate();
-        SkuCode skuCode = SkuCode.of("SKU-001");
-        Sku sku = Sku.create(skuId, skuCode, "테스트 상품", Weight.of(100, WeightUnit.GRAM), null, LocalDateTime.now(fixedClock));
-        
-        Inventory inventory = Inventory.createWithInitialStock(skuId, Quantity.of(100));
-        
-        ReceiveStockCommand command = ReceiveStockCommand.builder()
-            .skuId(skuId.value())
-            .quantity(50)
-            .reference("PO-2024-001")
-            .build();
+        Inventory inventory = Inventory.createWithInitialStock(skuId, Quantity.of(DEFAULT_INITIAL_STOCK));
+        ReceiveStockCommand command = createDefaultCommand(skuId);
         
         when(loadSkuPort.exists(skuId)).thenReturn(true);
         when(loadInventoryPort.load(skuId)).thenReturn(Optional.of(inventory));
-        when(validator.validate(command)).thenReturn(Set.of());
+        mockValidationSuccess(command);
         
         // When
         useCase.receive(command);
@@ -106,56 +157,48 @@ class ReceiveStockUseCaseTest {
         verify(saveInventoryPort).save(inventoryCaptor.capture());
         
         Inventory savedInventory = inventoryCaptor.getValue();
-        assertThat(savedInventory.getTotalQuantity().value()).isEqualTo(150);
-        assertThat(savedInventory.getAvailableQuantity().value()).isEqualTo(150);
+        assertThat(savedInventory.getTotalQuantity().value())
+            .isEqualTo(DEFAULT_INITIAL_STOCK + DEFAULT_QUANTITY);
+        assertThat(savedInventory.getAvailableQuantity().value())
+            .isEqualTo(DEFAULT_INITIAL_STOCK + DEFAULT_QUANTITY);
         
         ArgumentCaptor<StockMovement> movementCaptor = ArgumentCaptor.forClass(StockMovement.class);
         verify(saveStockMovementPort).save(movementCaptor.capture());
         
         StockMovement savedMovement = movementCaptor.getValue();
         assertThat(savedMovement.getSkuId()).isEqualTo(skuId);
-        assertThat(savedMovement.getQuantity()).isEqualTo(Quantity.of(50));
+        assertThat(savedMovement.getQuantity()).isEqualTo(Quantity.of(DEFAULT_QUANTITY));
         assertThat(savedMovement.getType()).isEqualTo(MovementType.RECEIVE);
-        assertThat(savedMovement.getReference()).isEqualTo("PO-2024-001");
+        assertThat(savedMovement.getReference()).isEqualTo(DEFAULT_REFERENCE);
     }
     
     @Test
     @DisplayName("존재하지 않는 SKU에 대한 재고 입고 시 예외 발생")
-    void receiveStock_WithNonExistentSku_ShouldThrowException() {
+    void receive_WithNonExistentSku_ShouldThrowInvalidSkuException() {
         // Given
         SkuId skuId = SkuId.generate();
-        ReceiveStockCommand command = ReceiveStockCommand.builder()
-            .skuId(skuId.value())
-            .quantity(50)
-            .reference("PO-2024-001")
-            .build();
+        ReceiveStockCommand command = createDefaultCommand(skuId);
         
         when(loadSkuPort.exists(skuId)).thenReturn(false);
-        when(validator.validate(command)).thenReturn(Set.of());
+        mockValidationSuccess(command);
         
         // When & Then
         assertThatThrownBy(() -> useCase.receive(command))
             .isInstanceOf(InvalidSkuException.class)
-            .hasMessageContaining("존재하지 않는 SKU입니다");
+            .hasMessageContaining(ERROR_MSG_SKU_NOT_FOUND);
     }
     
     @Test
     @DisplayName("재고가 없는 SKU에 대한 첫 재고 입고")
-    void receiveStock_WithNoExistingInventory_ShouldCreateNewInventory() {
+    void receive_WithNoExistingInventory_ShouldCreateNewInventory() {
         // Given
         SkuId skuId = SkuId.generate();
-        SkuCode skuCode = SkuCode.of("SKU-002");
-        Sku sku = Sku.create(skuId, skuCode, "신규 상품", Weight.of(200, WeightUnit.GRAM), null, LocalDateTime.now(fixedClock));
-        
-        ReceiveStockCommand command = ReceiveStockCommand.builder()
-            .skuId(skuId.value())
-            .quantity(100)
-            .reference("PO-2024-002")
-            .build();
+        final int initialQuantity = DEFAULT_INITIAL_STOCK;
+        ReceiveStockCommand command = createCommand(skuId.value(), initialQuantity, REFERENCE_PO_002);
         
         when(loadSkuPort.exists(skuId)).thenReturn(true);
         when(loadInventoryPort.load(skuId)).thenReturn(Optional.empty());
-        when(validator.validate(command)).thenReturn(Set.of());
+        mockValidationSuccess(command);
         
         // When
         useCase.receive(command);
@@ -166,77 +209,51 @@ class ReceiveStockUseCaseTest {
         
         Inventory savedInventory = inventoryCaptor.getValue();
         assertThat(savedInventory.getSkuId()).isEqualTo(skuId);
-        assertThat(savedInventory.getTotalQuantity().value()).isEqualTo(100);
-        assertThat(savedInventory.getReservedQuantity().value()).isEqualTo(0);
-        assertThat(savedInventory.getAvailableQuantity().value()).isEqualTo(100);
+        assertThat(savedInventory.getTotalQuantity().value()).isEqualTo(initialQuantity);
+        assertThat(savedInventory.getReservedQuantity().value()).isEqualTo(ZERO_QUANTITY);
+        assertThat(savedInventory.getAvailableQuantity().value()).isEqualTo(initialQuantity);
     }
     
     @ParameterizedTest
-    @ValueSource(ints = {0, -10})
+    @ValueSource(ints = {ZERO_QUANTITY, NEGATIVE_QUANTITY})
     @DisplayName("0 또는 음수 수량으로 재고 입고 시 예외 발생")
-    void receiveStock_WithInvalidQuantity_ShouldThrowException(int invalidQuantity) {
+    void receive_WithInvalidQuantity_ShouldThrowIllegalArgumentException(int invalidQuantity) {
         // Given
         SkuId skuId = SkuId.generate();
-        ReceiveStockCommand command = ReceiveStockCommand.builder()
-            .skuId(skuId.value())
-            .quantity(invalidQuantity)
-            .reference("PO-2024-003")
-            .build();
-        
-        // Mock validation failure
-        ConstraintViolation<ReceiveStockCommand> violation = mock(ConstraintViolation.class);
-        when(violation.getMessage()).thenReturn("입고 수량은 0보다 커야 합니다");
-        when(validator.validate(command)).thenReturn(Set.of(violation));
+        ReceiveStockCommand command = createCommand(skuId.value(), invalidQuantity, REFERENCE_PO_003);
         
         // When & Then
-        assertThatThrownBy(() -> useCase.receive(command))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("입고 수량은 0보다 커야 합니다");
+        assertValidationFailure(command, ERROR_MSG_QUANTITY_POSITIVE);
     }
     
     @ParameterizedTest
     @NullAndEmptySource
     @DisplayName("참조 번호 없이 재고 입고 시 예외 발생")
-    void receiveStock_WithoutReference_ShouldThrowException(String invalidReference) {
+    void receive_WithoutReference_ShouldThrowIllegalArgumentException(String invalidReference) {
         // Given
         SkuId skuId = SkuId.generate();
-        ReceiveStockCommand command = ReceiveStockCommand.builder()
-            .skuId(skuId.value())
-            .quantity(50)
-            .reference(invalidReference)
-            .build();
-        
-        // Mock validation failure
-        ConstraintViolation<ReceiveStockCommand> violation = mock(ConstraintViolation.class);
-        when(violation.getMessage()).thenReturn("참조 번호는 필수입니다");
-        when(validator.validate(command)).thenReturn(Set.of(violation));
+        ReceiveStockCommand command = createCommand(skuId.value(), DEFAULT_QUANTITY, invalidReference);
         
         // When & Then
-        assertThatThrownBy(() -> useCase.receive(command))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("참조 번호는 필수입니다");
+        assertValidationFailure(command, ERROR_MSG_REFERENCE_REQUIRED);
     }
     
     @ParameterizedTest
     @NullAndEmptySource
     @DisplayName("SKU ID 없이 재고 입고 시 예외 발생")
-    void receiveStock_WithoutSkuId_ShouldThrowException(String invalidSkuId) {
+    void receive_WithoutSkuId_ShouldThrowIllegalArgumentException(String invalidSkuId) {
         // Given
-        ReceiveStockCommand command = ReceiveStockCommand.builder()
-            .skuId(invalidSkuId)
-            .quantity(50)
-            .reference("PO-2024-004")
-            .build();
-        
-        // Mock validation failure
-        ConstraintViolation<ReceiveStockCommand> violation = mock(ConstraintViolation.class);
-        when(violation.getMessage()).thenReturn("SKU ID는 필수입니다");
-        when(validator.validate(command)).thenReturn(Set.of(violation));
+        ReceiveStockCommand command = createCommand(invalidSkuId, DEFAULT_QUANTITY, REFERENCE_PO_004);
         
         // When & Then
-        assertThatThrownBy(() -> useCase.receive(command))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("SKU ID는 필수입니다");
+        assertValidationFailure(command, ERROR_MSG_SKU_ID_REQUIRED);
     }
     
+    private void assertValidationFailure(ReceiveStockCommand command, String expectedMessage) {
+        mockValidationFailure(command, expectedMessage);
+        
+        assertThatThrownBy(() -> useCase.receive(command))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining(expectedMessage);
+    }
 }
