@@ -52,6 +52,23 @@ class ReleaseReservationUseCaseTest {
             saveInventoryPort
         );
     }
+    
+    private Reservation createDefaultReservation(ReservationId reservationId, SkuId skuId) {
+        return Reservation.create(
+                reservationId,
+                skuId,
+                Quantity.of(10),
+                "ORDER001",
+                LocalDateTime.now().plusHours(1),
+                LocalDateTime.now()
+        );
+    }
+
+    private ReleaseReservationCommand createCommand(String reservationId) {
+        return ReleaseReservationCommand.builder()
+                .reservationId(reservationId)
+                .build();
+    }
 
     @Test
     @DisplayName("정상적으로 예약을 해제할 수 있다")
@@ -60,16 +77,8 @@ class ReleaseReservationUseCaseTest {
         String reservationIdValue = "RESV123";
         ReservationId reservationId = new ReservationId(reservationIdValue);
         SkuId skuId = new SkuId("SKU001");
-        Quantity reservedQuantity = Quantity.of(10);
         
-        Reservation reservation = Reservation.create(
-            reservationId,
-            skuId,
-            reservedQuantity,
-            "ORDER001",
-            LocalDateTime.now().plusHours(1),
-            LocalDateTime.now()
-        );
+        Reservation reservation = createDefaultReservation(reservationId, skuId);
         
         Inventory inventory = Inventory.create(
             skuId,
@@ -82,9 +91,7 @@ class ReleaseReservationUseCaseTest {
         given(loadInventoryPort.load(skuId))
             .willReturn(Optional.of(inventory));
         
-        ReleaseReservationCommand command = ReleaseReservationCommand.builder()
-            .reservationId(reservationIdValue)
-            .build();
+        ReleaseReservationCommand command = createCommand(reservationIdValue);
         
         // When
         useCase.release(command);
@@ -107,9 +114,7 @@ class ReleaseReservationUseCaseTest {
         given(reservationRepository.findById(reservationId))
             .willReturn(Optional.empty());
         
-        ReleaseReservationCommand command = ReleaseReservationCommand.builder()
-            .reservationId(reservationIdValue)
-            .build();
+        ReleaseReservationCommand command = createCommand(reservationIdValue);
         
         // When & Then
         assertThatThrownBy(() -> useCase.release(command))
@@ -128,22 +133,13 @@ class ReleaseReservationUseCaseTest {
         ReservationId reservationId = new ReservationId(reservationIdValue);
         SkuId skuId = new SkuId("SKU001");
         
-        Reservation reservation = Reservation.create(
-            reservationId,
-            skuId,
-            Quantity.of(10),
-            "ORDER001",
-            LocalDateTime.now().plusHours(1),
-            LocalDateTime.now()
-        );
+        Reservation reservation = createDefaultReservation(reservationId, skuId);
         reservation.release(); // 이미 해제된 상태
         
         given(reservationRepository.findById(reservationId))
             .willReturn(Optional.of(reservation));
         
-        ReleaseReservationCommand command = ReleaseReservationCommand.builder()
-            .reservationId(reservationIdValue)
-            .build();
+        ReleaseReservationCommand command = createCommand(reservationIdValue);
         
         // When & Then
         assertThatThrownBy(() -> useCase.release(command))
@@ -183,9 +179,7 @@ class ReleaseReservationUseCaseTest {
         given(loadInventoryPort.load(skuId))
             .willReturn(Optional.of(inventory));
         
-        ReleaseReservationCommand command = ReleaseReservationCommand.builder()
-            .reservationId(reservationIdValue)
-            .build();
+        ReleaseReservationCommand command = createCommand(reservationIdValue);
         
         // When
         useCase.release(command);
@@ -206,23 +200,14 @@ class ReleaseReservationUseCaseTest {
         ReservationId reservationId = new ReservationId(reservationIdValue);
         SkuId skuId = new SkuId("SKU001");
         
-        Reservation reservation = Reservation.create(
-            reservationId,
-            skuId,
-            Quantity.of(10),
-            "ORDER001",
-            LocalDateTime.now().plusHours(1),
-            LocalDateTime.now()
-        );
+        Reservation reservation = createDefaultReservation(reservationId, skuId);
         
         given(reservationRepository.findById(reservationId))
             .willReturn(Optional.of(reservation));
         given(loadInventoryPort.load(skuId))
             .willReturn(Optional.empty());
         
-        ReleaseReservationCommand command = ReleaseReservationCommand.builder()
-            .reservationId(reservationIdValue)
-            .build();
+        ReleaseReservationCommand command = createCommand(reservationIdValue);
         
         // When & Then
         assertThatThrownBy(() -> useCase.release(command))
@@ -241,22 +226,13 @@ class ReleaseReservationUseCaseTest {
         ReservationId reservationId = new ReservationId(reservationIdValue);
         SkuId skuId = new SkuId("SKU001");
         
-        Reservation reservation = Reservation.create(
-            reservationId,
-            skuId,
-            Quantity.of(10),
-            "ORDER001",
-            LocalDateTime.now().plusHours(1),
-            LocalDateTime.now()
-        );
+        Reservation reservation = createDefaultReservation(reservationId, skuId);
         reservation.confirm(LocalDateTime.now()); // 확정된 상태
         
         given(reservationRepository.findById(reservationId))
             .willReturn(Optional.of(reservation));
         
-        ReleaseReservationCommand command = ReleaseReservationCommand.builder()
-            .reservationId(reservationIdValue)
-            .build();
+        ReleaseReservationCommand command = createCommand(reservationIdValue);
         
         // When & Then
         assertThatThrownBy(() -> useCase.release(command))
@@ -275,14 +251,7 @@ class ReleaseReservationUseCaseTest {
         ReservationId reservationId = new ReservationId(reservationIdValue);
         SkuId skuId = new SkuId("SKU001");
         
-        Reservation reservation = Reservation.create(
-            reservationId,
-            skuId,
-            Quantity.of(10),
-            "ORDER001",
-            LocalDateTime.now().plusHours(1),
-            LocalDateTime.now()
-        );
+        Reservation reservation = createDefaultReservation(reservationId, skuId);
         
         // 현재 예약된 수량(5)이 해제하려는 수량(10)보다 적은 재고 생성
         Inventory inventory = Inventory.create(
@@ -296,9 +265,7 @@ class ReleaseReservationUseCaseTest {
         given(loadInventoryPort.load(skuId))
             .willReturn(Optional.of(inventory));
         
-        ReleaseReservationCommand command = ReleaseReservationCommand.builder()
-            .reservationId(reservationIdValue)
-            .build();
+        ReleaseReservationCommand command = createCommand(reservationIdValue);
         
         // When & Then
         assertThatThrownBy(() -> useCase.release(command))
