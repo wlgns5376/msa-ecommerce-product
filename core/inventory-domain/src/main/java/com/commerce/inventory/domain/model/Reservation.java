@@ -145,25 +145,7 @@ public class Reservation extends BaseEntity<ReservationId> {
             LocalDateTime expiresAt,
             LocalDateTime currentTime
     ) {
-        if (id == null) {
-            throw new InvalidReservationException("Reservation ID는 필수입니다");
-        }
-        
-        if (skuId == null) {
-            throw new InvalidReservationException("SKU ID는 필수입니다");
-        }
-        
-        if (quantity == null || quantity.value() == 0) {
-            throw new InvalidReservationException("수량은 0보다 커야 합니다");
-        }
-        
-        if (orderId == null || orderId.trim().isEmpty()) {
-            throw new InvalidReservationException("주문 ID는 필수입니다");
-        }
-        
-        if (expiresAt == null) {
-            throw new InvalidReservationException("만료 시간은 필수입니다");
-        }
+        validateCommonFields(id, skuId, quantity, orderId, expiresAt);
         
         if (expiresAt.isBefore(currentTime)) {
             throw new InvalidReservationException("만료 시간은 현재 시간 이후여야 합니다");
@@ -179,6 +161,28 @@ public class Reservation extends BaseEntity<ReservationId> {
             ReservationStatus status,
             LocalDateTime createdAt,
             Long version
+    ) {
+        validateCommonFields(id, skuId, quantity, orderId, expiresAt);
+        
+        if (status == null) {
+            throw new InvalidReservationException("예약 상태는 필수입니다");
+        }
+        
+        if (createdAt == null) {
+            throw new InvalidReservationException("생성 시간은 필수입니다");
+        }
+        
+        if (version == null) {
+            throw new InvalidReservationException("버전 정보는 필수입니다");
+        }
+    }
+    
+    private void validateCommonFields(
+            ReservationId id,
+            SkuId skuId,
+            Quantity quantity,
+            String orderId,
+            LocalDateTime expiresAt
     ) {
         if (id == null) {
             throw new InvalidReservationException("Reservation ID는 필수입니다");
@@ -198,18 +202,6 @@ public class Reservation extends BaseEntity<ReservationId> {
         
         if (expiresAt == null) {
             throw new InvalidReservationException("만료 시간은 필수입니다");
-        }
-        
-        if (status == null) {
-            throw new InvalidReservationException("예약 상태는 필수입니다");
-        }
-        
-        if (createdAt == null) {
-            throw new InvalidReservationException("생성 시간은 필수입니다");
-        }
-        
-        if (version == null) {
-            throw new InvalidReservationException("버전 정보는 필수입니다");
         }
     }
     
