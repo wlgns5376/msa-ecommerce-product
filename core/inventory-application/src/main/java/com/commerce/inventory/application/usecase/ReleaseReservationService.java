@@ -9,7 +9,6 @@ import com.commerce.inventory.domain.exception.InvalidReservationIdException;
 import com.commerce.inventory.domain.model.Inventory;
 import com.commerce.inventory.domain.model.Reservation;
 import com.commerce.inventory.domain.model.ReservationId;
-import com.commerce.inventory.domain.model.ReservationStatus;
 import com.commerce.inventory.domain.repository.ReservationRepository;
 import com.commerce.inventory.domain.model.SkuId;
 import lombok.RequiredArgsConstructor;
@@ -30,17 +29,15 @@ public class ReleaseReservationService implements ReleaseReservationUseCase {
         // 1. 예약 조회
         Reservation reservation = findReservationOrThrow(command.getReservationId());
         
-        // 2. 예약 상태 검증 (재고 조회 전에 실패 빠르게 감지)
-        if (reservation.getStatus() == ReservationStatus.RELEASED || 
-            reservation.getStatus() == ReservationStatus.CONFIRMED) {
-            reservation.release(); // 예외 발생
-        }
-        
-        // 3. 재고 조회 (모든 읽기 작업 완료)
-        Inventory inventory = findInventoryOrThrow(reservation.getSkuId());
-        
-        // 4. 도메인 로직 수행 (모든 쓰기 작업)
+        // 2. 예약 상태 검증 및 도메인 로직 수행
+        // reservation.release()는 내부적으로 상태 검증과 변경을 모두 수행하므로,
+        // 이 호출만으로 '실패-빠르게'가 가능하며 코드도 간결해집니다.
         reservation.release();
+
+        // 3. 재고 조회
+        Inventory inventory = findInventoryOrThrow(reservation.getSkuId());
+
+        // 4. 재고의 예약 수량 복원
         inventory.releaseReservedQuantity(reservation.getQuantity());
 
         // 5. 영속성 처리
