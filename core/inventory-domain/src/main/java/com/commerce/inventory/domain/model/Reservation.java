@@ -79,6 +79,10 @@ public class Reservation extends BaseEntity<ReservationId> {
             throw new InvalidReservationStateException("이미 해제된 예약입니다");
         }
         
+        if (status == ReservationStatus.CONFIRMED) {
+            throw new InvalidReservationStateException("확정된 예약은 해제할 수 없습니다");
+        }
+        
         this.status = ReservationStatus.RELEASED;
     }
     

@@ -6,6 +6,7 @@ plugins {
 dependencies {
     api project(':inventory-domain')
     api project(':common')
+    implementation project(':product-domain')
     
     implementation 'org.springframework:spring-context'
     implementation 'org.springframework:spring-tx'
