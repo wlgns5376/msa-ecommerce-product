@@ -1,6 +1,6 @@
 package com.commerce.product.domain.application.usecase;
 
-import com.commerce.common.event.DomainEventPublisher;
+import org.springframework.context.ApplicationEventPublisher;
 import com.commerce.product.domain.event.ProductCreatedEvent;
 import com.commerce.product.domain.exception.InvalidProductException;
 import com.commerce.product.domain.exception.InvalidProductNameException;
@@ -30,7 +30,7 @@ class CreateProductUseCaseTest {
     private ProductRepository productRepository;
 
     @Mock
-    private DomainEventPublisher eventPublisher;
+    private ApplicationEventPublisher eventPublisher;
 
     @Captor
     private ArgumentCaptor<ProductCreatedEvent> eventCaptor;
@@ -64,7 +64,7 @@ class CreateProductUseCaseTest {
         assertThat(response.getStatus()).isEqualTo(ProductStatus.DRAFT);
 
         verify(productRepository, times(1)).save(any());
-        verify(eventPublisher, times(1)).publish(eventCaptor.capture());
+        verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
 
         ProductCreatedEvent event = eventCaptor.getValue();
         assertThat(event.getName()).isEqualTo("Test Product");
@@ -89,7 +89,7 @@ class CreateProductUseCaseTest {
         assertThat(response.getStatus()).isEqualTo(ProductStatus.DRAFT);
         
         verify(productRepository, times(1)).save(any());
-        verify(eventPublisher, times(1)).publish(any(ProductCreatedEvent.class));
+        verify(eventPublisher, times(1)).publishEvent(any(ProductCreatedEvent.class));
     }
 
     @ParameterizedTest
@@ -109,7 +109,7 @@ class CreateProductUseCaseTest {
                 .hasMessageContaining("Product name cannot be null or empty");
 
         verify(productRepository, never()).save(any());
-        verify(eventPublisher, never()).publish(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -128,7 +128,7 @@ class CreateProductUseCaseTest {
                 .hasMessageContaining("Product type is required");
 
         verify(productRepository, never()).save(any());
-        verify(eventPublisher, never()).publish(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -147,6 +147,7 @@ class CreateProductUseCaseTest {
         // Then
         assertThat(response.getDescription()).isEmpty();
         verify(productRepository, times(1)).save(any());
+        verify(eventPublisher, times(1)).publishEvent(any(ProductCreatedEvent.class));
     }
 
     @Test
@@ -167,6 +168,6 @@ class CreateProductUseCaseTest {
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Database error");
 
-        verify(eventPublisher, never()).publish(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 }
