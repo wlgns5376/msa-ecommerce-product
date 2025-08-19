@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.context.ApplicationEventPublisher;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -19,7 +18,7 @@ public class CreateProductService implements CreateProductUseCase {
 
     @Override
     public CreateProductResponse createProduct(CreateProductRequest request) {
-        String description = Optional.ofNullable(request.getDescription()).orElse("");
+        String description = request.getDescription() != null ? request.getDescription() : "";
         
         Product product = Product.create(
                 new ProductName(request.getName()),
@@ -29,8 +28,7 @@ public class CreateProductService implements CreateProductUseCase {
         
         productRepository.save(product);
         
-        product.getDomainEvents().forEach(eventPublisher::publishEvent);
-        product.clearDomainEvents();
+        publishDomainEvents(product);
         
         return CreateProductResponse.builder()
                 .productId(product.getId().toString())
@@ -39,5 +37,10 @@ public class CreateProductService implements CreateProductUseCase {
                 .type(product.getType())
                 .status(product.getStatus())
                 .build();
+    }
+    
+    private void publishDomainEvents(Product product) {
+        product.getDomainEvents().forEach(eventPublisher::publishEvent);
+        product.clearDomainEvents();
     }
 }
