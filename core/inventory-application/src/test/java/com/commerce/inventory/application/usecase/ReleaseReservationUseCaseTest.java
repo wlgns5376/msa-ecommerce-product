@@ -37,6 +37,7 @@ class ReleaseReservationUseCaseTest {
     private static final String SKU_ID_VALUE = "SKU001";
     private static final ReservationId RESERVATION_ID = new ReservationId(RESERVATION_ID_VALUE);
     private static final SkuId SKU_ID = new SkuId(SKU_ID_VALUE);
+    private static final LocalDateTime FIXED_TIME = LocalDateTime.of(2025, 1, 1, 12, 0);
 
     private ReleaseReservationUseCase useCase;
 
@@ -64,8 +65,8 @@ class ReleaseReservationUseCaseTest {
                 skuId,
                 Quantity.of(10),
                 "ORDER001",
-                LocalDateTime.now().plusHours(1),
-                LocalDateTime.now()
+                FIXED_TIME.plusHours(1),
+                FIXED_TIME
         );
     }
 
@@ -158,8 +159,8 @@ class ReleaseReservationUseCaseTest {
             SKU_ID,
             reservedQuantity,
             "ORDER001",
-            LocalDateTime.now().minusHours(1), // 만료된 예약
-            LocalDateTime.now().minusHours(2)
+            FIXED_TIME.minusHours(1), // 만료된 예약
+            FIXED_TIME.minusHours(2)
         );
         
         Inventory inventory = Inventory.create(
@@ -213,7 +214,7 @@ class ReleaseReservationUseCaseTest {
     void shouldNotReleaseConfirmedReservation() {
         // Given
         Reservation reservation = createDefaultReservation(RESERVATION_ID, SKU_ID);
-        reservation.confirm(LocalDateTime.now()); // 확정된 상태
+        reservation.confirm(FIXED_TIME); // 확정된 상태
         
         given(reservationRepository.findById(RESERVATION_ID))
             .willReturn(Optional.of(reservation));
