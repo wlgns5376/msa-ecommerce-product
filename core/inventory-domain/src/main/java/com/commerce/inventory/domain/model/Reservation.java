@@ -28,7 +28,7 @@ public class Reservation extends BaseEntity<ReservationId> {
             LocalDateTime expiresAt,
             LocalDateTime createdAt
     ) {
-        this(id, skuId, quantity, orderId, expiresAt, createdAt, 0L);
+        this(id, skuId, quantity, orderId, expiresAt, ReservationStatus.ACTIVE, createdAt, 0L);
     }
     
     private Reservation(
@@ -37,6 +37,7 @@ public class Reservation extends BaseEntity<ReservationId> {
             Quantity quantity,
             String orderId,
             LocalDateTime expiresAt,
+            ReservationStatus status,
             LocalDateTime createdAt,
             Long version
     ) {
@@ -47,7 +48,7 @@ public class Reservation extends BaseEntity<ReservationId> {
         this.quantity = quantity;
         this.orderId = orderId;
         this.expiresAt = expiresAt;
-        this.status = ReservationStatus.ACTIVE;
+        this.status = status;
         this.createdAt = createdAt;
         this.version = version;
     }
@@ -90,9 +91,7 @@ public class Reservation extends BaseEntity<ReservationId> {
             LocalDateTime createdAt,
             Long version
     ) {
-        Reservation reservation = new Reservation(id, skuId, quantity, orderId, expiresAt, createdAt, version);
-        reservation.status = status;
-        return reservation;
+        return new Reservation(id, skuId, quantity, orderId, expiresAt, status, createdAt, version);
     }
     
     public boolean isExpired(LocalDateTime currentTime) {
