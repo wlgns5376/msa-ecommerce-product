@@ -69,7 +69,7 @@ public class Inventory extends AggregateRoot<SkuId> {
     }
     
     public void receive(Quantity quantity) {
-        if (quantity == null || quantity.value() <= 0) {
+        if (quantity == null || quantity.isZero()) {
             throw new InvalidInventoryException("입고 수량은 0보다 커야 합니다");
         }
         
@@ -98,7 +98,7 @@ public class Inventory extends AggregateRoot<SkuId> {
     }
     
     public void releaseReservedQuantity(Quantity quantity) {
-        if (quantity == null || quantity.value() == 0) {
+        if (quantity == null || quantity.isZero()) {
             throw new InvalidInventoryException("해제할 수량은 0보다 커야 합니다");
         }
         
@@ -116,7 +116,7 @@ public class Inventory extends AggregateRoot<SkuId> {
     }
     
     public void confirmReservedQuantity(Quantity quantity) {
-        if (quantity == null || quantity.value() == 0) {
+        if (quantity == null || quantity.isZero()) {
             throw new InvalidInventoryException("확정할 수량은 0보다 커야 합니다");
         }
         
