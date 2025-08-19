@@ -18,6 +18,7 @@ public class Reservation extends BaseEntity<ReservationId> {
     private final LocalDateTime expiresAt;
     private ReservationStatus status;
     private final LocalDateTime createdAt;
+    private Long version;
     
     private Reservation(
             ReservationId id,
@@ -26,6 +27,18 @@ public class Reservation extends BaseEntity<ReservationId> {
             String orderId,
             LocalDateTime expiresAt,
             LocalDateTime createdAt
+    ) {
+        this(id, skuId, quantity, orderId, expiresAt, createdAt, 0L);
+    }
+    
+    private Reservation(
+            ReservationId id,
+            SkuId skuId,
+            Quantity quantity,
+            String orderId,
+            LocalDateTime expiresAt,
+            LocalDateTime createdAt,
+            Long version
     ) {
         validateCreate(id, skuId, quantity, orderId, expiresAt, createdAt);
         
@@ -36,6 +49,7 @@ public class Reservation extends BaseEntity<ReservationId> {
         this.expiresAt = expiresAt;
         this.status = ReservationStatus.ACTIVE;
         this.createdAt = createdAt;
+        this.version = version;
     }
     
     public static Reservation create(
@@ -66,6 +80,21 @@ public class Reservation extends BaseEntity<ReservationId> {
         );
     }
     
+    public static Reservation restore(
+            ReservationId id,
+            SkuId skuId,
+            Quantity quantity,
+            String orderId,
+            LocalDateTime expiresAt,
+            ReservationStatus status,
+            LocalDateTime createdAt,
+            Long version
+    ) {
+        Reservation reservation = new Reservation(id, skuId, quantity, orderId, expiresAt, createdAt, version);
+        reservation.status = status;
+        return reservation;
+    }
+    
     public boolean isExpired(LocalDateTime currentTime) {
         return currentTime.isAfter(expiresAt);
     }
@@ -84,6 +113,7 @@ public class Reservation extends BaseEntity<ReservationId> {
         }
         
         this.status = ReservationStatus.RELEASED;
+        markAsUpdated();
     }
     
     public void confirm(LocalDateTime currentTime) {
@@ -100,6 +130,7 @@ public class Reservation extends BaseEntity<ReservationId> {
         }
         
         this.status = ReservationStatus.CONFIRMED;
+        markAsUpdated();
     }
     
     private void validateCreate(

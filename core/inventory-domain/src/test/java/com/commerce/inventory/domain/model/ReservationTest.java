@@ -258,4 +258,44 @@ class ReservationTest {
                 .isInstanceOf(InvalidReservationStateException.class)
                 .hasMessage("해제된 예약은 확정할 수 없습니다");
     }
+
+    @Test
+    @DisplayName("저장된 예약을 버전 정보와 함께 복원할 수 있다")
+    void shouldRestoreReservationWithVersion() {
+        // given
+        ReservationId id = ReservationId.generate();
+        SkuId skuId = SkuId.generate();
+        Quantity quantity = Quantity.of(10);
+        String orderId = "ORDER-2024-001";
+        LocalDateTime expiresAt = FIXED_TIME.plusHours(1);
+        ReservationStatus status = ReservationStatus.ACTIVE;
+        Long version = 5L;
+
+        // when
+        Reservation reservation = Reservation.restore(
+                id, skuId, quantity, orderId, expiresAt, status, FIXED_TIME, version
+        );
+
+        // then
+        assertThat(reservation.getId()).isEqualTo(id);
+        assertThat(reservation.getSkuId()).isEqualTo(skuId);
+        assertThat(reservation.getQuantity()).isEqualTo(quantity);
+        assertThat(reservation.getOrderId()).isEqualTo(orderId);
+        assertThat(reservation.getExpiresAt()).isEqualTo(expiresAt);
+        assertThat(reservation.getStatus()).isEqualTo(status);
+        assertThat(reservation.getCreatedAt()).isEqualTo(FIXED_TIME);
+        assertThat(reservation.getVersion()).isEqualTo(version);
+    }
+
+    @Test
+    @DisplayName("새로 생성된 예약의 버전은 0이다")
+    void shouldHaveZeroVersionForNewReservation() {
+        // given
+        Reservation reservation = Reservation.createWithTTL(
+                SkuId.generate(), Quantity.of(10), "ORDER-2024-001", 3600, FIXED_TIME
+        );
+
+        // then
+        assertThat(reservation.getVersion()).isEqualTo(0L);
+    }
 }
