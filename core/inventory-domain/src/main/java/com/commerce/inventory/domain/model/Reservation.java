@@ -28,7 +28,7 @@ public class Reservation extends BaseEntity<ReservationId> {
             LocalDateTime expiresAt,
             LocalDateTime createdAt
     ) {
-        this(id, skuId, quantity, orderId, expiresAt, ReservationStatus.ACTIVE, createdAt, 0L);
+        this(id, skuId, quantity, orderId, expiresAt, ReservationStatus.ACTIVE, createdAt, 0L, true);
     }
     
     private Reservation(
@@ -39,9 +39,14 @@ public class Reservation extends BaseEntity<ReservationId> {
             LocalDateTime expiresAt,
             ReservationStatus status,
             LocalDateTime createdAt,
-            Long version
+            Long version,
+            boolean isNewCreation
     ) {
-        validateCreate(id, skuId, quantity, orderId, expiresAt, createdAt);
+        if (isNewCreation) {
+            validateCreate(id, skuId, quantity, orderId, expiresAt, createdAt);
+        } else {
+            validateRestore(id, skuId, quantity, orderId, expiresAt, status, createdAt, version);
+        }
         
         this.id = id;
         this.skuId = skuId;
@@ -91,7 +96,7 @@ public class Reservation extends BaseEntity<ReservationId> {
             LocalDateTime createdAt,
             Long version
     ) {
-        return new Reservation(id, skuId, quantity, orderId, expiresAt, status, createdAt, version);
+        return new Reservation(id, skuId, quantity, orderId, expiresAt, status, createdAt, version, false);
     }
     
     public boolean isExpired(LocalDateTime currentTime) {
@@ -162,6 +167,49 @@ public class Reservation extends BaseEntity<ReservationId> {
         
         if (expiresAt.isBefore(currentTime)) {
             throw new InvalidReservationException("만료 시간은 현재 시간 이후여야 합니다");
+        }
+    }
+    
+    private void validateRestore(
+            ReservationId id,
+            SkuId skuId,
+            Quantity quantity,
+            String orderId,
+            LocalDateTime expiresAt,
+            ReservationStatus status,
+            LocalDateTime createdAt,
+            Long version
+    ) {
+        if (id == null) {
+            throw new InvalidReservationException("Reservation ID는 필수입니다");
+        }
+        
+        if (skuId == null) {
+            throw new InvalidReservationException("SKU ID는 필수입니다");
+        }
+        
+        if (quantity == null || quantity.value() == 0) {
+            throw new InvalidReservationException("수량은 0보다 커야 합니다");
+        }
+        
+        if (orderId == null || orderId.trim().isEmpty()) {
+            throw new InvalidReservationException("주문 ID는 필수입니다");
+        }
+        
+        if (expiresAt == null) {
+            throw new InvalidReservationException("만료 시간은 필수입니다");
+        }
+        
+        if (status == null) {
+            throw new InvalidReservationException("예약 상태는 필수입니다");
+        }
+        
+        if (createdAt == null) {
+            throw new InvalidReservationException("생성 시간은 필수입니다");
+        }
+        
+        if (version == null) {
+            throw new InvalidReservationException("버전 정보는 필수입니다");
         }
     }
     

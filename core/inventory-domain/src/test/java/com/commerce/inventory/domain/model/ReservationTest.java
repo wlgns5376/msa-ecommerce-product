@@ -298,4 +298,73 @@ class ReservationTest {
         // then
         assertThat(reservation.getVersion()).isEqualTo(0L);
     }
+    
+    @Test
+    @DisplayName("restore 시 필수 값이 null이면 예외가 발생한다")
+    void shouldThrowExceptionWhenRestoreWithNullValues() {
+        // given
+        ReservationId id = ReservationId.generate();
+        SkuId skuId = SkuId.generate();
+        Quantity quantity = Quantity.of(10);
+        String orderId = "ORDER-2024-001";
+        LocalDateTime expiresAt = FIXED_TIME.plusHours(1);
+        ReservationStatus status = ReservationStatus.ACTIVE;
+        Long version = 1L;
+        
+        // when & then
+        assertThatThrownBy(() -> Reservation.restore(null, skuId, quantity, orderId, expiresAt, status, FIXED_TIME, version))
+                .isInstanceOf(InvalidReservationException.class)
+                .hasMessage("Reservation ID는 필수입니다");
+                
+        assertThatThrownBy(() -> Reservation.restore(id, null, quantity, orderId, expiresAt, status, FIXED_TIME, version))
+                .isInstanceOf(InvalidReservationException.class)
+                .hasMessage("SKU ID는 필수입니다");
+                
+        assertThatThrownBy(() -> Reservation.restore(id, skuId, null, orderId, expiresAt, status, FIXED_TIME, version))
+                .isInstanceOf(InvalidReservationException.class)
+                .hasMessage("수량은 0보다 커야 합니다");
+                
+        assertThatThrownBy(() -> Reservation.restore(id, skuId, quantity, null, expiresAt, status, FIXED_TIME, version))
+                .isInstanceOf(InvalidReservationException.class)
+                .hasMessage("주문 ID는 필수입니다");
+                
+        assertThatThrownBy(() -> Reservation.restore(id, skuId, quantity, orderId, null, status, FIXED_TIME, version))
+                .isInstanceOf(InvalidReservationException.class)
+                .hasMessage("만료 시간은 필수입니다");
+                
+        assertThatThrownBy(() -> Reservation.restore(id, skuId, quantity, orderId, expiresAt, null, FIXED_TIME, version))
+                .isInstanceOf(InvalidReservationException.class)
+                .hasMessage("예약 상태는 필수입니다");
+                
+        assertThatThrownBy(() -> Reservation.restore(id, skuId, quantity, orderId, expiresAt, status, null, version))
+                .isInstanceOf(InvalidReservationException.class)
+                .hasMessage("생성 시간은 필수입니다");
+                
+        assertThatThrownBy(() -> Reservation.restore(id, skuId, quantity, orderId, expiresAt, status, FIXED_TIME, null))
+                .isInstanceOf(InvalidReservationException.class)
+                .hasMessage("버전 정보는 필수입니다");
+    }
+    
+    @Test
+    @DisplayName("restore는 과거 만료 시간도 허용한다")
+    void shouldAllowPastExpirationDateInRestore() {
+        // given
+        ReservationId id = ReservationId.generate();
+        SkuId skuId = SkuId.generate();
+        Quantity quantity = Quantity.of(10);
+        String orderId = "ORDER-2024-001";
+        LocalDateTime expiresAt = FIXED_TIME.minusHours(1); // 과거 시간
+        ReservationStatus status = ReservationStatus.RELEASED;
+        Long version = 1L;
+        
+        // when
+        Reservation reservation = Reservation.restore(
+                id, skuId, quantity, orderId, expiresAt, status, FIXED_TIME.minusHours(2), version
+        );
+        
+        // then
+        assertThat(reservation).isNotNull();
+        assertThat(reservation.getExpiresAt()).isEqualTo(expiresAt);
+        assertThat(reservation.isExpired(FIXED_TIME)).isTrue();
+    }
 }
