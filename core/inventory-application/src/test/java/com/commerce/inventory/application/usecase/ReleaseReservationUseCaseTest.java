@@ -33,6 +33,11 @@ import static org.mockito.Mockito.times;
 @DisplayName("ReleaseReservationUseCase 테스트")
 class ReleaseReservationUseCaseTest {
 
+    private static final String RESERVATION_ID_VALUE = "RESV123";
+    private static final String SKU_ID_VALUE = "SKU001";
+    private static final ReservationId RESERVATION_ID = new ReservationId(RESERVATION_ID_VALUE);
+    private static final SkuId SKU_ID = new SkuId(SKU_ID_VALUE);
+
     private ReleaseReservationUseCase useCase;
 
     @Mock
@@ -74,24 +79,20 @@ class ReleaseReservationUseCaseTest {
     @DisplayName("정상적으로 예약을 해제할 수 있다")
     void shouldReleaseReservationSuccessfully() {
         // Given
-        String reservationIdValue = "RESV123";
-        ReservationId reservationId = new ReservationId(reservationIdValue);
-        SkuId skuId = new SkuId("SKU001");
-        
-        Reservation reservation = createDefaultReservation(reservationId, skuId);
+        Reservation reservation = createDefaultReservation(RESERVATION_ID, SKU_ID);
         
         Inventory inventory = Inventory.create(
-            skuId,
+            SKU_ID,
             Quantity.of(100),
             Quantity.of(50)
         );
         
-        given(reservationRepository.findById(reservationId))
+        given(reservationRepository.findById(RESERVATION_ID))
             .willReturn(Optional.of(reservation));
-        given(loadInventoryPort.load(skuId))
+        given(loadInventoryPort.load(SKU_ID))
             .willReturn(Optional.of(inventory));
         
-        ReleaseReservationCommand command = createCommand(reservationIdValue);
+        ReleaseReservationCommand command = createCommand(RESERVATION_ID_VALUE);
         
         // When
         useCase.release(command);
@@ -129,17 +130,13 @@ class ReleaseReservationUseCaseTest {
     @DisplayName("이미 해제된 예약을 다시 해제 시도시 예외가 발생한다")
     void shouldThrowExceptionWhenReservationAlreadyReleased() {
         // Given
-        String reservationIdValue = "RESV123";
-        ReservationId reservationId = new ReservationId(reservationIdValue);
-        SkuId skuId = new SkuId("SKU001");
-        
-        Reservation reservation = createDefaultReservation(reservationId, skuId);
+        Reservation reservation = createDefaultReservation(RESERVATION_ID, SKU_ID);
         reservation.release(); // 이미 해제된 상태
         
-        given(reservationRepository.findById(reservationId))
+        given(reservationRepository.findById(RESERVATION_ID))
             .willReturn(Optional.of(reservation));
         
-        ReleaseReservationCommand command = createCommand(reservationIdValue);
+        ReleaseReservationCommand command = createCommand(RESERVATION_ID_VALUE);
         
         // When & Then
         assertThatThrownBy(() -> useCase.release(command))
@@ -154,14 +151,11 @@ class ReleaseReservationUseCaseTest {
     @DisplayName("만료된 예약도 해제할 수 있다")
     void shouldReleaseExpiredReservation() {
         // Given
-        String reservationIdValue = "RESV123";
-        ReservationId reservationId = new ReservationId(reservationIdValue);
-        SkuId skuId = new SkuId("SKU001");
         Quantity reservedQuantity = Quantity.of(10);
         
         Reservation reservation = Reservation.create(
-            reservationId,
-            skuId,
+            RESERVATION_ID,
+            SKU_ID,
             reservedQuantity,
             "ORDER001",
             LocalDateTime.now().minusHours(1), // 만료된 예약
@@ -169,17 +163,17 @@ class ReleaseReservationUseCaseTest {
         );
         
         Inventory inventory = Inventory.create(
-            skuId,
+            SKU_ID,
             Quantity.of(100),
             Quantity.of(50)
         );
         
-        given(reservationRepository.findById(reservationId))
+        given(reservationRepository.findById(RESERVATION_ID))
             .willReturn(Optional.of(reservation));
-        given(loadInventoryPort.load(skuId))
+        given(loadInventoryPort.load(SKU_ID))
             .willReturn(Optional.of(inventory));
         
-        ReleaseReservationCommand command = createCommand(reservationIdValue);
+        ReleaseReservationCommand command = createCommand(RESERVATION_ID_VALUE);
         
         // When
         useCase.release(command);
@@ -196,23 +190,19 @@ class ReleaseReservationUseCaseTest {
     @DisplayName("재고가 없는 경우 예외가 발생한다")
     void shouldThrowExceptionWhenInventoryNotFound() {
         // Given
-        String reservationIdValue = "RESV123";
-        ReservationId reservationId = new ReservationId(reservationIdValue);
-        SkuId skuId = new SkuId("SKU001");
+        Reservation reservation = createDefaultReservation(RESERVATION_ID, SKU_ID);
         
-        Reservation reservation = createDefaultReservation(reservationId, skuId);
-        
-        given(reservationRepository.findById(reservationId))
+        given(reservationRepository.findById(RESERVATION_ID))
             .willReturn(Optional.of(reservation));
-        given(loadInventoryPort.load(skuId))
+        given(loadInventoryPort.load(SKU_ID))
             .willReturn(Optional.empty());
         
-        ReleaseReservationCommand command = createCommand(reservationIdValue);
+        ReleaseReservationCommand command = createCommand(RESERVATION_ID_VALUE);
         
         // When & Then
         assertThatThrownBy(() -> useCase.release(command))
             .isInstanceOf(InvalidInventoryException.class)
-            .hasMessage("재고를 찾을 수 없습니다: " + skuId.value());
+            .hasMessage("재고를 찾을 수 없습니다: " + SKU_ID.value());
         
         then(saveInventoryPort).should(never()).save(any());
         then(reservationRepository).should(never()).save(any());
@@ -222,17 +212,13 @@ class ReleaseReservationUseCaseTest {
     @DisplayName("확정된 예약은 해제할 수 없다")
     void shouldNotReleaseConfirmedReservation() {
         // Given
-        String reservationIdValue = "RESV123";
-        ReservationId reservationId = new ReservationId(reservationIdValue);
-        SkuId skuId = new SkuId("SKU001");
-        
-        Reservation reservation = createDefaultReservation(reservationId, skuId);
+        Reservation reservation = createDefaultReservation(RESERVATION_ID, SKU_ID);
         reservation.confirm(LocalDateTime.now()); // 확정된 상태
         
-        given(reservationRepository.findById(reservationId))
+        given(reservationRepository.findById(RESERVATION_ID))
             .willReturn(Optional.of(reservation));
         
-        ReleaseReservationCommand command = createCommand(reservationIdValue);
+        ReleaseReservationCommand command = createCommand(RESERVATION_ID_VALUE);
         
         // When & Then
         assertThatThrownBy(() -> useCase.release(command))
@@ -247,25 +233,21 @@ class ReleaseReservationUseCaseTest {
     @DisplayName("예약된 재고가 부족할 때 예외가 발생한다")
     void shouldThrowExceptionWhenReservedStockIsInsufficient() {
         // Given
-        String reservationIdValue = "RESV123";
-        ReservationId reservationId = new ReservationId(reservationIdValue);
-        SkuId skuId = new SkuId("SKU001");
-        
-        Reservation reservation = createDefaultReservation(reservationId, skuId);
+        Reservation reservation = createDefaultReservation(RESERVATION_ID, SKU_ID);
         
         // 현재 예약된 수량(5)이 해제하려는 수량(10)보다 적은 재고 생성
         Inventory inventory = Inventory.create(
-            skuId,
+            SKU_ID,
             Quantity.of(100),
             Quantity.of(5) // 5개만 예약된 상태
         );
         
-        given(reservationRepository.findById(reservationId))
+        given(reservationRepository.findById(RESERVATION_ID))
             .willReturn(Optional.of(reservation));
-        given(loadInventoryPort.load(skuId))
+        given(loadInventoryPort.load(SKU_ID))
             .willReturn(Optional.of(inventory));
         
-        ReleaseReservationCommand command = createCommand(reservationIdValue);
+        ReleaseReservationCommand command = createCommand(RESERVATION_ID_VALUE);
         
         // When & Then
         assertThatThrownBy(() -> useCase.release(command))
