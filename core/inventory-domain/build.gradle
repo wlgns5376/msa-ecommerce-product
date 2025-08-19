@@ -1,4 +1,8 @@
+plugins {
+    id 'java-library'
+}
+
 dependencies {
     implementation project(':common')
-    implementation project(':product-domain')
+    api project(':product-domain')
 }

@@ -230,6 +230,7 @@ class ReleaseReservationUseCaseTest {
             .hasMessage("재고를 찾을 수 없습니다: " + skuId.value());
         
         then(saveInventoryPort).should(never()).save(any());
+        then(reservationRepository).should(never()).save(any());
     }
     
     @Test
@@ -264,5 +265,47 @@ class ReleaseReservationUseCaseTest {
         
         then(loadInventoryPort).should(never()).load(any());
         then(saveInventoryPort).should(never()).save(any());
+    }
+    
+    @Test
+    @DisplayName("예약된 재고가 부족할 때 예외가 발생한다")
+    void shouldThrowExceptionWhenReservedStockIsInsufficient() {
+        // Given
+        String reservationIdValue = "RESV123";
+        ReservationId reservationId = new ReservationId(reservationIdValue);
+        SkuId skuId = new SkuId("SKU001");
+        
+        Reservation reservation = Reservation.create(
+            reservationId,
+            skuId,
+            Quantity.of(10),
+            "ORDER001",
+            LocalDateTime.now().plusHours(1),
+            LocalDateTime.now()
+        );
+        
+        // 현재 예약된 수량(5)이 해제하려는 수량(10)보다 적은 재고 생성
+        Inventory inventory = Inventory.create(
+            skuId,
+            Quantity.of(100),
+            Quantity.of(5) // 5개만 예약된 상태
+        );
+        
+        given(reservationRepository.findById(reservationId))
+            .willReturn(Optional.of(reservation));
+        given(loadInventoryPort.load(skuId))
+            .willReturn(Optional.of(inventory));
+        
+        ReleaseReservationCommand command = ReleaseReservationCommand.builder()
+            .reservationId(reservationIdValue)
+            .build();
+        
+        // When & Then
+        assertThatThrownBy(() -> useCase.release(command))
+            .isInstanceOf(InvalidInventoryException.class)
+            .hasMessage("해제할 예약 수량이 부족합니다. 현재 예약: 5, 해제 요청: 10");
+        
+        then(saveInventoryPort).should(never()).save(any());
+        then(reservationRepository).should(never()).save(any());
     }
 }
