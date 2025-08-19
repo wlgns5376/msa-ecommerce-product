@@ -11,6 +11,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
@@ -90,31 +92,13 @@ class CreateProductUseCaseTest {
         verify(eventPublisher, times(1)).publish(any(ProductCreatedEvent.class));
     }
 
-    @Test
-    @DisplayName("이름이 null인 경우 예외 발생")
-    void shouldThrowExceptionWhenNameIsNull() {
+    @ParameterizedTest
+    @NullAndEmptySource
+    @DisplayName("이름이 null 또는 빈 문자열인 경우 예외 발생")
+    void shouldThrowExceptionWhenNameIsNullOrEmpty(String name) {
         // Given
         CreateProductRequest request = CreateProductRequest.builder()
-                .name(null)
-                .description("Test Description")
-                .type(ProductType.NORMAL)
-                .build();
-
-        // When & Then
-        assertThatThrownBy(() -> createProductUseCase.createProduct(request))
-                .isInstanceOf(InvalidProductNameException.class)
-                .hasMessageContaining("Product name cannot be null or empty");
-
-        verify(productRepository, never()).save(any());
-        verify(eventPublisher, never()).publish(any());
-    }
-
-    @Test
-    @DisplayName("이름이 빈 문자열인 경우 예외 발생")
-    void shouldThrowExceptionWhenNameIsEmpty() {
-        // Given
-        CreateProductRequest request = CreateProductRequest.builder()
-                .name("")
+                .name(name)
                 .description("Test Description")
                 .type(ProductType.NORMAL)
                 .build();
