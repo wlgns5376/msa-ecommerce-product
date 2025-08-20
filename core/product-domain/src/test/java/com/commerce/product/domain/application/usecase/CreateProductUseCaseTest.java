@@ -85,11 +85,19 @@ class CreateProductUseCaseTest {
         CreateProductResponse response = createProductUseCase.createProduct(request);
 
         // Then
+        assertThat(response).isNotNull();
+        assertThat(response.getProductId()).isNotNull();
+        assertThat(response.getName()).isEqualTo("Bundle Product");
+        assertThat(response.getDescription()).isEqualTo("Bundle Description");
         assertThat(response.getType()).isEqualTo(ProductType.BUNDLE);
         assertThat(response.getStatus()).isEqualTo(ProductStatus.DRAFT);
-        
+
         verify(productRepository, times(1)).save(any());
-        verify(eventPublisher, times(1)).publishEvent(any(ProductCreatedEvent.class));
+        verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
+
+        ProductCreatedEvent event = eventCaptor.getValue();
+        assertThat(event.getName()).isEqualTo("Bundle Product");
+        assertThat(event.getType()).isEqualTo(ProductType.BUNDLE);
     }
 
     @ParameterizedTest
