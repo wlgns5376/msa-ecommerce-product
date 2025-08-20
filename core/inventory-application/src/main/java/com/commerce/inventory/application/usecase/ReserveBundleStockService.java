@@ -92,10 +92,12 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
 
     private Map<SkuId, Quantity> calculateTotalRequiredQuantities(List<SkuReservationRequest> skuRequests) {
         return skuRequests.stream()
-            .collect(Collectors.toMap(
+            .collect(Collectors.groupingBy(
                 SkuReservationRequest::skuId,
-                SkuReservationRequest::quantity,
-                Quantity::add
+                Collectors.mapping(
+                    SkuReservationRequest::quantity,
+                    Collectors.reducing(Quantity.zero(), Quantity::add)
+                )
             ));
     }
 
