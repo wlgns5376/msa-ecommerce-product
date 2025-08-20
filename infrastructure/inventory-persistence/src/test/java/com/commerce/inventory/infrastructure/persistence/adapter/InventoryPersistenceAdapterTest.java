@@ -15,9 +15,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.OptimisticLockingFailureException;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -181,5 +185,144 @@ class InventoryPersistenceAdapterTest {
         assertThatThrownBy(() -> adapter.saveAll(inventories))
                 .isInstanceOf(OptimisticLockingFailureException.class)
                 .hasMessageContaining("동시성 충돌이 발생했습니다");
+    }
+    
+    @Test
+    @DisplayName("여러 SKU ID로 재고를 조회할 수 있다")
+    void shouldLoadAllInventoriesByIds() {
+        // given
+        SkuId skuId1 = SkuId.generate();
+        SkuId skuId2 = SkuId.generate();
+        SkuId skuId3 = SkuId.generate();
+        
+        InventoryJpaEntity entity1 = InventoryJpaEntity.builder()
+                .skuId(skuId1.value())
+                .totalQuantity(100)
+                .reservedQuantity(20)
+                .version(1L)
+                .build();
+                
+        InventoryJpaEntity entity2 = InventoryJpaEntity.builder()
+                .skuId(skuId2.value())
+                .totalQuantity(200)
+                .reservedQuantity(40)
+                .version(2L)
+                .build();
+        
+        List<SkuId> skuIds = Arrays.asList(skuId1, skuId2, skuId3);
+        List<String> skuIdValues = Arrays.asList(skuId1.value(), skuId2.value(), skuId3.value());
+        
+        when(inventoryJpaRepository.findAllById(skuIdValues))
+                .thenReturn(Arrays.asList(entity1, entity2));
+        
+        // when
+        Map<SkuId, Inventory> result = adapter.loadAllByIds(skuIds);
+        
+        // then
+        assertThat(result).hasSize(2);
+        assertThat(result.get(skuId1)).isNotNull();
+        assertThat(result.get(skuId1).getTotalQuantity()).isEqualTo(Quantity.of(100));
+        assertThat(result.get(skuId2)).isNotNull();
+        assertThat(result.get(skuId2).getTotalQuantity()).isEqualTo(Quantity.of(200));
+        assertThat(result.get(skuId3)).isNull();
+    }
+    
+    @Test
+    @DisplayName("1000개 이상의 SKU ID로 조회 시 배치로 나누어 처리한다")
+    void shouldProcessInBatchesWhenLoadingMoreThan1000Ids() {
+        // given
+        List<SkuId> skuIds = IntStream.range(0, 2500)
+                .mapToObj(i -> SkuId.of("SKU-" + i))
+                .collect(Collectors.toList());
+        
+        // 첫 번째 배치 (0-999)
+        List<String> firstBatch = IntStream.range(0, 1000)
+                .mapToObj(i -> "SKU-" + i)
+                .collect(Collectors.toList());
+        List<InventoryJpaEntity> firstBatchEntities = IntStream.range(0, 1000)
+                .mapToObj(i -> InventoryJpaEntity.builder()
+                        .skuId("SKU-" + i)
+                        .totalQuantity(100 + i)
+                        .reservedQuantity(10)
+                        .version(1L)
+                        .build())
+                .collect(Collectors.toList());
+        
+        // 두 번째 배치 (1000-1999)
+        List<String> secondBatch = IntStream.range(1000, 2000)
+                .mapToObj(i -> "SKU-" + i)
+                .collect(Collectors.toList());
+        List<InventoryJpaEntity> secondBatchEntities = IntStream.range(1000, 2000)
+                .mapToObj(i -> InventoryJpaEntity.builder()
+                        .skuId("SKU-" + i)
+                        .totalQuantity(100 + i)
+                        .reservedQuantity(10)
+                        .version(1L)
+                        .build())
+                .collect(Collectors.toList());
+        
+        // 세 번째 배치 (2000-2499)
+        List<String> thirdBatch = IntStream.range(2000, 2500)
+                .mapToObj(i -> "SKU-" + i)
+                .collect(Collectors.toList());
+        List<InventoryJpaEntity> thirdBatchEntities = IntStream.range(2000, 2500)
+                .mapToObj(i -> InventoryJpaEntity.builder()
+                        .skuId("SKU-" + i)
+                        .totalQuantity(100 + i)
+                        .reservedQuantity(10)
+                        .version(1L)
+                        .build())
+                .collect(Collectors.toList());
+        
+        when(inventoryJpaRepository.findAllById(firstBatch))
+                .thenReturn(firstBatchEntities);
+        when(inventoryJpaRepository.findAllById(secondBatch))
+                .thenReturn(secondBatchEntities);
+        when(inventoryJpaRepository.findAllById(thirdBatch))
+                .thenReturn(thirdBatchEntities);
+        
+        // when
+        Map<SkuId, Inventory> result = adapter.loadAllByIds(skuIds);
+        
+        // then
+        assertThat(result).hasSize(2500);
+        verify(inventoryJpaRepository, times(3)).findAllById(anyList());
+        
+        // 각 배치가 올바른 크기로 호출되었는지 확인
+        ArgumentCaptor<List<String>> captor = ArgumentCaptor.forClass(List.class);
+        verify(inventoryJpaRepository, times(3)).findAllById(captor.capture());
+        List<List<String>> allBatches = captor.getAllValues();
+        
+        assertThat(allBatches.get(0)).hasSize(1000);
+        assertThat(allBatches.get(1)).hasSize(1000);
+        assertThat(allBatches.get(2)).hasSize(500);
+        
+        // 결과 검증
+        assertThat(result.get(SkuId.of("SKU-0")).getTotalQuantity()).isEqualTo(Quantity.of(100));
+        assertThat(result.get(SkuId.of("SKU-999")).getTotalQuantity()).isEqualTo(Quantity.of(1099));
+        assertThat(result.get(SkuId.of("SKU-1000")).getTotalQuantity()).isEqualTo(Quantity.of(1100));
+        assertThat(result.get(SkuId.of("SKU-2499")).getTotalQuantity()).isEqualTo(Quantity.of(2599));
+    }
+    
+    @Test
+    @DisplayName("빈 리스트로 조회 시 빈 맵을 반환한다")
+    void shouldReturnEmptyMapWhenLoadingWithEmptyList() {
+        // when
+        Map<SkuId, Inventory> result = adapter.loadAllByIds(new ArrayList<>());
+        
+        // then
+        assertThat(result).isEmpty();
+        verify(inventoryJpaRepository, never()).findAllById(anyList());
+    }
+    
+    @Test
+    @DisplayName("null 리스트로 조회 시 빈 맵을 반환한다")
+    void shouldReturnEmptyMapWhenLoadingWithNullList() {
+        // when
+        Map<SkuId, Inventory> result = adapter.loadAllByIds(null);
+        
+        // then
+        assertThat(result).isEmpty();
+        verify(inventoryJpaRepository, never()).findAllById(anyList());
     }
 }

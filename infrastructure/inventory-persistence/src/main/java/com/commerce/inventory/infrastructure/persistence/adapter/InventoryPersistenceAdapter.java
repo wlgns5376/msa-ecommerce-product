@@ -13,7 +13,9 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -22,6 +24,8 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInventoryPort {
+    
+    private static final int BATCH_SIZE = 1000;
     
     private final InventoryJpaRepository inventoryJpaRepository;
     
@@ -38,16 +42,27 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
         if (skuIds == null || skuIds.isEmpty()) {
             return java.util.Collections.emptyMap();
         }
+        
+        Map<SkuId, Inventory> resultMap = new HashMap<>();
         List<String> skuIdValues = skuIds.stream()
                 .map(SkuId::value)
                 .collect(Collectors.toList());
         
-        return inventoryJpaRepository.findAllById(skuIdValues).stream()
-                .map(this::toDomainEntity)
-                .collect(Collectors.toMap(
-                        Inventory::getSkuId,
-                        java.util.function.Function.identity()
-                ));
+        for (int i = 0; i < skuIdValues.size(); i += BATCH_SIZE) {
+            int endIndex = Math.min(i + BATCH_SIZE, skuIdValues.size());
+            List<String> batch = skuIdValues.subList(i, endIndex);
+            
+            Map<SkuId, Inventory> batchResult = inventoryJpaRepository.findAllById(batch).stream()
+                    .map(this::toDomainEntity)
+                    .collect(Collectors.toMap(
+                            Inventory::getSkuId,
+                            java.util.function.Function.identity()
+                    ));
+            
+            resultMap.putAll(batchResult);
+        }
+        
+        return resultMap;
     }
     
     @Override
