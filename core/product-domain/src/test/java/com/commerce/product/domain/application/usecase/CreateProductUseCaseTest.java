@@ -12,11 +12,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -42,62 +46,47 @@ class CreateProductUseCaseTest {
         createProductUseCase = new CreateProductService(productRepository, eventPublisher);
     }
 
-    @Test
-    @DisplayName("정상적인 상품 생성 요청 처리")
-    void shouldCreateProductSuccessfully() {
-        // Given
-        CreateProductRequest request = CreateProductRequest.builder()
-                .name("Test Product")
-                .description("Test Description")
-                .type(ProductType.NORMAL)
-                .build();
-
-        // When
-        CreateProductResponse response = createProductUseCase.createProduct(request);
-
-        // Then
-        assertThat(response).isNotNull();
-        assertThat(response.getProductId()).isNotNull();
-        assertThat(response.getName()).isEqualTo("Test Product");
-        assertThat(response.getDescription()).isEqualTo("Test Description");
-        assertThat(response.getType()).isEqualTo(ProductType.NORMAL);
-        assertThat(response.getStatus()).isEqualTo(ProductStatus.DRAFT);
-
-        verify(productRepository, times(1)).save(any());
-        verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
-
-        ProductCreatedEvent event = eventCaptor.getValue();
-        assertThat(event.getName()).isEqualTo("Test Product");
-        assertThat(event.getType()).isEqualTo(ProductType.NORMAL);
+    private static Stream<Arguments> productCreationProvider() {
+        return Stream.of(
+                Arguments.of("Test Product", "Test Description", ProductType.NORMAL),
+                Arguments.of("Bundle Product", "Bundle Description", ProductType.BUNDLE)
+        );
     }
 
-    @Test
-    @DisplayName("Bundle 타입 상품 생성")
-    void shouldCreateBundleProductSuccessfully() {
+    @ParameterizedTest(name = "{index}: {2} 타입 상품 생성")
+    @MethodSource("productCreationProvider")
+    @DisplayName("정상적인 상품 생성 요청 처리")
+    void shouldCreateProductSuccessfully(String name, String description, ProductType type) {
         // Given
         CreateProductRequest request = CreateProductRequest.builder()
-                .name("Bundle Product")
-                .description("Bundle Description")
-                .type(ProductType.BUNDLE)
+                .name(name)
+                .description(description)
+                .type(type)
+                .build();
+
+        CreateProductResponse expectedResponse = CreateProductResponse.builder()
+                .name(name)
+                .description(description)
+                .type(type)
+                .status(ProductStatus.DRAFT)
                 .build();
 
         // When
         CreateProductResponse response = createProductUseCase.createProduct(request);
 
         // Then
-        assertThat(response).isNotNull();
         assertThat(response.getProductId()).isNotNull();
-        assertThat(response.getName()).isEqualTo("Bundle Product");
-        assertThat(response.getDescription()).isEqualTo("Bundle Description");
-        assertThat(response.getType()).isEqualTo(ProductType.BUNDLE);
-        assertThat(response.getStatus()).isEqualTo(ProductStatus.DRAFT);
+        assertThat(response)
+                .usingRecursiveComparison()
+                .ignoringFields("productId")
+                .isEqualTo(expectedResponse);
 
         verify(productRepository, times(1)).save(any());
         verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
 
         ProductCreatedEvent event = eventCaptor.getValue();
-        assertThat(event.getName()).isEqualTo("Bundle Product");
-        assertThat(event.getType()).isEqualTo(ProductType.BUNDLE);
+        assertThat(event.getName()).isEqualTo(name);
+        assertThat(event.getType()).isEqualTo(type);
     }
 
     @ParameterizedTest
