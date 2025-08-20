@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -32,6 +33,7 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
     private final LoadInventoryPort loadInventoryPort;
     private final SaveInventoryPort saveInventoryPort;
     private final ReservationRepository reservationRepository;
+    private final Clock clock;
     
     @Override
     @Transactional
@@ -139,7 +141,7 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
         ReservationId reservationId = inventory.reserve(requestedQuantity);
         
         // 예약 엔티티 생성
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         Reservation reservation = Reservation.create(
             reservationId,
             inventory.getSkuId(),

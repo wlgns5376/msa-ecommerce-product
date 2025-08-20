@@ -16,7 +16,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.*;
@@ -36,14 +39,20 @@ class ReserveBundleStockServiceTest {
     @Mock
     private ReservationRepository reservationRepository;
 
+    private Clock fixedClock;
     private ReserveBundleStockService sut;
 
     @BeforeEach
     void setUp() {
+        // 고정된 시간으로 Clock 생성
+        Instant fixedInstant = Instant.parse("2024-01-01T10:00:00Z");
+        fixedClock = Clock.fixed(fixedInstant, ZoneId.systemDefault());
+        
         sut = new ReserveBundleStockService(
             loadInventoryPort,
             saveInventoryPort,
-            reservationRepository
+            reservationRepository,
+            fixedClock
         );
     }
 
@@ -113,7 +122,7 @@ class ReserveBundleStockServiceTest {
         
         assertThat(skuReservation1.getQuantity()).isEqualTo(2);
         assertThat(skuReservation1.getStatus()).isEqualTo("ACTIVE");
-        assertThat(skuReservation1.getExpiresAt()).isAfter(LocalDateTime.now());
+        assertThat(skuReservation1.getExpiresAt()).isAfter(LocalDateTime.now(fixedClock));
 
         // 재고 저장 확인
         then(saveInventoryPort).should(times(2)).save(any(Inventory.class));
@@ -171,9 +180,6 @@ class ReserveBundleStockServiceTest {
         assertThat(response.getStatus()).isEqualTo("FAILED");
         assertThat(response.getFailureReason()).contains("재고가 부족합니다");
         assertThat(response.getSkuReservations()).isEmpty();
-
-        // 재고가 부족한 경우에도 첫 번째 SKU는 예약 시도되고 롤백됨
-        // 따라서 saveInventoryPort는 호출될 수 있음
     }
 
     @Test
@@ -412,7 +418,7 @@ class ReserveBundleStockServiceTest {
         assertThat(response.getStatus()).isEqualTo("COMPLETED");
         
         // 예약 만료 시간이 대략 900초 후인지 확인
-        LocalDateTime expectedExpiry = LocalDateTime.now().plusSeconds(900);
+        LocalDateTime expectedExpiry = LocalDateTime.now(fixedClock).plusSeconds(900);
         assertThat(response.getSkuReservations().get(0).getExpiresAt())
             .isBetween(expectedExpiry.minusSeconds(5), expectedExpiry.plusSeconds(5));
     }
