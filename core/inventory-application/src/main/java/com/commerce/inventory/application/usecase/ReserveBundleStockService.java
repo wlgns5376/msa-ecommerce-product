@@ -54,6 +54,16 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
             
             Map<SkuId, Inventory> inventoryMap = loadInventoryPort.loadAllByIds(allSkuIds);
             
+            // 모든 SKU가 존재하는지 사전 검증
+            if (inventoryMap.size() != allSkuIds.size()) {
+                Set<SkuId> foundSkuIds = inventoryMap.keySet();
+                String missingSkuIds = allSkuIds.stream()
+                        .filter(id -> !foundSkuIds.contains(id))
+                        .map(SkuId::value)
+                        .collect(Collectors.joining(", "));
+                throw new InvalidInventoryException("다음 SKU에 대한 재고 정보를 찾을 수 없습니다: " + missingSkuIds);
+            }
+            
             // 모든 번들 항목을 순차적으로 처리
             for (ReserveBundleStockCommand.BundleItem bundleItem : command.getBundleItems()) {
                 List<ReservedItem> bundleReservedItems = reserveBundleItem(
@@ -72,7 +82,7 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
             // 성공 응답 생성
             return createSuccessResponse(sagaId, command.getOrderId(), reservedItems);
             
-        } catch (InsufficientStockException | InvalidInventoryException | IllegalArgumentException e) {
+        } catch (InsufficientStockException | InvalidInventoryException e) {
             log.error("번들 재고 예약 실패: sagaId={}, error={}", sagaId, e.getMessage(), e);
             
             // 실패 응답 생성 (트랜잭션이 자동으로 롤백됨)
@@ -96,11 +106,6 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
             // 재고 조회 (이미 로드된 맵에서 가져옴)
             SkuId skuId = new SkuId(skuMapping.getSkuId());
             Inventory inventory = inventoryMap.get(skuId);
-            if (inventory == null) {
-                throw new InvalidInventoryException(
-                    "재고를 찾을 수 없습니다: " + skuMapping.getSkuId()
-                );
-            }
             
             // 재고 예약
             ReservedItem reservedItem = reserveInventory(
