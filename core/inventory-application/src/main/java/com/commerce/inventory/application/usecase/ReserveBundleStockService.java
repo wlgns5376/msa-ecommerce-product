@@ -50,16 +50,28 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
         Set<Inventory> modifiedInventories = new HashSet<>();
         
         try {
-            // 모든 SKU ID를 수집하여 한 번에 조회
-            List<SkuId> allSkuIds = command.getBundleItems().stream()
-                .flatMap(bundleItem -> bundleItem.getSkuMappings().stream()
-                    .map(mapping -> new SkuId(mapping.getSkuId())))
-                .distinct()
-                .collect(Collectors.toList());
+            // 1. SKU별 총 필요 수량 계산
+            Map<SkuId, Integer> totalRequiredQuantities = command.getBundleItems().stream()
+                .flatMap(item -> item.getSkuMappings().stream()
+                    .map(mapping -> new AbstractMap.SimpleEntry<>(
+                        new SkuId(mapping.getSkuId()),
+                        mapping.getQuantity() * item.getQuantity()
+                    )))
+                .collect(Collectors.toMap(
+                    Map.Entry::getKey,
+                    Map.Entry::getValue,
+                    Integer::sum
+                ));
             
+            if (totalRequiredQuantities.isEmpty()) {
+                return createSuccessResponse(sagaId, command.getOrderId(), Collections.emptyList());
+            }
+
+            // 2. 모든 재고 정보 한 번에 조회
+            List<SkuId> allSkuIds = new ArrayList<>(totalRequiredQuantities.keySet());
             Map<SkuId, Inventory> inventoryMap = loadInventoryPort.loadAllByIds(allSkuIds);
             
-            // 모든 SKU가 존재하는지 사전 검증
+            // 3. 존재하지 않는 SKU 검증
             if (inventoryMap.size() != allSkuIds.size()) {
                 Set<SkuId> foundSkuIds = inventoryMap.keySet();
                 String missingSkuIds = allSkuIds.stream()
@@ -69,22 +81,46 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
                 throw new InvalidInventoryException("다음 SKU에 대한 재고 정보를 찾을 수 없습니다: " + missingSkuIds);
             }
             
-            // 모든 번들 항목을 순차적으로 처리
-            for (ReserveBundleStockCommand.BundleItem bundleItem : command.getBundleItems()) {
-                List<ReservedItem> bundleReservedItems = reserveBundleItem(
-                    bundleItem, 
-                    command.getOrderId(), 
-                    command.getTtlSeconds(),
-                    inventoryMap,
-                    modifiedInventories
-                );
-                reservedItems.addAll(bundleReservedItems);
+            // 4. 모든 항목에 대한 재고 가용성 사전 확인
+            for (Map.Entry<SkuId, Integer> entry : totalRequiredQuantities.entrySet()) {
+                SkuId skuId = entry.getKey();
+                Integer requiredQuantity = entry.getValue();
+                Inventory inventory = inventoryMap.get(skuId);
+                
+                if (!inventory.canReserve(Quantity.of(requiredQuantity))) {
+                    throw new InsufficientStockException(
+                        String.format("재고가 부족합니다. SKU: %s, 가용 재고: %d, 요청 수량: %d",
+                            skuId.value(),
+                            inventory.getAvailableQuantity().value(),
+                            requiredQuantity)
+                    );
+                }
             }
             
-            // 변경된 재고 정보를 일괄 저장
+            // 5. 모든 검증 통과 후 재고 예약 실행
+            for (ReserveBundleStockCommand.BundleItem bundleItem : command.getBundleItems()) {
+                for (ReserveBundleStockCommand.SkuMapping skuMapping : bundleItem.getSkuMappings()) {
+                    int requiredQuantity = skuMapping.getQuantity() * bundleItem.getQuantity();
+                    if (requiredQuantity <= 0) {
+                        continue;
+                    }
+
+                    Inventory inventory = inventoryMap.get(new SkuId(skuMapping.getSkuId()));
+                    ReservedItem reservedItem = reserveInventory(
+                        inventory,
+                        requiredQuantity,
+                        command.getOrderId(),
+                        command.getTtlSeconds() != null ? command.getTtlSeconds() : DEFAULT_TTL_SECONDS
+                    );
+                    reservedItems.add(reservedItem);
+                    modifiedInventories.add(inventory);
+                }
+            }
+            
+            // 6. 변경된 재고 정보 일괄 저장
             saveInventoryPort.saveAll(modifiedInventories);
             
-            // 성공 응답 생성
+            // 7. 성공 응답 생성
             return createSuccessResponse(sagaId, command.getOrderId(), reservedItems);
             
         } catch (InsufficientStockException | InvalidInventoryException e) {
@@ -93,40 +129,6 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
             // 실패 응답 생성 (트랜잭션이 자동으로 롤백됨)
             return createFailureResponse(sagaId, command.getOrderId(), e.getMessage());
         }
-    }
-    
-    private List<ReservedItem> reserveBundleItem(
-        ReserveBundleStockCommand.BundleItem bundleItem,
-        String orderId,
-        Integer ttlSeconds,
-        Map<SkuId, Inventory> inventoryMap,
-        Set<Inventory> modifiedInventories
-    ) {
-        List<ReservedItem> reservedItems = new ArrayList<>();
-        
-        // 번들의 각 SKU에 대해 필요한 수량 계산
-        for (ReserveBundleStockCommand.SkuMapping skuMapping : bundleItem.getSkuMappings()) {
-            int requiredQuantity = skuMapping.getQuantity() * bundleItem.getQuantity();
-            
-            // 재고 조회 (이미 로드된 맵에서 가져옴)
-            SkuId skuId = new SkuId(skuMapping.getSkuId());
-            Inventory inventory = inventoryMap.get(skuId);
-            
-            // 재고 예약
-            ReservedItem reservedItem = reserveInventory(
-                inventory,
-                requiredQuantity,
-                orderId,
-                ttlSeconds != null ? ttlSeconds : DEFAULT_TTL_SECONDS
-            );
-            
-            // 수정된 재고를 Set에 추가
-            modifiedInventories.add(inventory);
-            
-            reservedItems.add(reservedItem);
-        }
-        
-        return reservedItems;
     }
     
     private ReservedItem reserveInventory(

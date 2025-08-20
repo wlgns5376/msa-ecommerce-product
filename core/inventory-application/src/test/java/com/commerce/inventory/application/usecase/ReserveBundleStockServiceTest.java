@@ -181,7 +181,7 @@ class ReserveBundleStockServiceTest {
             new SkuId("SKU-002"), inventory2
         );
         given(loadInventoryPort.loadAllByIds(anyList())).willReturn(inventoryMap);
-        given(reservationRepository.save(any(Reservation.class))).willAnswer(invocation -> invocation.getArgument(0));
+        // 리팩토링 후 사전 검증에서 재고 부족이 감지되므로 reservation save 모킹 불필요
 
         // When
         BundleReservationResponse response = sut.execute(command);
@@ -351,31 +351,8 @@ class ReserveBundleStockServiceTest {
         );
         given(loadInventoryPort.loadAllByIds(anyList())).willReturn(inventoryMap);
         
-        // 첫 두 개는 예약 성공, 세 번째에서 실패
-        ReservationId reservationId1 = ReservationId.generate();
-        ReservationId reservationId2 = ReservationId.generate();
-        
-        Reservation reservation1 = Reservation.create(
-            reservationId1,
-            new SkuId("SKU-001"),
-            Quantity.of(2),
-            "ORDER-001",
-            LocalDateTime.now().plusSeconds(900),
-            LocalDateTime.now()
-        );
-        
-        Reservation reservation2 = Reservation.create(
-            reservationId2,
-            new SkuId("SKU-002"),
-            Quantity.of(1),
-            "ORDER-001",
-            LocalDateTime.now().plusSeconds(900),
-            LocalDateTime.now()
-        );
-        
-        given(reservationRepository.save(any(Reservation.class)))
-            .willReturn(reservation1)
-            .willReturn(reservation2);
+        // 리팩토링 후 사전 검증에서 재고 부족이 감지되므로 
+        // reservation save 모킹이 더 이상 필요하지 않음
 
         // When
         BundleReservationResponse response = sut.execute(command);
@@ -385,11 +362,11 @@ class ReserveBundleStockServiceTest {
         assertThat(response.getFailureReason()).contains("재고가 부족합니다");
         assertThat(response.getSkuReservations()).isEmpty();
         
-        // 트랜잭션이 롤백되므로 실제로는 아무것도 저장되지 않음
-        // 리팩토링으로 인해 예외 발생 시 saveInventoryPort.saveAll()는 호출되지 않음
+        // 리팩토링으로 인해 사전 검증 단계에서 재고 부족이 감지되므로
+        // 실제 예약 로직이 실행되지 않아 save 메서드들이 호출되지 않음
         then(saveInventoryPort).should(never()).saveAll(anyCollection());
-        // reservation save는 예외 발생 전까지 호출됨 (2번 성공, 3번째에서 예외 발생)
-        then(reservationRepository).should(times(2)).save(any(Reservation.class));
+        then(saveInventoryPort).should(never()).save(any(Inventory.class));
+        then(reservationRepository).should(never()).save(any(Reservation.class));
     }
 
     @Test
