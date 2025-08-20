@@ -86,7 +86,7 @@ PRD 문서와 설계 문서를 기반으로 수립한 구현 작업 계획입니
 - [x] CreateSkuUseCase
 - [x] ReceiveStockUseCase
 - [x] ReserveStockUseCase
-- [ ] ReserveBundleStockUseCase (Saga 패턴 기반)
+- [x] ReserveBundleStockUseCase (Saga 패턴 기반)
 - [x] ReleaseReservationUseCase
 - [x] GetInventoryUseCase
 

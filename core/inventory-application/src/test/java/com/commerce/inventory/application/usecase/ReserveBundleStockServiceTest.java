@@ -1,0 +1,476 @@
+package com.commerce.inventory.application.usecase;
+
+import com.commerce.common.domain.model.Quantity;
+import com.commerce.inventory.application.port.in.BundleReservationResponse;
+import com.commerce.inventory.application.port.in.ReserveBundleStockCommand;
+import com.commerce.inventory.application.port.out.LoadInventoryPort;
+import com.commerce.inventory.application.port.out.SaveInventoryPort;
+import com.commerce.inventory.domain.exception.InsufficientStockException;
+import com.commerce.inventory.domain.exception.InvalidInventoryException;
+import com.commerce.inventory.domain.model.*;
+import com.commerce.inventory.domain.repository.ReservationRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDateTime;
+import java.util.*;
+
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.BDDMockito.*;
+
+@ExtendWith(MockitoExtension.class)
+@DisplayName("ReserveBundleStockService 테스트")
+class ReserveBundleStockServiceTest {
+
+    @Mock
+    private LoadInventoryPort loadInventoryPort;
+
+    @Mock
+    private SaveInventoryPort saveInventoryPort;
+
+    @Mock
+    private ReservationRepository reservationRepository;
+
+    private ReserveBundleStockService sut;
+
+    @BeforeEach
+    void setUp() {
+        sut = new ReserveBundleStockService(
+            loadInventoryPort,
+            saveInventoryPort,
+            reservationRepository
+        );
+    }
+
+    @Test
+    @DisplayName("단일 번들 상품의 재고를 성공적으로 예약한다")
+    void reserveBundleStock_singleBundle_success() {
+        // Given
+        String orderId = "ORDER-001";
+        String reservationId = "BUNDLE-RESERVATION-001";
+        
+        ReserveBundleStockCommand.BundleItem bundleItem = ReserveBundleStockCommand.BundleItem.builder()
+            .productOptionId("OPTION-001")
+            .skuMappings(List.of(
+                ReserveBundleStockCommand.SkuMapping.builder()
+                    .skuId("SKU-001")
+                    .quantity(2)
+                    .build(),
+                ReserveBundleStockCommand.SkuMapping.builder()
+                    .skuId("SKU-002")
+                    .quantity(1)
+                    .build()
+            ))
+            .quantity(1)
+            .build();
+
+        ReserveBundleStockCommand command = ReserveBundleStockCommand.builder()
+            .orderId(orderId)
+            .reservationId(reservationId)
+            .bundleItems(List.of(bundleItem))
+            .ttlSeconds(900)
+            .build();
+
+        // 재고 설정
+        Inventory inventory1 = Inventory.createWithInitialStock(
+            new SkuId("SKU-001"), 
+            Quantity.of(10)
+        );
+        Inventory inventory2 = Inventory.createWithInitialStock(
+            new SkuId("SKU-002"), 
+            Quantity.of(5)
+        );
+
+        given(loadInventoryPort.load(new SkuId("SKU-001"))).willReturn(Optional.of(inventory1));
+        given(loadInventoryPort.load(new SkuId("SKU-002"))).willReturn(Optional.of(inventory2));
+        given(reservationRepository.save(any(Reservation.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        BundleReservationResponse response = sut.execute(command);
+
+        // Then
+        assertThat(response).isNotNull();
+        assertThat(response.getSagaId()).isEqualTo(reservationId);
+        assertThat(response.getOrderId()).isEqualTo(orderId);
+        assertThat(response.getStatus()).isEqualTo("COMPLETED");
+        assertThat(response.getSkuReservations()).hasSize(2);
+        assertThat(response.getFailureReason()).isNull();
+
+        // 각 SKU 예약 확인
+        BundleReservationResponse.SkuReservation skuReservation1 = 
+            response.getSkuReservations().stream()
+                .filter(r -> r.getSkuId().equals("SKU-001"))
+                .findFirst()
+                .orElseThrow();
+        
+        assertThat(skuReservation1.getQuantity()).isEqualTo(2);
+        assertThat(skuReservation1.getStatus()).isEqualTo("ACTIVE");
+        assertThat(skuReservation1.getExpiresAt()).isAfter(LocalDateTime.now());
+
+        // 재고 저장 확인
+        then(saveInventoryPort).should(times(2)).save(any(Inventory.class));
+        then(reservationRepository).should(times(2)).save(any(Reservation.class));
+    }
+
+    @Test
+    @DisplayName("번들 상품의 일부 SKU 재고가 부족하면 전체 예약이 실패한다")
+    void reserveBundleStock_insufficientStock_fail() {
+        // Given
+        ReserveBundleStockCommand.BundleItem bundleItem = ReserveBundleStockCommand.BundleItem.builder()
+            .productOptionId("OPTION-001")
+            .skuMappings(List.of(
+                ReserveBundleStockCommand.SkuMapping.builder()
+                    .skuId("SKU-001")
+                    .quantity(2)
+                    .build(),
+                ReserveBundleStockCommand.SkuMapping.builder()
+                    .skuId("SKU-002")
+                    .quantity(3)
+                    .build()
+            ))
+            .quantity(2) // 2세트 주문
+            .build();
+
+        ReserveBundleStockCommand command = ReserveBundleStockCommand.builder()
+            .orderId("ORDER-001")
+            .reservationId("BUNDLE-RESERVATION-001")
+            .bundleItems(List.of(bundleItem))
+            .ttlSeconds(900)
+            .build();
+
+        // SKU-001: 충분한 재고, SKU-002: 부족한 재고
+        Inventory inventory1 = Inventory.createWithInitialStock(
+            new SkuId("SKU-001"), 
+            Quantity.of(10)
+        );
+        Inventory inventory2 = Inventory.createWithInitialStock(
+            new SkuId("SKU-002"), 
+            Quantity.of(5) // 6개 필요하지만 5개만 있음
+        );
+
+        given(loadInventoryPort.load(new SkuId("SKU-001"))).willReturn(Optional.of(inventory1));
+        given(loadInventoryPort.load(new SkuId("SKU-002"))).willReturn(Optional.of(inventory2));
+
+        // When
+        BundleReservationResponse response = sut.execute(command);
+
+        // Then
+        assertThat(response).isNotNull();
+        assertThat(response.getStatus()).isEqualTo("FAILED");
+        assertThat(response.getFailureReason()).contains("재고가 부족합니다");
+        assertThat(response.getSkuReservations()).isEmpty();
+
+        // 재고가 부족한 경우에도 첫 번째 SKU는 예약 시도되고 롤백됨
+        // 따라서 saveInventoryPort는 호출될 수 있음
+    }
+
+    @Test
+    @DisplayName("여러 번들 상품을 동시에 예약할 수 있다")
+    void reserveBundleStock_multipleBundles_success() {
+        // Given
+        ReserveBundleStockCommand.BundleItem bundleItem1 = ReserveBundleStockCommand.BundleItem.builder()
+            .productOptionId("OPTION-001")
+            .skuMappings(List.of(
+                ReserveBundleStockCommand.SkuMapping.builder()
+                    .skuId("SKU-001")
+                    .quantity(1)
+                    .build()
+            ))
+            .quantity(2)
+            .build();
+
+        ReserveBundleStockCommand.BundleItem bundleItem2 = ReserveBundleStockCommand.BundleItem.builder()
+            .productOptionId("OPTION-002")
+            .skuMappings(List.of(
+                ReserveBundleStockCommand.SkuMapping.builder()
+                    .skuId("SKU-002")
+                    .quantity(1)
+                    .build(),
+                ReserveBundleStockCommand.SkuMapping.builder()
+                    .skuId("SKU-003")
+                    .quantity(2)
+                    .build()
+            ))
+            .quantity(1)
+            .build();
+
+        ReserveBundleStockCommand command = ReserveBundleStockCommand.builder()
+            .orderId("ORDER-001")
+            .reservationId("BUNDLE-RESERVATION-001")
+            .bundleItems(List.of(bundleItem1, bundleItem2))
+            .ttlSeconds(900)
+            .build();
+
+        // 재고 설정
+        Inventory inventory1 = Inventory.createWithInitialStock(new SkuId("SKU-001"), Quantity.of(10));
+        Inventory inventory2 = Inventory.createWithInitialStock(new SkuId("SKU-002"), Quantity.of(5));
+        Inventory inventory3 = Inventory.createWithInitialStock(new SkuId("SKU-003"), Quantity.of(8));
+
+        given(loadInventoryPort.load(new SkuId("SKU-001"))).willReturn(Optional.of(inventory1));
+        given(loadInventoryPort.load(new SkuId("SKU-002"))).willReturn(Optional.of(inventory2));
+        given(loadInventoryPort.load(new SkuId("SKU-003"))).willReturn(Optional.of(inventory3));
+        given(reservationRepository.save(any(Reservation.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        BundleReservationResponse response = sut.execute(command);
+
+        // Then
+        assertThat(response.getStatus()).isEqualTo("COMPLETED");
+        assertThat(response.getSkuReservations()).hasSize(3);
+        
+        // SKU-001은 2개 예약되었는지 확인
+        int sku001TotalQuantity = response.getSkuReservations().stream()
+            .filter(r -> r.getSkuId().equals("SKU-001"))
+            .mapToInt(BundleReservationResponse.SkuReservation::getQuantity)
+            .sum();
+        assertThat(sku001TotalQuantity).isEqualTo(2);
+
+        then(saveInventoryPort).should(times(3)).save(any(Inventory.class));
+        then(reservationRepository).should(times(3)).save(any(Reservation.class));
+    }
+
+    @Test
+    @DisplayName("SKU가 존재하지 않으면 예약이 실패한다")
+    void reserveBundleStock_skuNotFound_fail() {
+        // Given
+        ReserveBundleStockCommand.BundleItem bundleItem = ReserveBundleStockCommand.BundleItem.builder()
+            .productOptionId("OPTION-001")
+            .skuMappings(List.of(
+                ReserveBundleStockCommand.SkuMapping.builder()
+                    .skuId("SKU-001")
+                    .quantity(1)
+                    .build(),
+                ReserveBundleStockCommand.SkuMapping.builder()
+                    .skuId("SKU-NOT-EXIST")
+                    .quantity(1)
+                    .build()
+            ))
+            .quantity(1)
+            .build();
+
+        ReserveBundleStockCommand command = ReserveBundleStockCommand.builder()
+            .orderId("ORDER-001")
+            .reservationId("BUNDLE-RESERVATION-001")
+            .bundleItems(List.of(bundleItem))
+            .ttlSeconds(900)
+            .build();
+
+        Inventory inventory1 = Inventory.createWithInitialStock(new SkuId("SKU-001"), Quantity.of(10));
+        
+        given(loadInventoryPort.load(new SkuId("SKU-001"))).willReturn(Optional.of(inventory1));
+        given(loadInventoryPort.load(new SkuId("SKU-NOT-EXIST"))).willReturn(Optional.empty());
+
+        // When
+        BundleReservationResponse response = sut.execute(command);
+
+        // Then
+        assertThat(response.getStatus()).isEqualTo("FAILED");
+        assertThat(response.getFailureReason()).contains("재고를 찾을 수 없습니다");
+        assertThat(response.getSkuReservations()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("예약 중 일부가 실패하면 이미 예약된 항목들을 롤백한다")
+    void reserveBundleStock_partialFailure_rollback() {
+        // Given
+        ReserveBundleStockCommand.BundleItem bundleItem = ReserveBundleStockCommand.BundleItem.builder()
+            .productOptionId("OPTION-001")
+            .skuMappings(List.of(
+                ReserveBundleStockCommand.SkuMapping.builder()
+                    .skuId("SKU-001")
+                    .quantity(2)
+                    .build(),
+                ReserveBundleStockCommand.SkuMapping.builder()
+                    .skuId("SKU-002")
+                    .quantity(1)
+                    .build(),
+                ReserveBundleStockCommand.SkuMapping.builder()
+                    .skuId("SKU-003")
+                    .quantity(3)
+                    .build()
+            ))
+            .quantity(1)
+            .build();
+
+        ReserveBundleStockCommand command = ReserveBundleStockCommand.builder()
+            .orderId("ORDER-001")
+            .reservationId("BUNDLE-RESERVATION-001")
+            .bundleItems(List.of(bundleItem))
+            .ttlSeconds(900)
+            .build();
+
+        // SKU-001, SKU-002는 충분한 재고, SKU-003는 부족한 재고
+        Inventory inventory1 = Inventory.createWithInitialStock(new SkuId("SKU-001"), Quantity.of(10));
+        Inventory inventory2 = Inventory.createWithInitialStock(new SkuId("SKU-002"), Quantity.of(5));
+        Inventory inventory3 = Inventory.createWithInitialStock(new SkuId("SKU-003"), Quantity.of(2)); // 3개 필요하지만 2개만 있음
+
+        given(loadInventoryPort.load(new SkuId("SKU-001"))).willReturn(Optional.of(inventory1));
+        given(loadInventoryPort.load(new SkuId("SKU-002"))).willReturn(Optional.of(inventory2));
+        given(loadInventoryPort.load(new SkuId("SKU-003"))).willReturn(Optional.of(inventory3));
+        
+        // 첫 두 개는 예약 성공, 세 번째에서 실패
+        ReservationId reservationId1 = ReservationId.generate();
+        ReservationId reservationId2 = ReservationId.generate();
+        
+        Reservation reservation1 = Reservation.create(
+            reservationId1,
+            new SkuId("SKU-001"),
+            Quantity.of(2),
+            "ORDER-001",
+            LocalDateTime.now().plusSeconds(900),
+            LocalDateTime.now()
+        );
+        
+        Reservation reservation2 = Reservation.create(
+            reservationId2,
+            new SkuId("SKU-002"),
+            Quantity.of(1),
+            "ORDER-001",
+            LocalDateTime.now().plusSeconds(900),
+            LocalDateTime.now()
+        );
+        
+        given(reservationRepository.save(any(Reservation.class)))
+            .willReturn(reservation1)
+            .willReturn(reservation2);
+
+        // When
+        BundleReservationResponse response = sut.execute(command);
+
+        // Then
+        assertThat(response.getStatus()).isEqualTo("FAILED");
+        assertThat(response.getFailureReason()).contains("재고가 부족합니다");
+        
+        // 롤백 확인 - 성공적으로 예약된 항목들이 롤백되어야 함
+        assertThat(response.getSkuReservations()).isEmpty();
+        
+        // 롤백 과정에서 재고 저장이 일어남
+        then(saveInventoryPort).should(atLeast(2)).save(any(Inventory.class));
+    }
+
+    @Test
+    @DisplayName("TTL이 설정되지 않으면 기본값 900초를 사용한다")
+    void reserveBundleStock_defaultTTL() {
+        // Given
+        ReserveBundleStockCommand command = ReserveBundleStockCommand.builder()
+            .orderId("ORDER-001")
+            .reservationId("BUNDLE-RESERVATION-001")
+            .bundleItems(List.of(
+                ReserveBundleStockCommand.BundleItem.builder()
+                    .productOptionId("OPTION-001")
+                    .skuMappings(List.of(
+                        ReserveBundleStockCommand.SkuMapping.builder()
+                            .skuId("SKU-001")
+                            .quantity(1)
+                            .build()
+                    ))
+                    .quantity(1)
+                    .build()
+            ))
+            .ttlSeconds(null) // TTL 미설정
+            .build();
+
+        Inventory inventory = Inventory.createWithInitialStock(new SkuId("SKU-001"), Quantity.of(10));
+        given(loadInventoryPort.load(new SkuId("SKU-001"))).willReturn(Optional.of(inventory));
+        given(reservationRepository.save(any(Reservation.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        BundleReservationResponse response = sut.execute(command);
+
+        // Then
+        assertThat(response.getStatus()).isEqualTo("COMPLETED");
+        
+        // 예약 만료 시간이 대략 900초 후인지 확인
+        LocalDateTime expectedExpiry = LocalDateTime.now().plusSeconds(900);
+        assertThat(response.getSkuReservations().get(0).getExpiresAt())
+            .isBetween(expectedExpiry.minusSeconds(5), expectedExpiry.plusSeconds(5));
+    }
+
+    @Test
+    @DisplayName("동일한 SKU가 여러 번들에 포함된 경우 각각 예약된다")
+    void reserveBundleStock_sameSkuInMultipleBundles() {
+        // Given
+        ReserveBundleStockCommand command = ReserveBundleStockCommand.builder()
+            .orderId("ORDER-001")
+            .reservationId("BUNDLE-RESERVATION-001")
+            .bundleItems(List.of(
+                ReserveBundleStockCommand.BundleItem.builder()
+                    .productOptionId("OPTION-001")
+                    .skuMappings(List.of(
+                        ReserveBundleStockCommand.SkuMapping.builder()
+                            .skuId("SKU-001")
+                            .quantity(2)
+                            .build()
+                    ))
+                    .quantity(1)
+                    .build(),
+                ReserveBundleStockCommand.BundleItem.builder()
+                    .productOptionId("OPTION-002")
+                    .skuMappings(List.of(
+                        ReserveBundleStockCommand.SkuMapping.builder()
+                            .skuId("SKU-001") // 동일한 SKU
+                            .quantity(3)
+                            .build()
+                    ))
+                    .quantity(1)
+                    .build()
+            ))
+            .ttlSeconds(900)
+            .build();
+
+        Inventory inventory = Inventory.createWithInitialStock(new SkuId("SKU-001"), Quantity.of(10));
+        given(loadInventoryPort.load(new SkuId("SKU-001"))).willReturn(Optional.of(inventory));
+        given(reservationRepository.save(any(Reservation.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        BundleReservationResponse response = sut.execute(command);
+
+        // Then
+        assertThat(response.getStatus()).isEqualTo("COMPLETED");
+        assertThat(response.getSkuReservations()).hasSize(2);
+        
+        // 총 5개가 예약되었는지 확인
+        int totalReserved = response.getSkuReservations().stream()
+            .mapToInt(BundleReservationResponse.SkuReservation::getQuantity)
+            .sum();
+        assertThat(totalReserved).isEqualTo(5);
+        
+        // 재고의 예약 수량 확인
+        assertThat(inventory.getReservedQuantity()).isEqualTo(Quantity.of(5));
+    }
+
+    @Test
+    @DisplayName("잘못된 입력값이 주어지면 예외가 발생한다")
+    void reserveBundleStock_invalidInput_throwsException() {
+        // Given - null command
+        assertThatThrownBy(() -> sut.execute(null))
+            .isInstanceOf(IllegalArgumentException.class);
+
+        // Given - empty order ID
+        ReserveBundleStockCommand emptyOrderIdCommand = ReserveBundleStockCommand.builder()
+            .orderId("")
+            .reservationId("BUNDLE-RESERVATION-001")
+            .bundleItems(List.of())
+            .build();
+        
+        assertThatThrownBy(() -> sut.execute(emptyOrderIdCommand))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("주문 ID");
+
+        // Given - empty bundle items
+        ReserveBundleStockCommand emptyItemsCommand = ReserveBundleStockCommand.builder()
+            .orderId("ORDER-001")
+            .reservationId("BUNDLE-RESERVATION-001")
+            .bundleItems(List.of())
+            .build();
+        
+        assertThatThrownBy(() -> sut.execute(emptyItemsCommand))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("번들 항목");
+    }
+}
