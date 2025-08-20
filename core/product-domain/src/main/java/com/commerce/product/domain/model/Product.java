@@ -33,8 +33,10 @@ public class Product extends AggregateRoot<ProductId> {
     public static Product create(ProductName name, String description, ProductType type) {
         validateCreation(name, type);
         
+        String validDescription = description != null ? description : "";
+        
         ProductId id = ProductId.generate();
-        Product product = new Product(id, name, description, type);
+        Product product = new Product(id, name, validDescription, type);
         product.addDomainEvent(new ProductCreatedEvent(id, name.value(), type));
         
         return product;
