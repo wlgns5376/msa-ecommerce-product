@@ -23,6 +23,7 @@ public class ProductDomainEventHandler {
             log.error("Failed to publish domain event of type {}: {}. Event: {}", 
                 event.getClass().getSimpleName(), e.getMessage(), event, e);
             // TODO: 실패한 이벤트를 Dead Letter Queue에 보내는 등의 추가적인 오류 처리 로직을 고려해야 합니다.
+            throw new RuntimeException("Failed to publish domain event", e);
         }
     }
 }
