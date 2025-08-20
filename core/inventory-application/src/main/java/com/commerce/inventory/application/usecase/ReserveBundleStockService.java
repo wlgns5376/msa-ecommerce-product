@@ -45,10 +45,6 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
     @Override
     @Transactional
     public BundleReservationResponse execute(ReserveBundleStockCommand command) {
-        if (command == null) {
-            throw new IllegalArgumentException("예약 요청이 null일 수 없습니다");
-        }
-        
         validateCommand(command);
         
         String sagaId = command.getSagaId();
@@ -98,7 +94,7 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
                 SkuReservationRequest::skuId,
                 Collectors.mapping(
                     SkuReservationRequest::quantity,
-                    Collectors.reducing(Quantity.zero(), Quantity::add)
+                    Collectors.reducing(Quantity.zero(), (q1, q2) -> Quantity.of(Math.addExact(q1.value(), q2.value())))
                 )
             ));
     }
@@ -225,6 +221,9 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
     }
     
     private void validateCommand(ReserveBundleStockCommand command) {
+        if (command == null) {
+            throw new IllegalArgumentException("예약 요청이 null일 수 없습니다");
+        }
         Set<ConstraintViolation<ReserveBundleStockCommand>> violations = validator.validate(command);
         if (!violations.isEmpty()) {
             String errorMessage = violations.stream()
