@@ -288,8 +288,8 @@ class ReserveBundleStockServiceTest {
     }
 
     @Test
-    @DisplayName("예약 중 일부가 실패하면 이미 예약된 항목들을 롤백한다")
-    void reserveBundleStock_partialFailure_rollback() {
+    @DisplayName("예약 중 일부가 실패하면 트랜잭션이 롤백되어 전체 예약이 취소된다")
+    void reserveBundleStock_partialFailure_transactionRollback() {
         // Given
         ReserveBundleStockCommand.BundleItem bundleItem = ReserveBundleStockCommand.BundleItem.builder()
             .productOptionId("OPTION-001")
@@ -362,14 +362,12 @@ class ReserveBundleStockServiceTest {
         // Then
         assertThat(response.getStatus()).isEqualTo("FAILED");
         assertThat(response.getFailureReason()).contains("재고가 부족합니다");
-        
-        // 롤백 확인 - 성공적으로 예약된 항목들이 롤백되어야 함
         assertThat(response.getSkuReservations()).isEmpty();
         
-        // 예약 시도 2번만 발생하고 3번째에서 실패하므로 롤백도 2번만 발생
-        // 하지만 Inventory는 2번만 저장됨 (롤백 시 inventory 객체가 동일한 인스턴스)
-        then(saveInventoryPort).should(atLeast(2)).save(any(Inventory.class));
-        then(reservationRepository).should(atLeast(2)).save(any(Reservation.class));
+        // 트랜잭션이 롤백되므로 실제로는 아무것도 저장되지 않음
+        // 하지만 메서드 호출은 발생함 (2번 성공, 3번째에서 예외 발생)
+        then(saveInventoryPort).should(times(2)).save(any(Inventory.class));
+        then(reservationRepository).should(times(2)).save(any(Reservation.class));
     }
 
     @Test

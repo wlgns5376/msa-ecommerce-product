@@ -68,10 +68,7 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
         } catch (InsufficientStockException | InvalidInventoryException | IllegalArgumentException e) {
             log.error("번들 재고 예약 실패: sagaId={}, error={}", sagaId, e.getMessage(), e);
             
-            // 실패 시 이미 예약된 항목들을 롤백
-            rollbackReservations(reservedItems);
-            
-            // 실패 응답 생성
+            // 실패 응답 생성 (트랜잭션이 자동으로 롤백됨)
             return createFailureResponse(sagaId, command.getOrderId(), e.getMessage());
         }
     }
@@ -156,29 +153,6 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
             savedReservation.getExpiresAt(),
             inventory
         );
-    }
-    
-    private void rollbackReservations(List<ReservedItem> reservedItems) {
-        for (ReservedItem item : reservedItems) {
-            try {
-                // 예약 조회
-                Reservation reservation = reservationRepository.findById(item.reservationId)
-                    .orElse(null);
-                
-                if (reservation != null && reservation.isActive(LocalDateTime.now())) {
-                    // 예약 해제
-                    reservation.release();
-                    reservationRepository.save(reservation);
-                    
-                    // 재고의 예약 수량 복원
-                    item.inventory.releaseReservedQuantity(item.quantity);
-                    saveInventoryPort.save(item.inventory);
-                }
-            } catch (Exception e) {
-                log.error("예약 롤백 실패: reservationId={}, error={}", 
-                    item.reservationId.value(), e.getMessage(), e);
-            }
-        }
     }
     
     private BundleReservationResponse createSuccessResponse(
@@ -279,26 +253,12 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
         }
     }
     
-    // 내부 클래스: 예약된 항목 정보
-    private static class ReservedItem {
-        final SkuId skuId;
-        final ReservationId reservationId;
-        final Quantity quantity;
-        final LocalDateTime expiresAt;
-        final Inventory inventory;
-        
-        ReservedItem(
-            SkuId skuId,
-            ReservationId reservationId,
-            Quantity quantity,
-            LocalDateTime expiresAt,
-            Inventory inventory
-        ) {
-            this.skuId = skuId;
-            this.reservationId = reservationId;
-            this.quantity = quantity;
-            this.expiresAt = expiresAt;
-            this.inventory = inventory;
-        }
-    }
+    // 내부 레코드: 예약된 항목 정보
+    private record ReservedItem(
+        SkuId skuId,
+        ReservationId reservationId,
+        Quantity quantity,
+        LocalDateTime expiresAt,
+        Inventory inventory
+    ) {}
 }
