@@ -26,7 +26,7 @@ public class ProductDomainEventHandler {
     @Retryable(
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2, maxDelay = 5000),
-        include = { Exception.class }
+        include = { java.io.IOException.class, org.springframework.dao.TransientDataAccessException.class }
     )
     public void publishEventWithRetry(DomainEvent event) {
         try {
