@@ -82,7 +82,7 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
         return command.getBundleItems().stream()
             .flatMap(bundleItem -> bundleItem.getSkuMappings().stream()
                 .map(skuMapping -> new SkuReservationRequest(
-                    new SkuId(skuMapping.getSkuId()),
+                    SkuId.of(skuMapping.getSkuId()),
                     Quantity.of(skuMapping.getQuantity() * bundleItem.getQuantity())
                 ))
             )

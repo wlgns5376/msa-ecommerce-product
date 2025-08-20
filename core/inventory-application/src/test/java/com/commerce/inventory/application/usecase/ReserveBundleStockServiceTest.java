@@ -406,8 +406,7 @@ class ReserveBundleStockServiceTest {
         
         // 예약 만료 시간이 대략 900초 후인지 확인
         LocalDateTime expectedExpiry = LocalDateTime.now(fixedClock).plusSeconds(900);
-        assertThat(response.getSkuReservations().get(0).getExpiresAt())
-            .isBetween(expectedExpiry.minusSeconds(5), expectedExpiry.plusSeconds(5));
+        assertThat(response.getSkuReservations().get(0).getExpiresAt()).isEqualTo(expectedExpiry);
     }
 
     @Test
