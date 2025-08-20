@@ -27,6 +27,7 @@ public class ReserveBundleStockCommand {
     @Valid
     private List<BundleItem> bundleItems;
     
+    @Positive(message = "TTL은 0보다 커야 합니다")
     private Integer ttlSeconds;
     
     @Getter

@@ -51,16 +51,16 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
         
         try {
             // 1. SKU별 총 필요 수량 계산
-            Map<SkuId, Integer> totalRequiredQuantities = command.getBundleItems().stream()
+            Map<SkuId, Quantity> totalRequiredQuantities = command.getBundleItems().stream()
                 .flatMap(item -> item.getSkuMappings().stream()
                     .map(mapping -> new AbstractMap.SimpleEntry<>(
                         new SkuId(mapping.getSkuId()),
-                        mapping.getQuantity() * item.getQuantity()
+                        Quantity.of(mapping.getQuantity() * item.getQuantity())
                     )))
                 .collect(Collectors.toMap(
                     Map.Entry::getKey,
                     Map.Entry::getValue,
-                    Integer::sum
+                    Quantity::add
                 ));
             
             if (totalRequiredQuantities.isEmpty()) {
@@ -82,22 +82,27 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
             }
             
             // 4. 모든 항목에 대한 재고 가용성 사전 확인
-            for (Map.Entry<SkuId, Integer> entry : totalRequiredQuantities.entrySet()) {
+            for (Map.Entry<SkuId, Quantity> entry : totalRequiredQuantities.entrySet()) {
                 SkuId skuId = entry.getKey();
-                Integer requiredQuantity = entry.getValue();
+                Quantity requiredQuantity = entry.getValue();
                 Inventory inventory = inventoryMap.get(skuId);
                 
-                if (!inventory.canReserve(Quantity.of(requiredQuantity))) {
+                if (!inventory.canReserve(requiredQuantity)) {
                     throw new InsufficientStockException(
                         String.format("재고가 부족합니다. SKU: %s, 가용 재고: %d, 요청 수량: %d",
                             skuId.value(),
                             inventory.getAvailableQuantity().value(),
-                            requiredQuantity)
+                            requiredQuantity.value())
                     );
                 }
             }
             
             // 5. 모든 검증 통과 후 재고 예약 실행
+            List<Reservation> reservationsToSave = new ArrayList<>();
+            int ttlSeconds = command.getTtlSeconds() != null ? command.getTtlSeconds() : DEFAULT_TTL_SECONDS;
+            LocalDateTime now = LocalDateTime.now(clock);
+            LocalDateTime expiresAt = now.plusSeconds(ttlSeconds);
+            
             for (ReserveBundleStockCommand.BundleItem bundleItem : command.getBundleItems()) {
                 for (ReserveBundleStockCommand.SkuMapping skuMapping : bundleItem.getSkuMappings()) {
                     int requiredQuantity = skuMapping.getQuantity() * bundleItem.getQuantity();
@@ -106,21 +111,45 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
                     }
 
                     Inventory inventory = inventoryMap.get(new SkuId(skuMapping.getSkuId()));
-                    ReservedItem reservedItem = reserveInventory(
-                        inventory,
-                        requiredQuantity,
+                    Quantity requestedQuantity = Quantity.of(requiredQuantity);
+                    
+                    // 재고 예약 (도메인 객체가 재고 확인 및 예외 처리 담당)
+                    ReservationId reservationId = inventory.reserve(requestedQuantity);
+                    
+                    // 예약 엔티티 생성
+                    Reservation reservation = Reservation.create(
+                        reservationId,
+                        inventory.getSkuId(),
+                        requestedQuantity,
                         command.getOrderId(),
-                        command.getTtlSeconds() != null ? command.getTtlSeconds() : DEFAULT_TTL_SECONDS
+                        expiresAt,
+                        now
                     );
-                    reservedItems.add(reservedItem);
+                    
+                    reservationsToSave.add(reservation);
                     modifiedInventories.add(inventory);
                 }
             }
             
-            // 6. 변경된 재고 정보 일괄 저장
+            // 6. 예약 정보 일괄 저장
+            if (!reservationsToSave.isEmpty()) {
+                List<Reservation> savedReservations = reservationRepository.saveAll(reservationsToSave);
+                
+                // 7. 저장된 예약 정보로 응답 항목 생성
+                for (Reservation savedReservation : savedReservations) {
+                    reservedItems.add(new ReservedItem(
+                        savedReservation.getSkuId(),
+                        savedReservation.getId(),
+                        savedReservation.getQuantity(),
+                        savedReservation.getExpiresAt()
+                    ));
+                }
+            }
+            
+            // 8. 변경된 재고 정보 일괄 저장
             saveInventoryPort.saveAll(modifiedInventories);
             
-            // 7. 성공 응답 생성
+            // 9. 성공 응답 생성
             return createSuccessResponse(sagaId, command.getOrderId(), reservedItems);
             
         } catch (InsufficientStockException | InvalidInventoryException e) {
@@ -129,39 +158,6 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
             // 실패 응답 생성 (트랜잭션이 자동으로 롤백됨)
             return createFailureResponse(sagaId, command.getOrderId(), e.getMessage());
         }
-    }
-    
-    private ReservedItem reserveInventory(
-        Inventory inventory,
-        int quantity,
-        String orderId,
-        int ttlSeconds
-    ) {
-        Quantity requestedQuantity = Quantity.of(quantity);
-        
-        // 재고 예약 (도메인 객체가 재고 확인 및 예외 처리 담당)
-        ReservationId reservationId = inventory.reserve(requestedQuantity);
-        
-        // 예약 엔티티 생성
-        LocalDateTime now = LocalDateTime.now(clock);
-        Reservation reservation = Reservation.create(
-            reservationId,
-            inventory.getSkuId(),
-            requestedQuantity,
-            orderId,
-            now.plusSeconds(ttlSeconds),
-            now
-        );
-        
-        // 예약 저장
-        Reservation savedReservation = reservationRepository.save(reservation);
-        
-        return new ReservedItem(
-            inventory.getSkuId(),
-            savedReservation.getId(),
-            savedReservation.getQuantity(),
-            savedReservation.getExpiresAt()
-        );
     }
     
     private BundleReservationResponse createSuccessResponse(

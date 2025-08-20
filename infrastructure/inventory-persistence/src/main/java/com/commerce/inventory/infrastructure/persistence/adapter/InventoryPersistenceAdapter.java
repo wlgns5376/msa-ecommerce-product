@@ -35,6 +35,9 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
     @Override
     @Transactional(readOnly = true)
     public Map<SkuId, Inventory> loadAllByIds(List<SkuId> skuIds) {
+        if (skuIds == null || skuIds.isEmpty()) {
+            return java.util.Collections.emptyMap();
+        }
         List<String> skuIdValues = skuIds.stream()
                 .map(SkuId::value)
                 .collect(Collectors.toList());
@@ -64,6 +67,9 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
     @Override
     @Transactional
     public void saveAll(Collection<Inventory> inventories) {
+        if (inventories == null || inventories.isEmpty()) {
+            return;
+        }
         try {
             List<InventoryJpaEntity> entities = inventories.stream()
                 .map(this::toJpaEntity)
