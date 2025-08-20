@@ -149,7 +149,7 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
         Set<Inventory> modifiedInventories = new HashSet<>();
         List<Reservation> reservationsToSave = new ArrayList<>();
         
-        int ttlSeconds = command.getTtlSeconds() != null ? command.getTtlSeconds() : defaultTtlSeconds;
+        int ttlSeconds = Optional.ofNullable(command.getTtlSeconds()).orElse(defaultTtlSeconds);
         LocalDateTime now = LocalDateTime.now(clock);
         LocalDateTime expiresAt = now.plusSeconds(ttlSeconds);
         

@@ -46,7 +46,7 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
                 .map(this::toDomainEntity)
                 .collect(Collectors.toMap(
                         Inventory::getSkuId,
-                        inventory -> inventory
+                        java.util.function.Function.identity()
                 ));
     }
     
