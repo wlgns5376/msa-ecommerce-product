@@ -7,6 +7,7 @@ import com.commerce.product.domain.exception.InvalidProductNameException;
 import com.commerce.product.domain.model.ProductStatus;
 import com.commerce.product.domain.model.ProductType;
 import com.commerce.product.domain.repository.ProductRepository;
+import com.commerce.product.domain.model.Product;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,9 @@ class CreateProductUseCaseTest {
 
     @Captor
     private ArgumentCaptor<ProductCreatedEvent> eventCaptor;
+
+    @Captor
+    private ArgumentCaptor<Product> productCaptor;
 
     private CreateProductUseCase createProductUseCase;
 
@@ -143,7 +147,8 @@ class CreateProductUseCaseTest {
 
         // Then
         assertThat(response.getDescription()).isEmpty();
-        verify(productRepository, times(1)).save(any());
+        verify(productRepository, times(1)).save(productCaptor.capture());
+        assertThat(productCaptor.getValue().getDescription()).isEmpty();
         verify(eventPublisher, times(1)).publishEvent(any(ProductCreatedEvent.class));
     }
 

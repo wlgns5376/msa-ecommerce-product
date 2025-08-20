@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.context.ApplicationEventPublisher;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -18,7 +19,7 @@ public class CreateProductService implements CreateProductUseCase {
 
     @Override
     public CreateProductResponse createProduct(CreateProductRequest request) {
-        String description = request.getDescription() != null ? request.getDescription() : "";
+        String description = Optional.ofNullable(request.getDescription()).orElse("");
         
         Product product = Product.create(
                 new ProductName(request.getName()),
