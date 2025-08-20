@@ -2,8 +2,10 @@ package com.commerce.inventory.application.usecase;
 
 import com.commerce.common.domain.model.Quantity;
 import com.commerce.inventory.application.port.in.BundleReservationResponse;
+import com.commerce.inventory.application.port.in.BundleReservationStatus;
 import com.commerce.inventory.application.port.in.ReserveBundleStockCommand;
 import com.commerce.inventory.application.port.in.ReserveBundleStockUseCase;
+import com.commerce.inventory.application.port.in.SkuReservationStatus;
 import com.commerce.inventory.application.port.out.LoadInventoryPort;
 import com.commerce.inventory.application.port.out.SaveInventoryPort;
 import com.commerce.inventory.domain.exception.InsufficientStockException;
@@ -13,6 +15,8 @@ import com.commerce.inventory.domain.model.Reservation;
 import com.commerce.inventory.domain.model.ReservationId;
 import com.commerce.inventory.domain.model.SkuId;
 import com.commerce.inventory.domain.repository.ReservationRepository;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,6 +38,7 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
     private final SaveInventoryPort saveInventoryPort;
     private final ReservationRepository reservationRepository;
     private final Clock clock;
+    private final Validator validator;
     
     @Override
     @Transactional
@@ -77,7 +82,7 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
             }
             
             // 변경된 재고 정보를 일괄 저장
-            modifiedInventories.forEach(saveInventoryPort::save);
+            saveInventoryPort.saveAll(modifiedInventories);
             
             // 성공 응답 생성
             return createSuccessResponse(sagaId, command.getOrderId(), reservedItems);
@@ -178,14 +183,14 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
                 .reservationId(item.reservationId.value())
                 .quantity(item.quantity.value())
                 .expiresAt(item.expiresAt)
-                .status("ACTIVE")
+                .status(SkuReservationStatus.ACTIVE)
                 .build())
             .collect(Collectors.toList());
         
         return BundleReservationResponse.builder()
             .sagaId(sagaId)
             .orderId(orderId)
-            .status("COMPLETED")
+            .status(BundleReservationStatus.COMPLETED)
             .skuReservations(skuReservations)
             .failureReason(null)
             .build();
@@ -199,7 +204,7 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
         return BundleReservationResponse.builder()
             .sagaId(sagaId)
             .orderId(orderId)
-            .status("FAILED")
+            .status(BundleReservationStatus.FAILED)
             .skuReservations(Collections.emptyList())
             .failureReason(failureReason)
             .build();
@@ -210,58 +215,12 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
             throw new IllegalArgumentException("예약 요청이 null일 수 없습니다");
         }
         
-        if (command.getOrderId() == null || command.getOrderId().trim().isEmpty()) {
-            throw new IllegalArgumentException("주문 ID는 필수입니다");
-        }
-        
-        if (command.getReservationId() == null || command.getReservationId().trim().isEmpty()) {
-            throw new IllegalArgumentException("예약 ID는 필수입니다");
-        }
-        
-        if (command.getBundleItems() == null || command.getBundleItems().isEmpty()) {
-            throw new IllegalArgumentException("번들 항목은 최소 1개 이상이어야 합니다");
-        }
-        
-        // 각 번들 항목 검증
-        for (ReserveBundleStockCommand.BundleItem item : command.getBundleItems()) {
-            validateBundleItem(item);
-        }
-    }
-    
-    private void validateBundleItem(ReserveBundleStockCommand.BundleItem item) {
-        if (item == null) {
-            throw new IllegalArgumentException("번들 항목이 null일 수 없습니다");
-        }
-        
-        if (item.getProductOptionId() == null || item.getProductOptionId().trim().isEmpty()) {
-            throw new IllegalArgumentException("상품 옵션 ID는 필수입니다");
-        }
-        
-        if (item.getQuantity() == null || item.getQuantity() <= 0) {
-            throw new IllegalArgumentException("번들 수량은 0보다 커야 합니다");
-        }
-        
-        if (item.getSkuMappings() == null || item.getSkuMappings().isEmpty()) {
-            throw new IllegalArgumentException("SKU 매핑은 최소 1개 이상이어야 합니다");
-        }
-        
-        // 각 SKU 매핑 검증
-        for (ReserveBundleStockCommand.SkuMapping mapping : item.getSkuMappings()) {
-            validateSkuMapping(mapping);
-        }
-    }
-    
-    private void validateSkuMapping(ReserveBundleStockCommand.SkuMapping mapping) {
-        if (mapping == null) {
-            throw new IllegalArgumentException("SKU 매핑이 null일 수 없습니다");
-        }
-        
-        if (mapping.getSkuId() == null || mapping.getSkuId().trim().isEmpty()) {
-            throw new IllegalArgumentException("SKU ID는 필수입니다");
-        }
-        
-        if (mapping.getQuantity() == null || mapping.getQuantity() <= 0) {
-            throw new IllegalArgumentException("SKU 수량은 0보다 커야 합니다");
+        Set<ConstraintViolation<ReserveBundleStockCommand>> violations = validator.validate(command);
+        if (!violations.isEmpty()) {
+            String errorMessage = violations.stream()
+                .map(ConstraintViolation::getMessage)
+                .collect(Collectors.joining(", "));
+            throw new IllegalArgumentException(errorMessage);
         }
     }
     

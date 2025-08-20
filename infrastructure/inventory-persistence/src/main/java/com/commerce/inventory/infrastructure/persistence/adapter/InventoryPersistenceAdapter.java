@@ -13,6 +13,7 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -55,6 +56,22 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
         } catch (OptimisticLockException e) {
             throw new OptimisticLockingFailureException(
                 "동시성 충돌이 발생했습니다. 다시 시도해주세요. SKU ID: " + inventory.getSkuId().value(), 
+                e
+            );
+        }
+    }
+    
+    @Override
+    @Transactional
+    public void saveAll(Collection<Inventory> inventories) {
+        try {
+            List<InventoryJpaEntity> entities = inventories.stream()
+                .map(this::toJpaEntity)
+                .collect(Collectors.toList());
+            inventoryJpaRepository.saveAll(entities);
+        } catch (OptimisticLockException e) {
+            throw new OptimisticLockingFailureException(
+                "동시성 충돌이 발생했습니다. 다시 시도해주세요.", 
                 e
             );
         }

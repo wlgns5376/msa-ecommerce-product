@@ -15,7 +15,7 @@ import java.util.List;
 public class BundleReservationResponse {
     private String sagaId;
     private String orderId;
-    private String status;
+    private BundleReservationStatus status;
     private List<SkuReservation> skuReservations;
     private String failureReason;
     
@@ -28,6 +28,6 @@ public class BundleReservationResponse {
         private String reservationId;
         private Integer quantity;
         private LocalDateTime expiresAt;
-        private String status;
+        private SkuReservationStatus status;
     }
 }

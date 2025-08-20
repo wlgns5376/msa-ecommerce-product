@@ -15,11 +15,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.OptimisticLockingFailureException;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -117,5 +120,66 @@ class InventoryPersistenceAdapterTest {
                 .isInstanceOf(OptimisticLockingFailureException.class)
                 .hasMessageContaining("동시성 충돌이 발생했습니다")
                 .hasMessageContaining(skuId.value());
+    }
+    
+    @Test
+    @DisplayName("여러 재고를 한 번에 저장할 수 있다")
+    void shouldSaveAllInventories() {
+        // given
+        SkuId skuId1 = SkuId.generate();
+        SkuId skuId2 = SkuId.generate();
+        
+        Inventory inventory1 = Inventory.createWithInitialStock(skuId1, Quantity.of(100));
+        inventory1.reserve(Quantity.of(20));
+        
+        Inventory inventory2 = Inventory.createWithInitialStock(skuId2, Quantity.of(50));
+        inventory2.reserve(Quantity.of(10));
+        
+        List<Inventory> inventories = Arrays.asList(inventory1, inventory2);
+        
+        // when
+        adapter.saveAll(inventories);
+        
+        // then
+        ArgumentCaptor<List<InventoryJpaEntity>> captor = ArgumentCaptor.forClass(List.class);
+        verify(inventoryJpaRepository).saveAll(captor.capture());
+        
+        List<InventoryJpaEntity> savedEntities = captor.getValue();
+        assertThat(savedEntities).hasSize(2);
+        
+        InventoryJpaEntity savedEntity1 = savedEntities.stream()
+            .filter(e -> e.getSkuId().equals(skuId1.value()))
+            .findFirst()
+            .orElseThrow();
+        assertThat(savedEntity1.getTotalQuantity()).isEqualTo(100);
+        assertThat(savedEntity1.getReservedQuantity()).isEqualTo(20);
+        
+        InventoryJpaEntity savedEntity2 = savedEntities.stream()
+            .filter(e -> e.getSkuId().equals(skuId2.value()))
+            .findFirst()
+            .orElseThrow();
+        assertThat(savedEntity2.getTotalQuantity()).isEqualTo(50);
+        assertThat(savedEntity2.getReservedQuantity()).isEqualTo(10);
+    }
+    
+    @Test
+    @DisplayName("saveAll 실행 중 동시성 충돌 발생 시 OptimisticLockingFailureException을 던진다")
+    void shouldThrowOptimisticLockingFailureExceptionOnConcurrentBatchUpdate() {
+        // given
+        SkuId skuId1 = SkuId.generate();
+        SkuId skuId2 = SkuId.generate();
+        
+        Inventory inventory1 = Inventory.createWithInitialStock(skuId1, Quantity.of(100));
+        Inventory inventory2 = Inventory.createWithInitialStock(skuId2, Quantity.of(50));
+        
+        List<Inventory> inventories = Arrays.asList(inventory1, inventory2);
+        
+        when(inventoryJpaRepository.saveAll(anyList()))
+                .thenThrow(new OptimisticLockException("Version conflict"));
+        
+        // when & then
+        assertThatThrownBy(() -> adapter.saveAll(inventories))
+                .isInstanceOf(OptimisticLockingFailureException.class)
+                .hasMessageContaining("동시성 충돌이 발생했습니다");
     }
 }

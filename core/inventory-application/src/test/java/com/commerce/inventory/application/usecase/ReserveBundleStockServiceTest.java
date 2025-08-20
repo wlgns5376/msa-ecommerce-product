@@ -2,13 +2,17 @@ package com.commerce.inventory.application.usecase;
 
 import com.commerce.common.domain.model.Quantity;
 import com.commerce.inventory.application.port.in.BundleReservationResponse;
+import com.commerce.inventory.application.port.in.BundleReservationStatus;
 import com.commerce.inventory.application.port.in.ReserveBundleStockCommand;
+import com.commerce.inventory.application.port.in.SkuReservationStatus;
 import com.commerce.inventory.application.port.out.LoadInventoryPort;
 import com.commerce.inventory.application.port.out.SaveInventoryPort;
 import com.commerce.inventory.domain.exception.InsufficientStockException;
 import com.commerce.inventory.domain.exception.InvalidInventoryException;
 import com.commerce.inventory.domain.model.*;
 import com.commerce.inventory.domain.repository.ReservationRepository;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,6 +43,9 @@ class ReserveBundleStockServiceTest {
     @Mock
     private ReservationRepository reservationRepository;
 
+    @Mock
+    private Validator validator;
+
     private Clock fixedClock;
     private ReserveBundleStockService sut;
 
@@ -52,8 +59,12 @@ class ReserveBundleStockServiceTest {
             loadInventoryPort,
             saveInventoryPort,
             reservationRepository,
-            fixedClock
+            fixedClock,
+            validator
         );
+        
+        // 기본적으로 validation은 통과하도록 설정
+        given(validator.validate(any())).willReturn(Collections.emptySet());
     }
 
     @Test
@@ -109,7 +120,7 @@ class ReserveBundleStockServiceTest {
         assertThat(response).isNotNull();
         assertThat(response.getSagaId()).isEqualTo(reservationId);
         assertThat(response.getOrderId()).isEqualTo(orderId);
-        assertThat(response.getStatus()).isEqualTo("COMPLETED");
+        assertThat(response.getStatus()).isEqualTo(BundleReservationStatus.COMPLETED);
         assertThat(response.getSkuReservations()).hasSize(2);
         assertThat(response.getFailureReason()).isNull();
 
@@ -121,11 +132,11 @@ class ReserveBundleStockServiceTest {
                 .orElseThrow();
         
         assertThat(skuReservation1.getQuantity()).isEqualTo(2);
-        assertThat(skuReservation1.getStatus()).isEqualTo("ACTIVE");
+        assertThat(skuReservation1.getStatus()).isEqualTo(SkuReservationStatus.ACTIVE);
         assertThat(skuReservation1.getExpiresAt()).isAfter(LocalDateTime.now(fixedClock));
 
         // 재고 저장 확인
-        then(saveInventoryPort).should(times(2)).save(any(Inventory.class));
+        then(saveInventoryPort).should(times(1)).saveAll(anyCollection());
         then(reservationRepository).should(times(2)).save(any(Reservation.class));
     }
 
@@ -177,7 +188,7 @@ class ReserveBundleStockServiceTest {
 
         // Then
         assertThat(response).isNotNull();
-        assertThat(response.getStatus()).isEqualTo("FAILED");
+        assertThat(response.getStatus()).isEqualTo(BundleReservationStatus.FAILED);
         assertThat(response.getFailureReason()).contains("재고가 부족합니다");
         assertThat(response.getSkuReservations()).isEmpty();
     }
@@ -236,7 +247,7 @@ class ReserveBundleStockServiceTest {
         BundleReservationResponse response = sut.execute(command);
 
         // Then
-        assertThat(response.getStatus()).isEqualTo("COMPLETED");
+        assertThat(response.getStatus()).isEqualTo(BundleReservationStatus.COMPLETED);
         assertThat(response.getSkuReservations()).hasSize(3);
         
         // SKU-001은 2개 예약되었는지 확인
@@ -246,7 +257,7 @@ class ReserveBundleStockServiceTest {
             .sum();
         assertThat(sku001TotalQuantity).isEqualTo(2);
 
-        then(saveInventoryPort).should(times(3)).save(any(Inventory.class));
+        then(saveInventoryPort).should(times(1)).saveAll(anyCollection());
         then(reservationRepository).should(times(3)).save(any(Reservation.class));
     }
 
@@ -287,13 +298,13 @@ class ReserveBundleStockServiceTest {
         BundleReservationResponse response = sut.execute(command);
 
         // Then
-        assertThat(response.getStatus()).isEqualTo("FAILED");
+        assertThat(response.getStatus()).isEqualTo(BundleReservationStatus.FAILED);
         assertThat(response.getFailureReason()).contains("다음 SKU에 대한 재고 정보를 찾을 수 없습니다");
         assertThat(response.getFailureReason()).contains("SKU-NOT-EXIST");
         assertThat(response.getSkuReservations()).isEmpty();
         
         // 사전 검증에서 실패하므로 save 메서드는 호출되지 않음
-        then(saveInventoryPort).should(never()).save(any(Inventory.class));
+        then(saveInventoryPort).should(never()).saveAll(anyCollection());
         then(reservationRepository).should(never()).save(any(Reservation.class));
     }
 
@@ -370,13 +381,13 @@ class ReserveBundleStockServiceTest {
         BundleReservationResponse response = sut.execute(command);
 
         // Then
-        assertThat(response.getStatus()).isEqualTo("FAILED");
+        assertThat(response.getStatus()).isEqualTo(BundleReservationStatus.FAILED);
         assertThat(response.getFailureReason()).contains("재고가 부족합니다");
         assertThat(response.getSkuReservations()).isEmpty();
         
         // 트랜잭션이 롤백되므로 실제로는 아무것도 저장되지 않음
-        // 리팩토링으로 인해 예외 발생 시 saveInventoryPort.save()는 호출되지 않음
-        then(saveInventoryPort).should(never()).save(any(Inventory.class));
+        // 리팩토링으로 인해 예외 발생 시 saveInventoryPort.saveAll()는 호출되지 않음
+        then(saveInventoryPort).should(never()).saveAll(anyCollection());
         // reservation save는 예외 발생 전까지 호출됨 (2번 성공, 3번째에서 예외 발생)
         then(reservationRepository).should(times(2)).save(any(Reservation.class));
     }
@@ -414,7 +425,7 @@ class ReserveBundleStockServiceTest {
         BundleReservationResponse response = sut.execute(command);
 
         // Then
-        assertThat(response.getStatus()).isEqualTo("COMPLETED");
+        assertThat(response.getStatus()).isEqualTo(BundleReservationStatus.COMPLETED);
         
         // 예약 만료 시간이 대략 900초 후인지 확인
         LocalDateTime expectedExpiry = LocalDateTime.now(fixedClock).plusSeconds(900);
@@ -465,7 +476,7 @@ class ReserveBundleStockServiceTest {
         BundleReservationResponse response = sut.execute(command);
 
         // Then
-        assertThat(response.getStatus()).isEqualTo("COMPLETED");
+        assertThat(response.getStatus()).isEqualTo(BundleReservationStatus.COMPLETED);
         assertThat(response.getSkuReservations()).hasSize(2);
         
         // 총 5개가 예약되었는지 확인
@@ -489,8 +500,20 @@ class ReserveBundleStockServiceTest {
         ReserveBundleStockCommand emptyOrderIdCommand = ReserveBundleStockCommand.builder()
             .orderId("")
             .reservationId("BUNDLE-RESERVATION-001")
-            .bundleItems(List.of())
+            .bundleItems(List.of(ReserveBundleStockCommand.BundleItem.builder()
+                .productOptionId("OPTION-001")
+                .skuMappings(List.of(ReserveBundleStockCommand.SkuMapping.builder()
+                    .skuId("SKU-001")
+                    .quantity(1)
+                    .build()))
+                .quantity(1)
+                .build()))
             .build();
+        
+        // Mock validation error for empty order ID
+        ConstraintViolation<ReserveBundleStockCommand> violation = mock(ConstraintViolation.class);
+        when(violation.getMessage()).thenReturn("주문 ID는 필수입니다");
+        when(validator.validate(emptyOrderIdCommand)).thenReturn(Set.of(violation));
         
         assertThatThrownBy(() -> sut.execute(emptyOrderIdCommand))
             .isInstanceOf(IllegalArgumentException.class)
@@ -502,6 +525,11 @@ class ReserveBundleStockServiceTest {
             .reservationId("BUNDLE-RESERVATION-001")
             .bundleItems(List.of())
             .build();
+        
+        // Mock validation error for empty bundle items
+        ConstraintViolation<ReserveBundleStockCommand> violation2 = mock(ConstraintViolation.class);
+        when(violation2.getMessage()).thenReturn("번들 항목은 최소 1개 이상이어야 합니다");
+        when(validator.validate(emptyItemsCommand)).thenReturn(Set.of(violation2));
         
         assertThatThrownBy(() -> sut.execute(emptyItemsCommand))
             .isInstanceOf(IllegalArgumentException.class)
