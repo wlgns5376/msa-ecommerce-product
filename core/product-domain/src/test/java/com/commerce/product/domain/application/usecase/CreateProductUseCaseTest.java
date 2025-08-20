@@ -75,6 +75,8 @@ class CreateProductUseCaseTest {
                 .status(ProductStatus.DRAFT)
                 .build();
 
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
         // When
         CreateProductResponse response = createProductUseCase.createProduct(request);
 
@@ -148,6 +150,8 @@ class CreateProductUseCaseTest {
                 .description(null)
                 .type(ProductType.NORMAL)
                 .build();
+
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
         CreateProductResponse response = createProductUseCase.createProduct(request);

@@ -27,16 +27,16 @@ public class CreateProductService implements CreateProductUseCase {
                 request.getType()
         );
         
-        productRepository.save(product);
+        Product savedProduct = productRepository.save(product);
         
-        publishDomainEvents(product);
+        publishDomainEvents(savedProduct);
         
         return CreateProductResponse.builder()
-                .productId(product.getId().toString())
-                .name(product.getName().value())
-                .description(product.getDescription())
-                .type(product.getType())
-                .status(product.getStatus())
+                .productId(savedProduct.getId().toString())
+                .name(savedProduct.getName().value())
+                .description(savedProduct.getDescription())
+                .type(savedProduct.getType())
+                .status(savedProduct.getStatus())
                 .build();
     }
     
