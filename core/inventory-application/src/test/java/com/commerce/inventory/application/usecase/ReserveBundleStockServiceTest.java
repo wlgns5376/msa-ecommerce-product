@@ -86,8 +86,11 @@ class ReserveBundleStockServiceTest {
             Quantity.of(5)
         );
 
-        given(loadInventoryPort.load(new SkuId("SKU-001"))).willReturn(Optional.of(inventory1));
-        given(loadInventoryPort.load(new SkuId("SKU-002"))).willReturn(Optional.of(inventory2));
+        Map<SkuId, Inventory> inventoryMap = Map.of(
+            new SkuId("SKU-001"), inventory1,
+            new SkuId("SKU-002"), inventory2
+        );
+        given(loadInventoryPort.loadAllByIds(anyList())).willReturn(inventoryMap);
         given(reservationRepository.save(any(Reservation.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         // When
@@ -153,8 +156,12 @@ class ReserveBundleStockServiceTest {
             Quantity.of(5) // 6개 필요하지만 5개만 있음
         );
 
-        given(loadInventoryPort.load(new SkuId("SKU-001"))).willReturn(Optional.of(inventory1));
-        given(loadInventoryPort.load(new SkuId("SKU-002"))).willReturn(Optional.of(inventory2));
+        Map<SkuId, Inventory> inventoryMap = Map.of(
+            new SkuId("SKU-001"), inventory1,
+            new SkuId("SKU-002"), inventory2
+        );
+        given(loadInventoryPort.loadAllByIds(anyList())).willReturn(inventoryMap);
+        given(reservationRepository.save(any(Reservation.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         // When
         BundleReservationResponse response = sut.execute(command);
@@ -211,9 +218,12 @@ class ReserveBundleStockServiceTest {
         Inventory inventory2 = Inventory.createWithInitialStock(new SkuId("SKU-002"), Quantity.of(5));
         Inventory inventory3 = Inventory.createWithInitialStock(new SkuId("SKU-003"), Quantity.of(8));
 
-        given(loadInventoryPort.load(new SkuId("SKU-001"))).willReturn(Optional.of(inventory1));
-        given(loadInventoryPort.load(new SkuId("SKU-002"))).willReturn(Optional.of(inventory2));
-        given(loadInventoryPort.load(new SkuId("SKU-003"))).willReturn(Optional.of(inventory3));
+        Map<SkuId, Inventory> inventoryMap = Map.of(
+            new SkuId("SKU-001"), inventory1,
+            new SkuId("SKU-002"), inventory2,
+            new SkuId("SKU-003"), inventory3
+        );
+        given(loadInventoryPort.loadAllByIds(anyList())).willReturn(inventoryMap);
         given(reservationRepository.save(any(Reservation.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         // When
@@ -262,8 +272,11 @@ class ReserveBundleStockServiceTest {
 
         Inventory inventory1 = Inventory.createWithInitialStock(new SkuId("SKU-001"), Quantity.of(10));
         
-        given(loadInventoryPort.load(new SkuId("SKU-001"))).willReturn(Optional.of(inventory1));
-        given(loadInventoryPort.load(new SkuId("SKU-NOT-EXIST"))).willReturn(Optional.empty());
+        Map<SkuId, Inventory> inventoryMap = Map.of(
+            new SkuId("SKU-001"), inventory1
+        );
+        given(loadInventoryPort.loadAllByIds(anyList())).willReturn(inventoryMap);
+        given(reservationRepository.save(any(Reservation.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         // When
         BundleReservationResponse response = sut.execute(command);
@@ -309,9 +322,13 @@ class ReserveBundleStockServiceTest {
         Inventory inventory2 = Inventory.createWithInitialStock(new SkuId("SKU-002"), Quantity.of(5));
         Inventory inventory3 = Inventory.createWithInitialStock(new SkuId("SKU-003"), Quantity.of(2)); // 3개 필요하지만 2개만 있음
 
-        given(loadInventoryPort.load(new SkuId("SKU-001"))).willReturn(Optional.of(inventory1));
-        given(loadInventoryPort.load(new SkuId("SKU-002"))).willReturn(Optional.of(inventory2));
-        given(loadInventoryPort.load(new SkuId("SKU-003"))).willReturn(Optional.of(inventory3));
+        // bulk 조회를 위한 mocking
+        Map<SkuId, Inventory> inventoryMap = Map.of(
+            new SkuId("SKU-001"), inventory1,
+            new SkuId("SKU-002"), inventory2,
+            new SkuId("SKU-003"), inventory3
+        );
+        given(loadInventoryPort.loadAllByIds(anyList())).willReturn(inventoryMap);
         
         // 첫 두 개는 예약 성공, 세 번째에서 실패
         ReservationId reservationId1 = ReservationId.generate();
@@ -349,8 +366,10 @@ class ReserveBundleStockServiceTest {
         // 롤백 확인 - 성공적으로 예약된 항목들이 롤백되어야 함
         assertThat(response.getSkuReservations()).isEmpty();
         
-        // 롤백 과정에서 재고 저장이 일어남
+        // 예약 시도 2번만 발생하고 3번째에서 실패하므로 롤백도 2번만 발생
+        // 하지만 Inventory는 2번만 저장됨 (롤백 시 inventory 객체가 동일한 인스턴스)
         then(saveInventoryPort).should(atLeast(2)).save(any(Inventory.class));
+        then(reservationRepository).should(atLeast(2)).save(any(Reservation.class));
     }
 
     @Test
@@ -376,7 +395,10 @@ class ReserveBundleStockServiceTest {
             .build();
 
         Inventory inventory = Inventory.createWithInitialStock(new SkuId("SKU-001"), Quantity.of(10));
-        given(loadInventoryPort.load(new SkuId("SKU-001"))).willReturn(Optional.of(inventory));
+        Map<SkuId, Inventory> inventoryMap = Map.of(
+            new SkuId("SKU-001"), inventory
+        );
+        given(loadInventoryPort.loadAllByIds(anyList())).willReturn(inventoryMap);
         given(reservationRepository.save(any(Reservation.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         // When
@@ -424,7 +446,10 @@ class ReserveBundleStockServiceTest {
             .build();
 
         Inventory inventory = Inventory.createWithInitialStock(new SkuId("SKU-001"), Quantity.of(10));
-        given(loadInventoryPort.load(new SkuId("SKU-001"))).willReturn(Optional.of(inventory));
+        Map<SkuId, Inventory> inventoryMap = Map.of(
+            new SkuId("SKU-001"), inventory
+        );
+        given(loadInventoryPort.loadAllByIds(anyList())).willReturn(inventoryMap);
         given(reservationRepository.save(any(Reservation.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         // When

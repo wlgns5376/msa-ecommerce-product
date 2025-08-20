@@ -13,7 +13,10 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -26,6 +29,21 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
     public Optional<Inventory> load(SkuId skuId) {
         return inventoryJpaRepository.findById(skuId.value())
                 .map(this::toDomainEntity);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public Map<SkuId, Inventory> loadAllByIds(List<SkuId> skuIds) {
+        List<String> skuIdValues = skuIds.stream()
+                .map(SkuId::value)
+                .collect(Collectors.toList());
+        
+        return inventoryJpaRepository.findAllById(skuIdValues).stream()
+                .map(this::toDomainEntity)
+                .collect(Collectors.toMap(
+                        Inventory::getSkuId,
+                        inventory -> inventory
+                ));
     }
     
     @Override
