@@ -70,8 +70,11 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
                 .collect(Collectors.toList());
             inventoryJpaRepository.saveAll(entities);
         } catch (OptimisticLockException e) {
+            String conflictingSkuIds = inventories.stream()
+                .map(inv -> inv.getSkuId().value())
+                .collect(Collectors.joining(", "));
             throw new OptimisticLockingFailureException(
-                "동시성 충돌이 발생했습니다. 다시 시도해주세요.", 
+                "동시성 충돌이 발생했습니다. 다시 시도해주세요. SKU IDs: " + conflictingSkuIds,
                 e
             );
         }

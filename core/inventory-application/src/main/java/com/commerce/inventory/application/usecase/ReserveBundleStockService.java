@@ -139,17 +139,7 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
     ) {
         Quantity requestedQuantity = Quantity.of(quantity);
         
-        // 재고 가용성 확인
-        if (!inventory.canReserve(requestedQuantity)) {
-            throw new InsufficientStockException(
-                String.format("재고가 부족합니다. SKU: %s, 가용 재고: %d, 요청 수량: %d",
-                    inventory.getSkuId().value(), 
-                    inventory.getAvailableQuantity().value(), 
-                    quantity)
-            );
-        }
-        
-        // 재고 예약
+        // 재고 예약 (도메인 객체가 재고 확인 및 예외 처리 담당)
         ReservationId reservationId = inventory.reserve(requestedQuantity);
         
         // 예약 엔티티 생성
