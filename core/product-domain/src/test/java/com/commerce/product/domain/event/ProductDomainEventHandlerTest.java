@@ -11,6 +11,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
@@ -41,19 +42,30 @@ class ProductDomainEventHandlerTest {
     }
 
     @Test
-    @DisplayName("도메인 이벤트 발행 실패 시 RuntimeException 발생")
-    void handleDomainEvent_WhenPublishFails_ThrowsRuntimeException() {
+    @DisplayName("도메인 이벤트 발행 실패 시 예외 발생")
+    void publishEventWithRetry_WhenPublishFails_ThrowsException() {
         // Given
         String errorMessage = "Failed to publish event";
         doThrow(new RuntimeException(errorMessage))
             .when(eventPublisher).publish(domainEvent);
 
         // When & Then
-        RuntimeException exception = assertThrows(RuntimeException.class, 
-            () -> eventHandler.handleDomainEvent(domainEvent));
+        assertThrows(RuntimeException.class, 
+            () -> eventHandler.publishEventWithRetry(domainEvent));
         
         // Verify
         verify(eventPublisher).publish(domainEvent);
+    }
+
+    @Test
+    @DisplayName("재시도 실패 후 recover 메소드 호출")
+    void handleFailedEvent_LogsErrorAndContinues() {
+        // Given
+        Exception exception = new RuntimeException("Test exception");
+        
+        // When & Then
+        assertDoesNotThrow(() -> 
+            eventHandler.handleFailedEvent(exception, domainEvent));
     }
 
     static class TestDomainEvent implements DomainEvent {
