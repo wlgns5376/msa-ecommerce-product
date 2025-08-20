@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -62,6 +63,9 @@ class ReserveBundleStockServiceTest {
             fixedClock,
             validator
         );
+        
+        // @Value 필드 설정
+        ReflectionTestUtils.setField(sut, "defaultTtlSeconds", 900);
         
         // 기본적으로 validation은 통과하도록 설정
         given(validator.validate(any())).willReturn(Collections.emptySet());
@@ -510,5 +514,34 @@ class ReserveBundleStockServiceTest {
         assertThatThrownBy(() -> sut.execute(emptyItemsCommand))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("번들 항목");
+    }
+
+    @Test
+    @DisplayName("요청 수량 곱셈 시 오버플로우가 발생하면 예약이 실패한다")
+    void reserveBundleStock_quantityOverflow_fail() {
+        // Given
+        ReserveBundleStockCommand.BundleItem bundleItem = ReserveBundleStockCommand.BundleItem.builder()
+            .productOptionId("OPTION-001")
+            .skuMappings(List.of(
+                ReserveBundleStockCommand.SkuMapping.builder()
+                    .skuId("SKU-001")
+                    .quantity(Integer.MAX_VALUE)
+                    .build()
+            ))
+            .quantity(2) // This will cause overflow
+            .build();
+
+        ReserveBundleStockCommand command = ReserveBundleStockCommand.builder()
+            .orderId("ORDER-001")
+            .sagaId("BUNDLE-RESERVATION-001")
+            .bundleItems(List.of(bundleItem))
+            .build();
+
+        // When
+        BundleReservationResponse response = sut.execute(command);
+
+        // Then
+        assertThat(response.getStatus()).isEqualTo(BundleReservationStatus.FAILED);
+        assertThat(response.getFailureReason()).contains("integer overflow");
     }
 }

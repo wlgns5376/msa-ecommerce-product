@@ -19,6 +19,7 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +33,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ReserveBundleStockService implements ReserveBundleStockUseCase {
     
-    private static final int DEFAULT_TTL_SECONDS = 900; // 15분
+    @Value("${inventory.reservation.default-ttl-seconds:900}")
+    private int defaultTtlSeconds; // 15분
     
     private final LoadInventoryPort loadInventoryPort;
     private final SaveInventoryPort saveInventoryPort;
@@ -70,7 +72,7 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
             // 5. 성공 응답 생성
             return createSuccessResponse(sagaId, command.getOrderId(), savedReservations);
             
-        } catch (InsufficientStockException | InvalidInventoryException e) {
+        } catch (InsufficientStockException | InvalidInventoryException | ArithmeticException e) {
             log.error("번들 재고 예약 실패: sagaId={}, error={}", sagaId, e.getMessage(), e);
             
             // 실패 응답 생성 (트랜잭션이 자동으로 롤백됨)
@@ -83,7 +85,7 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
             .flatMap(bundleItem -> bundleItem.getSkuMappings().stream()
                 .map(skuMapping -> new SkuReservationRequest(
                     SkuId.of(skuMapping.getSkuId()),
-                    Quantity.of(skuMapping.getQuantity() * bundleItem.getQuantity())
+                    Quantity.of(Math.multiplyExact(skuMapping.getQuantity(), bundleItem.getQuantity()))
                 ))
             )
             .filter(request -> request.quantity().value() > 0)
@@ -151,7 +153,7 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
         Set<Inventory> modifiedInventories = new HashSet<>();
         List<Reservation> reservationsToSave = new ArrayList<>();
         
-        int ttlSeconds = command.getTtlSeconds() != null ? command.getTtlSeconds() : DEFAULT_TTL_SECONDS;
+        int ttlSeconds = command.getTtlSeconds() != null ? command.getTtlSeconds() : defaultTtlSeconds;
         LocalDateTime now = LocalDateTime.now(clock);
         LocalDateTime expiresAt = now.plusSeconds(ttlSeconds);
         
