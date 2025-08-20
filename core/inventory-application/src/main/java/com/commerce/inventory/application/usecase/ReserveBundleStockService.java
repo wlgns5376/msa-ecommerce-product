@@ -43,6 +43,10 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
     @Override
     @Transactional
     public BundleReservationResponse execute(ReserveBundleStockCommand command) {
+        if (command == null) {
+            throw new IllegalArgumentException("예약 요청이 null일 수 없습니다");
+        }
+        
         validateCommand(command);
         
         String sagaId = command.getSagaId();
@@ -75,21 +79,15 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
     }
 
     private List<SkuReservationRequest> parseSkuRequests(ReserveBundleStockCommand command) {
-        List<SkuReservationRequest> requests = new ArrayList<>();
-        
-        for (ReserveBundleStockCommand.BundleItem bundleItem : command.getBundleItems()) {
-            for (ReserveBundleStockCommand.SkuMapping skuMapping : bundleItem.getSkuMappings()) {
-                int requiredQuantity = skuMapping.getQuantity() * bundleItem.getQuantity();
-                if (requiredQuantity > 0) {
-                    requests.add(new SkuReservationRequest(
-                        new SkuId(skuMapping.getSkuId()),
-                        Quantity.of(requiredQuantity)
-                    ));
-                }
-            }
-        }
-        
-        return requests;
+        return command.getBundleItems().stream()
+            .flatMap(bundleItem -> bundleItem.getSkuMappings().stream()
+                .map(skuMapping -> new SkuReservationRequest(
+                    new SkuId(skuMapping.getSkuId()),
+                    Quantity.of(skuMapping.getQuantity() * bundleItem.getQuantity())
+                ))
+            )
+            .filter(request -> request.quantity().value() > 0)
+            .collect(Collectors.toList());
     }
 
     private Map<SkuId, Quantity> calculateTotalRequiredQuantities(List<SkuReservationRequest> skuRequests) {
@@ -223,10 +221,6 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
     }
     
     private void validateCommand(ReserveBundleStockCommand command) {
-        if (command == null) {
-            throw new IllegalArgumentException("예약 요청이 null일 수 없습니다");
-        }
-        
         Set<ConstraintViolation<ReserveBundleStockCommand>> violations = validator.validate(command);
         if (!violations.isEmpty()) {
             String errorMessage = violations.stream()
