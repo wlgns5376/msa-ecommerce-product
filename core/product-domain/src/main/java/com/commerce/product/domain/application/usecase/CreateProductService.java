@@ -28,13 +28,7 @@ public class CreateProductService implements CreateProductUseCase {
         
         publishDomainEvents(savedProduct);
         
-        return CreateProductResponse.builder()
-                .productId(savedProduct.getId().toString())
-                .name(savedProduct.getName().value())
-                .description(savedProduct.getDescription())
-                .type(savedProduct.getType())
-                .status(savedProduct.getStatus())
-                .build();
+        return CreateProductResponse.from(savedProduct);
     }
     
     private void publishDomainEvents(Product product) {
