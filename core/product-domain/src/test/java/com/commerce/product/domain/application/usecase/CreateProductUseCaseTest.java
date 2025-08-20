@@ -85,10 +85,17 @@ class CreateProductUseCaseTest {
                 .ignoringFields("productId")
                 .isEqualTo(expectedResponse);
 
-        verify(productRepository, times(1)).save(any());
+        verify(productRepository, times(1)).save(productCaptor.capture());
         verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
 
+        Product savedProduct = productCaptor.getValue();
+        assertThat(savedProduct.getName().value()).isEqualTo(name);
+        assertThat(savedProduct.getDescription()).isEqualTo(description);
+        assertThat(savedProduct.getType()).isEqualTo(type);
+        assertThat(savedProduct.getStatus()).isEqualTo(ProductStatus.DRAFT);
+
         ProductCreatedEvent event = eventCaptor.getValue();
+        assertThat(event.getProductId()).isEqualTo(savedProduct.getId());
         assertThat(event.getName()).isEqualTo(name);
         assertThat(event.getType()).isEqualTo(type);
     }
