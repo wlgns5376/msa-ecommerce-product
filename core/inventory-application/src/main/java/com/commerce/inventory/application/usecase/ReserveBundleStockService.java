@@ -40,6 +40,7 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
         
         String sagaId = command.getReservationId();
         List<ReservedItem> reservedItems = new ArrayList<>();
+        Set<Inventory> modifiedInventories = new HashSet<>();
         
         try {
             // 모든 SKU ID를 수집하여 한 번에 조회
@@ -57,10 +58,14 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
                     bundleItem, 
                     command.getOrderId(), 
                     command.getTtlSeconds(),
-                    inventoryMap
+                    inventoryMap,
+                    modifiedInventories
                 );
                 reservedItems.addAll(bundleReservedItems);
             }
+            
+            // 변경된 재고 정보를 일괄 저장
+            modifiedInventories.forEach(saveInventoryPort::save);
             
             // 성공 응답 생성
             return createSuccessResponse(sagaId, command.getOrderId(), reservedItems);
@@ -77,7 +82,8 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
         ReserveBundleStockCommand.BundleItem bundleItem,
         String orderId,
         Integer ttlSeconds,
-        Map<SkuId, Inventory> inventoryMap
+        Map<SkuId, Inventory> inventoryMap,
+        Set<Inventory> modifiedInventories
     ) {
         List<ReservedItem> reservedItems = new ArrayList<>();
         
@@ -101,6 +107,9 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
                 orderId,
                 ttlSeconds != null ? ttlSeconds : DEFAULT_TTL_SECONDS
             );
+            
+            // 수정된 재고를 Set에 추가
+            modifiedInventories.add(inventory);
             
             reservedItems.add(reservedItem);
         }
@@ -143,15 +152,11 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
         // 예약 저장
         Reservation savedReservation = reservationRepository.save(reservation);
         
-        // 재고 저장
-        saveInventoryPort.save(inventory);
-        
         return new ReservedItem(
             inventory.getSkuId(),
             savedReservation.getId(),
             savedReservation.getQuantity(),
-            savedReservation.getExpiresAt(),
-            inventory
+            savedReservation.getExpiresAt()
         );
     }
     
@@ -258,7 +263,6 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
         SkuId skuId,
         ReservationId reservationId,
         Quantity quantity,
-        LocalDateTime expiresAt,
-        Inventory inventory
+        LocalDateTime expiresAt
     ) {}
 }

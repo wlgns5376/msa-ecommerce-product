@@ -285,6 +285,11 @@ class ReserveBundleStockServiceTest {
         assertThat(response.getStatus()).isEqualTo("FAILED");
         assertThat(response.getFailureReason()).contains("재고를 찾을 수 없습니다");
         assertThat(response.getSkuReservations()).isEmpty();
+        
+        // 트랜잭션 실패로 인해 saveInventoryPort.save()는 호출되지 않음
+        then(saveInventoryPort).should(never()).save(any(Inventory.class));
+        // 예외 발생 전 성공한 SKU에 대한 reservation save는 호출됨
+        then(reservationRepository).should(times(1)).save(any(Reservation.class));
     }
 
     @Test
@@ -365,8 +370,9 @@ class ReserveBundleStockServiceTest {
         assertThat(response.getSkuReservations()).isEmpty();
         
         // 트랜잭션이 롤백되므로 실제로는 아무것도 저장되지 않음
-        // 하지만 메서드 호출은 발생함 (2번 성공, 3번째에서 예외 발생)
-        then(saveInventoryPort).should(times(2)).save(any(Inventory.class));
+        // 리팩토링으로 인해 예외 발생 시 saveInventoryPort.save()는 호출되지 않음
+        then(saveInventoryPort).should(never()).save(any(Inventory.class));
+        // reservation save는 예외 발생 전까지 호출됨 (2번 성공, 3번째에서 예외 발생)
         then(reservationRepository).should(times(2)).save(any(Reservation.class));
     }
 
