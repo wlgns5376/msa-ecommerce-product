@@ -72,7 +72,7 @@ class ReserveBundleStockServiceTest {
     void reserveBundleStock_singleBundle_success() {
         // Given
         String orderId = "ORDER-001";
-        String reservationId = "BUNDLE-RESERVATION-001";
+        String sagaId = "BUNDLE-RESERVATION-001";
         
         ReserveBundleStockCommand.BundleItem bundleItem = ReserveBundleStockCommand.BundleItem.builder()
             .productOptionId("OPTION-001")
@@ -91,7 +91,7 @@ class ReserveBundleStockServiceTest {
 
         ReserveBundleStockCommand command = ReserveBundleStockCommand.builder()
             .orderId(orderId)
-            .reservationId(reservationId)
+            .sagaId(sagaId)
             .bundleItems(List.of(bundleItem))
             .ttlSeconds(900)
             .build();
@@ -118,7 +118,7 @@ class ReserveBundleStockServiceTest {
 
         // Then
         assertThat(response).isNotNull();
-        assertThat(response.getSagaId()).isEqualTo(reservationId);
+        assertThat(response.getSagaId()).isEqualTo(sagaId);
         assertThat(response.getOrderId()).isEqualTo(orderId);
         assertThat(response.getStatus()).isEqualTo(BundleReservationStatus.COMPLETED);
         assertThat(response.getSkuReservations()).hasSize(2);
@@ -161,7 +161,7 @@ class ReserveBundleStockServiceTest {
 
         ReserveBundleStockCommand command = ReserveBundleStockCommand.builder()
             .orderId("ORDER-001")
-            .reservationId("BUNDLE-RESERVATION-001")
+            .sagaId("BUNDLE-RESERVATION-001")
             .bundleItems(List.of(bundleItem))
             .ttlSeconds(900)
             .build();
@@ -225,7 +225,7 @@ class ReserveBundleStockServiceTest {
 
         ReserveBundleStockCommand command = ReserveBundleStockCommand.builder()
             .orderId("ORDER-001")
-            .reservationId("BUNDLE-RESERVATION-001")
+            .sagaId("BUNDLE-RESERVATION-001")
             .bundleItems(List.of(bundleItem1, bundleItem2))
             .ttlSeconds(900)
             .build();
@@ -282,7 +282,7 @@ class ReserveBundleStockServiceTest {
 
         ReserveBundleStockCommand command = ReserveBundleStockCommand.builder()
             .orderId("ORDER-001")
-            .reservationId("BUNDLE-RESERVATION-001")
+            .sagaId("BUNDLE-RESERVATION-001")
             .bundleItems(List.of(bundleItem))
             .ttlSeconds(900)
             .build();
@@ -333,7 +333,7 @@ class ReserveBundleStockServiceTest {
 
         ReserveBundleStockCommand command = ReserveBundleStockCommand.builder()
             .orderId("ORDER-001")
-            .reservationId("BUNDLE-RESERVATION-001")
+            .sagaId("BUNDLE-RESERVATION-001")
             .bundleItems(List.of(bundleItem))
             .ttlSeconds(900)
             .build();
@@ -375,7 +375,7 @@ class ReserveBundleStockServiceTest {
         // Given
         ReserveBundleStockCommand command = ReserveBundleStockCommand.builder()
             .orderId("ORDER-001")
-            .reservationId("BUNDLE-RESERVATION-001")
+            .sagaId("BUNDLE-RESERVATION-001")
             .bundleItems(List.of(
                 ReserveBundleStockCommand.BundleItem.builder()
                     .productOptionId("OPTION-001")
@@ -416,7 +416,7 @@ class ReserveBundleStockServiceTest {
         // Given
         ReserveBundleStockCommand command = ReserveBundleStockCommand.builder()
             .orderId("ORDER-001")
-            .reservationId("BUNDLE-RESERVATION-001")
+            .sagaId("BUNDLE-RESERVATION-001")
             .bundleItems(List.of(
                 ReserveBundleStockCommand.BundleItem.builder()
                     .productOptionId("OPTION-001")
@@ -476,7 +476,7 @@ class ReserveBundleStockServiceTest {
         // Given - empty order ID
         ReserveBundleStockCommand emptyOrderIdCommand = ReserveBundleStockCommand.builder()
             .orderId("")
-            .reservationId("BUNDLE-RESERVATION-001")
+            .sagaId("BUNDLE-RESERVATION-001")
             .bundleItems(List.of(ReserveBundleStockCommand.BundleItem.builder()
                 .productOptionId("OPTION-001")
                 .skuMappings(List.of(ReserveBundleStockCommand.SkuMapping.builder()
@@ -499,7 +499,7 @@ class ReserveBundleStockServiceTest {
         // Given - empty bundle items
         ReserveBundleStockCommand emptyItemsCommand = ReserveBundleStockCommand.builder()
             .orderId("ORDER-001")
-            .reservationId("BUNDLE-RESERVATION-001")
+            .sagaId("BUNDLE-RESERVATION-001")
             .bundleItems(List.of())
             .build();
         

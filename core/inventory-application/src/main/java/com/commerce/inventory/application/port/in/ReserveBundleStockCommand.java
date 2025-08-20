@@ -20,8 +20,8 @@ public class ReserveBundleStockCommand {
     @NotBlank(message = "주문 ID는 필수입니다")
     private String orderId;
     
-    @NotBlank(message = "예약 ID는 필수입니다")
-    private String reservationId;
+    @NotBlank(message = "Saga ID는 필수입니다")
+    private String sagaId;
     
     @NotEmpty(message = "번들 항목은 최소 1개 이상이어야 합니다")
     @Valid
