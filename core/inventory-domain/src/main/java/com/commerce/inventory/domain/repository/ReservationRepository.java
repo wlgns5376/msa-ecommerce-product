@@ -18,4 +18,6 @@ public interface ReservationRepository extends Repository<Reservation, Reservati
     List<Reservation> findExpiredReservations(LocalDateTime currentTime);
     
     int deleteExpiredReservations(LocalDateTime currentTime);
+    
+    List<Reservation> saveAll(List<Reservation> reservations);
 }
