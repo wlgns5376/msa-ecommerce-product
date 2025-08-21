@@ -1,38 +1,45 @@
-package com.commerce.inventory.domain.application.usecase;
+package com.commerce.inventory.application.usecase;
 
+import com.commerce.inventory.application.port.in.CreateSkuCommand;
+import com.commerce.inventory.application.port.in.CreateSkuResponse;
+import com.commerce.inventory.application.port.in.CreateSkuUseCase;
+import com.commerce.inventory.application.port.out.LoadSkuPort;
+import com.commerce.inventory.application.port.out.SaveSkuPort;
 import com.commerce.inventory.domain.exception.DuplicateSkuCodeException;
-import com.commerce.inventory.domain.exception.InvalidSkuCodeException;
 import com.commerce.inventory.domain.exception.InvalidVolumeException;
 import com.commerce.inventory.domain.exception.InvalidWeightException;
 import com.commerce.inventory.domain.model.*;
-import com.commerce.inventory.domain.repository.SkuRepository;
-import com.commerce.common.application.usecase.UseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
 
+@Service
 @RequiredArgsConstructor
-public class CreateSkuUseCase implements UseCase<CreateSkuRequest, CreateSkuResponse> {
+@Transactional
+public class CreateSkuService implements CreateSkuUseCase {
     
-    private final SkuRepository skuRepository;
+    private final LoadSkuPort loadSkuPort;
+    private final SaveSkuPort saveSkuPort;
     private final Clock clock;
     
     @Override
-    public CreateSkuResponse execute(CreateSkuRequest request) {
+    public CreateSkuResponse execute(CreateSkuCommand request) {
         SkuCode skuCode = SkuCode.of(request.getCode());
         
         // 빠른 실패(fast-fail)를 위한 사전 검사
-        if (skuRepository.existsByCode(skuCode)) {
+        if (loadSkuPort.existsByCode(skuCode)) {
             throw new DuplicateSkuCodeException("이미 존재하는 SKU 코드입니다: " + skuCode.value());
         }
         
-        CreateSkuCommand command = buildCreateCommand(request, skuCode);
+        com.commerce.inventory.domain.model.CreateSkuCommand command = buildCreateCommand(request, skuCode);
         Sku sku = Sku.create(command, LocalDateTime.now(clock));
         
         try {
-            Sku savedSku = skuRepository.save(sku);
+            Sku savedSku = saveSkuPort.save(sku);
             return mapToResponse(savedSku);
         } catch (DataIntegrityViolationException e) {
             // 데이터베이스 제약 조건 위반으로 인한 예외 처리
@@ -40,8 +47,8 @@ public class CreateSkuUseCase implements UseCase<CreateSkuRequest, CreateSkuResp
         }
     }
     
-    private CreateSkuCommand buildCreateCommand(CreateSkuRequest request, SkuCode skuCode) {
-        CreateSkuCommand.CreateSkuCommandBuilder builder = CreateSkuCommand.builder()
+    private com.commerce.inventory.domain.model.CreateSkuCommand buildCreateCommand(CreateSkuCommand request, SkuCode skuCode) {
+        com.commerce.inventory.domain.model.CreateSkuCommand.CreateSkuCommandBuilder builder = com.commerce.inventory.domain.model.CreateSkuCommand.builder()
                 .id(SkuId.generate())
                 .code(skuCode)
                 .name(request.getName())
@@ -53,7 +60,7 @@ public class CreateSkuUseCase implements UseCase<CreateSkuRequest, CreateSkuResp
         return builder.build();
     }
     
-    private void addWeightToCommand(CreateSkuCommand.CreateSkuCommandBuilder builder, CreateSkuRequest request) {
+    private void addWeightToCommand(com.commerce.inventory.domain.model.CreateSkuCommand.CreateSkuCommandBuilder builder, CreateSkuCommand request) {
         boolean weightValueProvided = request.getWeight() != null;
         boolean weightUnitProvided = request.getWeightUnit() != null && !request.getWeightUnit().trim().isEmpty();
         if (weightValueProvided != weightUnitProvided) {
@@ -65,7 +72,7 @@ public class CreateSkuUseCase implements UseCase<CreateSkuRequest, CreateSkuResp
         }
     }
     
-    private void addVolumeToCommand(CreateSkuCommand.CreateSkuCommandBuilder builder, CreateSkuRequest request) {
+    private void addVolumeToCommand(com.commerce.inventory.domain.model.CreateSkuCommand.CreateSkuCommandBuilder builder, CreateSkuCommand request) {
         boolean volumeValueProvided = request.getVolume() != null;
         boolean volumeUnitProvided = request.getVolumeUnit() != null && !request.getVolumeUnit().trim().isEmpty();
         if (volumeValueProvided != volumeUnitProvided) {

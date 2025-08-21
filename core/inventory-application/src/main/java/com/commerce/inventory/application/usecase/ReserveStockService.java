@@ -1,8 +1,12 @@
-package com.commerce.inventory.domain.application.usecase;
+package com.commerce.inventory.application.usecase;
 
-import com.commerce.common.application.usecase.UseCase;
 import com.commerce.common.domain.model.Quantity;
-import com.commerce.inventory.domain.application.usecase.validation.RequestValidator;
+import com.commerce.inventory.application.port.in.ReserveStockCommand;
+import com.commerce.inventory.application.port.in.ReserveStockResponse;
+import com.commerce.inventory.application.port.in.ReserveStockUseCase;
+import com.commerce.inventory.application.port.out.LoadInventoryPort;
+import com.commerce.inventory.application.port.out.SaveInventoryPort;
+import com.commerce.inventory.application.util.ValidationHelper;
 import com.commerce.inventory.domain.exception.InsufficientStockException;
 import com.commerce.inventory.domain.exception.InvalidReservationException;
 import com.commerce.inventory.domain.exception.InvalidSkuIdException;
@@ -10,37 +14,31 @@ import com.commerce.inventory.domain.model.Inventory;
 import com.commerce.inventory.domain.model.Reservation;
 import com.commerce.inventory.domain.model.ReservationId;
 import com.commerce.inventory.domain.model.SkuId;
-import com.commerce.inventory.domain.repository.InventoryRepository;
 import com.commerce.inventory.domain.repository.ReservationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
+@Service
 @RequiredArgsConstructor
-public class ReserveStockUseCase implements UseCase<ReserveStockRequest, ReserveStockResponse> {
+@Transactional
+public class ReserveStockService implements ReserveStockUseCase {
     
     private static final int DEFAULT_TTL_SECONDS = 900; // 15분
     private static final int BATCH_SIZE = 1000; // IN 절 제한을 위한 배치 크기
     
-    private final InventoryRepository inventoryRepository;
+    private final LoadInventoryPort loadInventoryPort;
+    private final SaveInventoryPort saveInventoryPort;
     private final ReservationRepository reservationRepository;
     private final Clock clock;
     
-    
     @Override
-    @Transactional
-    public ReserveStockResponse execute(ReserveStockRequest request) {
+    public ReserveStockResponse execute(ReserveStockCommand request) {
         validateRequest(request);
         
         LocalDateTime currentTime = LocalDateTime.now(clock);
@@ -58,7 +56,7 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
         List<Reservation> savedReservations = reservationRepository.saveAll(reservations);
         
         // 변경된 모든 재고를 일괄 저장
-        inventoryRepository.saveAll(new ArrayList<>(inventoryMap.values()));
+        saveInventoryPort.saveAll(new ArrayList<>(inventoryMap.values()));
         
         // DTO 변환
         List<ReserveStockResponse.ReservationResult> results = convertToResults(savedReservations);
@@ -68,12 +66,12 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
                 .build();
     }
     
-    private Map<String, Inventory> lockAndVerifyInventories(List<ReserveStockRequest.ReservationItem> items) {
+    private Map<String, Inventory> lockAndVerifyInventories(List<ReserveStockCommand.ReservationItem> items) {
         // SKU별로 요청 수량을 합산
         Map<String, Integer> totalQuantityBySku = items.stream()
                 .collect(Collectors.groupingBy(
-                        ReserveStockRequest.ReservationItem::getSkuId,
-                        Collectors.summingInt(ReserveStockRequest.ReservationItem::getQuantity)
+                        ReserveStockCommand.ReservationItem::getSkuId,
+                        Collectors.summingInt(ReserveStockCommand.ReservationItem::getQuantity)
                 ));
         
         // 모든 SKU ID를 수집
@@ -98,7 +96,7 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
         for (int i = 0; i < skuIdList.size(); i += BATCH_SIZE) {
             int endIndex = Math.min(i + BATCH_SIZE, skuIdList.size());
             Set<SkuId> batchSkuIds = new HashSet<>(skuIdList.subList(i, endIndex));
-            result.putAll(inventoryRepository.findBySkuIdsWithLock(batchSkuIds));
+            result.putAll(loadInventoryPort.loadBySkuIdsWithLock(batchSkuIds));
         }
         
         return result;
@@ -149,7 +147,7 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
     }
     
     private List<Reservation> performReservations(
-            ReserveStockRequest request,
+            ReserveStockCommand request,
             Map<String, Inventory> inventoryMap,
             int ttlSeconds,
             LocalDateTime currentTime
@@ -166,7 +164,7 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
     }
     
     private Reservation createReservation(
-            ReserveStockRequest.ReservationItem item,
+            ReserveStockCommand.ReservationItem item,
             Inventory inventory,
             String orderId,
             int ttlSeconds,
@@ -200,19 +198,15 @@ public class ReserveStockUseCase implements UseCase<ReserveStockRequest, Reserve
                 .collect(Collectors.toList());
     }
     
-    private void validateRequest(ReserveStockRequest request) {
-        RequestValidator.of(request)
-                .validate(Objects::nonNull, "예약 요청이 null일 수 없습니다")
-                .notEmpty(ReserveStockRequest::getOrderId, "주문 ID")
-                .notEmptyList(ReserveStockRequest::getItems, "예약 항목")
-                .validateEach(ReserveStockRequest::getItems, this::validateReservationItem)
-                .execute();
-    }
-    
-    private void validateReservationItem(RequestValidator<ReserveStockRequest.ReservationItem> validator) {
-        validator
-                .validate(Objects::nonNull, "예약 항목에 null이 포함될 수 없습니다")
-                .notEmpty(ReserveStockRequest.ReservationItem::getSkuId, "SKU ID")
-                .positive(ReserveStockRequest.ReservationItem::getQuantity, "수량");
+    private void validateRequest(ReserveStockCommand request) {
+        ValidationHelper.validateNotNull(request, "예약 요청이 null일 수 없습니다");
+        ValidationHelper.validateNotEmpty(request.getOrderId(), "주문 ID");
+        ValidationHelper.validateNotEmptyList(request.getItems(), "예약 항목");
+        
+        for (ReserveStockCommand.ReservationItem item : request.getItems()) {
+            ValidationHelper.validateNotNull(item, "예약 항목에 null이 포함될 수 없습니다");
+            ValidationHelper.validateNotEmpty(item.getSkuId(), "SKU ID");
+            ValidationHelper.validatePositive(item.getQuantity(), "수량");
+        }
     }
 }

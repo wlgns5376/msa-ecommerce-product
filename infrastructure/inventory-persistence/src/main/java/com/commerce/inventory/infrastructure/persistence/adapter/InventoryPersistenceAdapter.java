@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
@@ -77,6 +78,25 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
         }
         
         return resultMap;
+    }
+    
+    @Override
+    @Transactional
+    public Map<SkuId, Inventory> loadBySkuIdsWithLock(Set<SkuId> skuIds) {
+        if (skuIds == null || skuIds.isEmpty()) {
+            return Map.of();
+        }
+        
+        List<String> skuIdStrings = skuIds.stream()
+                .map(SkuId::value)
+                .collect(Collectors.toList());
+        
+        return inventoryJpaRepository.findAllByIdWithLock(skuIdStrings).stream()
+                .map(this::toDomainEntity)
+                .collect(Collectors.toMap(
+                        Inventory::getSkuId,
+                        inventory -> inventory
+                ));
     }
     
     @Override

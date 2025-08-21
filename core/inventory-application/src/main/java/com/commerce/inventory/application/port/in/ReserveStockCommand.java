@@ -1,4 +1,4 @@
-package com.commerce.inventory.domain.application.usecase;
+package com.commerce.inventory.application.port.in;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -7,7 +7,7 @@ import java.util.List;
 
 @Getter
 @Builder
-public class ReserveStockRequest {
+public class ReserveStockCommand {
     
     private final List<ReservationItem> items;
     private final String orderId;
