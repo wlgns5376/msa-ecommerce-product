@@ -1,82 +1,57 @@
 package com.commerce.product.domain.event;
 
 import com.commerce.common.event.DomainEvent;
-import com.commerce.common.event.DomainEventPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.*;
+import java.time.LocalDateTime;
 
 @ExtendWith(MockitoExtension.class)
 class ProductDomainEventHandlerTest {
-
+    
     @Mock
-    private DomainEventPublisher eventPublisher;
-
-    @Mock
-    private DomainEvent domainEvent;
-
-    private ProductDomainEventHandler eventHandler;
-
+    private EventPublicationDelegate delegate;
+    
+    @InjectMocks
+    private ProductDomainEventHandler handler;
+    
+    private TestDomainEvent testEvent;
+    
     @BeforeEach
     void setUp() {
-        eventHandler = new ProductDomainEventHandler(eventPublisher);
+        testEvent = new TestDomainEvent();
     }
-
+    
     @Test
-    @DisplayName("도메인 이벤트 발행 성공")
-    void handleDomainEvent_Success() {
+    @DisplayName("도메인 이벤트 수신 시 EventPublicationDelegate를 통해 이벤트가 발행된다")
+    void handleDomainEvent_ShouldDelegateToEventPublicationDelegate() {
+        // Given - 테스트 이벤트가 준비됨
+        
         // When
-        eventHandler.handleDomainEvent(domainEvent);
-
+        handler.handleDomainEvent(testEvent);
+        
         // Then
-        verify(eventPublisher).publish(domainEvent);
+        verify(delegate, times(1)).publishWithRetry(testEvent);
     }
-
-    @Test
-    @DisplayName("도메인 이벤트 발행 실패 시 예외 발생")
-    void publishEventWithRetry_WhenPublishFails_ThrowsException() {
-        // Given
-        String errorMessage = "Failed to publish event";
-        doThrow(new RuntimeException(errorMessage))
-            .when(eventPublisher).publish(domainEvent);
-
-        // When & Then
-        assertThrows(RuntimeException.class, 
-            () -> eventHandler.publishEventWithRetry(domainEvent));
-        
-        // Verify
-        verify(eventPublisher).publish(domainEvent);
-    }
-
-    @Test
-    @DisplayName("재시도 실패 후 recover 메소드 호출")
-    void handleFailedEvent_LogsErrorAndContinues() {
-        // Given
-        Exception exception = new RuntimeException("Test exception");
-        
-        // When & Then
-        assertDoesNotThrow(() -> 
-            eventHandler.handleFailedEvent(exception, domainEvent));
-    }
-
+    
     static class TestDomainEvent implements DomainEvent {
         @Override
         public LocalDateTime getOccurredAt() {
             return LocalDateTime.now();
         }
-
+        
         @Override
         public String eventType() {
-            return "TestDomainEvent";
+            return "TestEvent";
         }
     }
 }
