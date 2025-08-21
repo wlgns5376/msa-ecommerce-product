@@ -313,8 +313,8 @@ class ReserveBundleStockServiceTest {
     }
 
     @Test
-    @DisplayName("예약 중 일부가 실패하면 트랜잭션이 롤백되어 전체 예약이 취소된다")
-    void reserveBundleStock_partialFailure_transactionRollback() {
+    @DisplayName("번들 내 SKU 중 하나라도 재고가 부족하면 전체 예약이 실패한다")
+    void reserveBundleStock_failWhenAnySkuInBundleIsInsufficient() {
         // Given
         ReserveBundleStockCommand.BundleItem bundleItem = ReserveBundleStockCommand.BundleItem.builder()
             .productOptionId("OPTION-001")

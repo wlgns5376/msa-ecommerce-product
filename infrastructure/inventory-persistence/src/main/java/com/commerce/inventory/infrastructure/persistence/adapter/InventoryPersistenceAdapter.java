@@ -9,6 +9,7 @@ import com.commerce.inventory.infrastructure.persistence.entity.InventoryJpaEnti
 import com.commerce.inventory.infrastructure.persistence.repository.InventoryJpaRepository;
 import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +26,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInventoryPort {
     
-    private static final int BATCH_SIZE = 1000;
+    @Value("${inventory.persistence.batch-size:1000}")
+    private int batchSize;
     
     private final InventoryJpaRepository inventoryJpaRepository;
     
@@ -48,8 +50,8 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
                 .map(SkuId::value)
                 .collect(Collectors.toList());
         
-        for (int i = 0; i < skuIdValues.size(); i += BATCH_SIZE) {
-            int endIndex = Math.min(i + BATCH_SIZE, skuIdValues.size());
+        for (int i = 0; i < skuIdValues.size(); i += batchSize) {
+            int endIndex = Math.min(i + batchSize, skuIdValues.size());
             List<String> batch = skuIdValues.subList(i, endIndex);
             
             Map<SkuId, Inventory> batchResult = inventoryJpaRepository.findAllById(batch).stream()

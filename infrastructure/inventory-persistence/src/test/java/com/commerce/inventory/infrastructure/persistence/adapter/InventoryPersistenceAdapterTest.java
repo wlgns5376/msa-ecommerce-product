@@ -14,6 +14,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,6 +42,8 @@ class InventoryPersistenceAdapterTest {
     @BeforeEach
     void setUp() {
         adapter = new InventoryPersistenceAdapter(inventoryJpaRepository);
+        // 테스트용 배치 크기 설정
+        ReflectionTestUtils.setField(adapter, "batchSize", 1000);
     }
     
     @Test
