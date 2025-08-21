@@ -54,12 +54,15 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
         if (skuIds == null || skuIds.isEmpty()) {
             return Map.of();
         }
+
+        // 중복된 SKU ID를 제거하여 불필요한 작업을 줄입니다.
+        List<SkuId> distinctSkuIds = skuIds.stream().distinct().collect(Collectors.toList());
         
-        Map<SkuId, Inventory> resultMap = new HashMap<>(skuIds.size());
+        Map<SkuId, Inventory> resultMap = new HashMap<>(distinctSkuIds.size());
         
-        for (int i = 0; i < skuIds.size(); i += batchSize) {
-            int endIndex = Math.min(i + batchSize, skuIds.size());
-            List<String> batchIds = skuIds.subList(i, endIndex).stream()
+        for (int i = 0; i < distinctSkuIds.size(); i += batchSize) {
+            int endIndex = Math.min(i + batchSize, distinctSkuIds.size());
+            List<String> batchIds = distinctSkuIds.subList(i, endIndex).stream()
                     .map(SkuId::value)
                     .collect(Collectors.toList());
             
