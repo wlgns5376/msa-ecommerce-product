@@ -43,6 +43,16 @@ class ProductTest {
         assertThat(product.isOutOfStock()).isFalse();
     }
 
+    @Test
+    @DisplayName("description이 null인 경우 빈 문자열로 처리된다")
+    void shouldHandleNullDescription() {
+        // When
+        Product product = Product.create(productName, null, ProductType.NORMAL);
+
+        // Then
+        assertThat(product.getDescription()).isEqualTo("");
+    }
+
     @ParameterizedTest
     @EnumSource(ProductType.class)
     @DisplayName("모든 상품 타입으로 상품을 생성할 수 있다")

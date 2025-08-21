@@ -71,3 +71,12 @@ logging:
     org.hibernate.SQL: ${SQL_LOG_LEVEL:DEBUG}
   pattern:
     console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# 이벤트 발행 재시도 정책 설정
+event:
+  publication:
+    retry:
+      max-attempts: ${EVENT_RETRY_MAX_ATTEMPTS:3}
+      initial-delay: ${EVENT_RETRY_INITIAL_DELAY:1000}
+      max-delay: ${EVENT_RETRY_MAX_DELAY:5000}
+      multiplier: ${EVENT_RETRY_MULTIPLIER:2}
