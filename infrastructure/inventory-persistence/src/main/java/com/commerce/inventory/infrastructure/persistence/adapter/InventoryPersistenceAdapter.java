@@ -73,7 +73,7 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
         try {
             InventoryJpaEntity entity = toJpaEntity(inventory);
             inventoryJpaRepository.save(entity);
-        } catch (OptimisticLockException e) {
+        } catch (OptimisticLockException | org.springframework.dao.OptimisticLockingFailureException e) {
             throw new OptimisticLockingFailureException(
                 "동시성 충돌이 발생했습니다. 다시 시도해주세요. SKU ID: " + inventory.getSkuId().value(), 
                 e
@@ -92,7 +92,7 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
                 .map(this::toJpaEntity)
                 .collect(Collectors.toList());
             inventoryJpaRepository.saveAll(entities);
-        } catch (OptimisticLockException e) {
+        } catch (OptimisticLockException | org.springframework.dao.OptimisticLockingFailureException e) {
             throw new OptimisticLockingFailureException(
                 "동시성 충돌이 발생했습니다. 다시 시도해주세요. " + formatConflictingSkuIds(inventories),
                 e

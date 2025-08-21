@@ -73,6 +73,9 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
             
             // 실패 응답 생성 (트랜잭션이 자동으로 롤백됨)
             return createFailureResponse(sagaId, command.getOrderId(), e.getMessage());
+        } catch (org.springframework.dao.OptimisticLockingFailureException e) {
+            log.warn("번들 재고 예약 중 동시성 충돌 발생: sagaId={}, error={}", sagaId, e.getMessage());
+            return createFailureResponse(sagaId, command.getOrderId(), "일시적인 오류가 발생했습니다. 다시 시도해주세요.");
         }
     }
 
