@@ -45,10 +45,10 @@ public class EventPublicationDelegate {
             
             // RuntimeException 내부의 원인이 재시도 가능한 예외인지 확인
             Throwable cause = e.getCause();
-            if (cause instanceof IOException) {
-                throw (IOException) cause;
-            } else if (cause instanceof TimeoutException) {
-                throw (TimeoutException) cause;
+            if (cause instanceof IOException ioException) {
+                throw ioException;
+            } else if (cause instanceof TimeoutException timeoutException) {
+                throw timeoutException;
             } else if (e instanceof TransientDataAccessException) {
                 throw e;
             }
