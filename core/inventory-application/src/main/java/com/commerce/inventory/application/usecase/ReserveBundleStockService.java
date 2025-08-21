@@ -153,7 +153,7 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
         Map<SkuId, Inventory> inventoryMap
     ) {
         Set<Inventory> modifiedInventories = new HashSet<>();
-        List<Reservation> reservationsToSave = new ArrayList<>();
+        List<Reservation> reservationsToSave = new ArrayList<>(skuRequests.size());
         
         int ttlSeconds = Optional.ofNullable(command.getTtlSeconds()).orElse(defaultTtlSeconds);
         LocalDateTime now = LocalDateTime.now(clock);

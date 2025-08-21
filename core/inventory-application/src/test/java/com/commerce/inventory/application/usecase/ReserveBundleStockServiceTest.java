@@ -54,7 +54,7 @@ class ReserveBundleStockServiceTest {
     void setUp() {
         // 고정된 시간으로 Clock 생성
         Instant fixedInstant = Instant.parse("2024-01-01T10:00:00Z");
-        fixedClock = Clock.fixed(fixedInstant, ZoneId.systemDefault());
+        fixedClock = Clock.fixed(fixedInstant, ZoneId.of("UTC"));
         
         sut = new ReserveBundleStockService(
             loadInventoryPort,

@@ -55,7 +55,7 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
             return Map.of();
         }
         
-        Map<SkuId, Inventory> resultMap = new HashMap<>();
+        Map<SkuId, Inventory> resultMap = new HashMap<>(skuIds.size());
         
         for (int i = 0; i < skuIds.size(); i += batchSize) {
             int endIndex = Math.min(i + batchSize, skuIds.size());
