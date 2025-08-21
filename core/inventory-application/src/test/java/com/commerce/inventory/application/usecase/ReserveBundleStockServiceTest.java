@@ -470,11 +470,16 @@ class ReserveBundleStockServiceTest {
     }
 
     @Test
-    @DisplayName("잘못된 입력값이 주어지면 예외가 발생한다")
-    void reserveBundleStock_invalidInput_throwsException() {
+    @DisplayName("잘못된 입력값이 주어지면 실패 응답을 반환한다")
+    void reserveBundleStock_invalidInput_returnsFailureResponse() {
         // Given - null command
-        assertThatThrownBy(() -> sut.execute(null))
-            .isInstanceOf(IllegalArgumentException.class);
+        BundleReservationResponse response = sut.execute(null);
+        
+        // Then
+        assertThat(response.getStatus()).isEqualTo(BundleReservationStatus.FAILED);
+        assertThat(response.getFailureReason()).isEqualTo("예약 요청이 null일 수 없습니다");
+        assertThat(response.getSagaId()).isNull();
+        assertThat(response.getOrderId()).isNull();
 
         // Given - empty order ID
         ReserveBundleStockCommand emptyOrderIdCommand = ReserveBundleStockCommand.builder()
@@ -495,9 +500,13 @@ class ReserveBundleStockServiceTest {
         when(violation.getMessage()).thenReturn("주문 ID는 필수입니다");
         when(validator.validate(emptyOrderIdCommand)).thenReturn(Set.of(violation));
         
-        assertThatThrownBy(() -> sut.execute(emptyOrderIdCommand))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("주문 ID");
+        response = sut.execute(emptyOrderIdCommand);
+        
+        // Then
+        assertThat(response.getStatus()).isEqualTo(BundleReservationStatus.FAILED);
+        assertThat(response.getFailureReason()).contains("주문 ID");
+        assertThat(response.getSagaId()).isEqualTo("BUNDLE-RESERVATION-001");
+        assertThat(response.getOrderId()).isEqualTo("");
 
         // Given - empty bundle items
         ReserveBundleStockCommand emptyItemsCommand = ReserveBundleStockCommand.builder()
@@ -511,9 +520,11 @@ class ReserveBundleStockServiceTest {
         when(violation2.getMessage()).thenReturn("번들 항목은 최소 1개 이상이어야 합니다");
         when(validator.validate(emptyItemsCommand)).thenReturn(Set.of(violation2));
         
-        assertThatThrownBy(() -> sut.execute(emptyItemsCommand))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("번들 항목");
+        response = sut.execute(emptyItemsCommand);
+        
+        // Then
+        assertThat(response.getStatus()).isEqualTo(BundleReservationStatus.FAILED);
+        assertThat(response.getFailureReason()).contains("번들 항목");
     }
 
     @Test

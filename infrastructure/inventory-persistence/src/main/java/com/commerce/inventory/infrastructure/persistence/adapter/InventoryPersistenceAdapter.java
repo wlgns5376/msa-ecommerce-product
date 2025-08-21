@@ -27,6 +27,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInventoryPort {
     
+    private static final int MAX_SKU_IDS_IN_ERROR_MESSAGE = 10;
+    
     @Value("${inventory.persistence.batch-size:1000}")
     private int batchSize;
     
@@ -110,9 +112,9 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
     private String formatConflictingSkuIds(Collection<Inventory> inventories) {
         String ids = inventories.stream()
                 .map(inv -> inv.getSkuId().value())
-                .limit(10)
+                .limit(MAX_SKU_IDS_IN_ERROR_MESSAGE)
                 .collect(Collectors.joining(", "));
-        if (inventories.size() > 10) {
+        if (inventories.size() > MAX_SKU_IDS_IN_ERROR_MESSAGE) {
             ids += " 등 (총 " + inventories.size() + "개)";
         }
         return "SKU IDs: " + ids;
