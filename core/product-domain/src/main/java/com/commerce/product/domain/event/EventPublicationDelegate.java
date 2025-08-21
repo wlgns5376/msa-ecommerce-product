@@ -22,18 +22,6 @@ public class EventPublicationDelegate {
     private final DomainEventPublisher eventPublisher;
     private final DeadLetterQueueService deadLetterQueueService;
     
-    @Value("${event.publication.retry.max-attempts:3}")
-    private int maxAttempts;
-    
-    @Value("${event.publication.retry.initial-delay:1000}")
-    private long initialDelay;
-    
-    @Value("${event.publication.retry.max-delay:5000}")
-    private long maxDelay;
-    
-    @Value("${event.publication.retry.multiplier:2}")
-    private double multiplier;
-    
     @Retryable(
         maxAttemptsExpression = "${event.publication.retry.max-attempts:3}",
         backoff = @Backoff(

@@ -42,8 +42,9 @@ public abstract class AggregateRoot<ID> {
     }
     
     /**
-     * 도메인 이벤트를 반환하고 내부 목록을 원자적으로 비웁니다.
-     * 이벤트 발행 후 clearDomainEvents()를 호출하는 것을 잊어버리는 실수를 방지합니다.
+     * 도메인 이벤트를 반환하고 내부 목록을 비웁니다.
+     * 이 메소드는 한 번의 호출로 이벤트 목록을 가져오고 비우는 작업을 모두 수행하여,
+     * 이벤트 발행 후 clearDomainEvents()를 호출하는 것을 잊는 실수를 방지합니다.
      */
     public List<DomainEvent> pullDomainEvents() {
         List<DomainEvent> pulledEvents = new ArrayList<>(this.domainEvents);
