@@ -19,7 +19,8 @@ public class EventPublicationDelegate {
     @Retryable(
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2, maxDelay = 5000),
-        include = { java.io.IOException.class, org.springframework.dao.TransientDataAccessException.class }
+        retryFor = { RuntimeException.class },
+        noRetryFor = { IllegalArgumentException.class, IllegalStateException.class }
     )
     public void publishWithRetry(DomainEvent event) {
         try {

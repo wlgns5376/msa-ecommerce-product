@@ -40,6 +40,16 @@ public abstract class AggregateRoot<ID> {
     }
     
     /**
+     * 도메인 이벤트를 반환하고 내부 목록을 원자적으로 비웁니다.
+     * 이벤트 발행 후 clearDomainEvents()를 호출하는 것을 잊어버리는 실수를 방지합니다.
+     */
+    public List<DomainEvent> pullDomainEvents() {
+        List<DomainEvent> pulledEvents = new ArrayList<>(this.domainEvents);
+        this.domainEvents.clear();
+        return Collections.unmodifiableList(pulledEvents);
+    }
+    
+    /**
      * 애그리게이트의 ID를 반환합니다.
      */
     public abstract ID getId();

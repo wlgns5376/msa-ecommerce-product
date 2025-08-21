@@ -32,7 +32,6 @@ public class CreateProductService implements CreateProductUseCase {
     }
     
     private void publishDomainEvents(Product product) {
-        product.getDomainEvents().forEach(eventPublisher::publishEvent);
-        product.clearDomainEvents();
+        product.pullDomainEvents().forEach(eventPublisher::publishEvent);
     }
 }
