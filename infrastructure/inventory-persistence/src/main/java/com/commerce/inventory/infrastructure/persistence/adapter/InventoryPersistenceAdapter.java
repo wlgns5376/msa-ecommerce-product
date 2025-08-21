@@ -40,7 +40,7 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
     @Transactional(readOnly = true)
     public Map<SkuId, Inventory> loadAllByIds(List<SkuId> skuIds) {
         if (skuIds == null || skuIds.isEmpty()) {
-            return java.util.Collections.emptyMap();
+            return Map.of();
         }
         
         Map<SkuId, Inventory> resultMap = new HashMap<>();
@@ -56,7 +56,7 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
                     .map(this::toDomainEntity)
                     .collect(Collectors.toMap(
                             Inventory::getSkuId,
-                            java.util.function.Function.identity()
+                            inventory -> inventory
                     ));
             
             resultMap.putAll(batchResult);

@@ -113,9 +113,8 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
 
     private void validateInventoryExists(List<SkuId> requiredSkuIds, Map<SkuId, Inventory> inventoryMap) {
         if (inventoryMap.size() != requiredSkuIds.size()) {
-            Set<SkuId> missingSkuIdSet = new HashSet<>(requiredSkuIds);
-            missingSkuIdSet.removeAll(inventoryMap.keySet());
-            String missingSkuIds = missingSkuIdSet.stream()
+            String missingSkuIds = requiredSkuIds.stream()
+                    .filter(id -> !inventoryMap.containsKey(id))
                     .map(SkuId::value)
                     .collect(Collectors.joining(", "));
             throw new InvalidInventoryException("다음 SKU에 대한 재고 정보를 찾을 수 없습니다: " + missingSkuIds);
