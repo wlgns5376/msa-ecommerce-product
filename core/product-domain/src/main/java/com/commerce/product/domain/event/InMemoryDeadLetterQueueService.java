@@ -17,9 +17,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class InMemoryDeadLetterQueueService implements DeadLetterQueueService {
     
     private final Map<String, FailedEventRecord> deadLetterQueue = new ConcurrentHashMap<>();
-    
-    @Value("${event.publication.retry.max-attempts:3}")
-    private int maxAttempts;
+    private final int maxAttempts;
+
+    public InMemoryDeadLetterQueueService(@Value("${event.publication.retry.max-attempts:3}") int maxAttempts) {
+        this.maxAttempts = maxAttempts;
+    }
     
     @Override
     public void storeFailedEvent(DomainEvent event, Exception failureReason) {

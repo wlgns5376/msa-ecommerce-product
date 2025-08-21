@@ -19,6 +19,9 @@ public class ProductDomainEventHandler {
         try {
             delegate.publishWithRetry(event);
         } catch (Exception e) {
+            if (e instanceof RuntimeException) {
+                throw (RuntimeException) e;
+            }
             // TransactionalEventListener는 checked exception을 던질 수 없으므로
             // RuntimeException으로 감싸서 던짐
             throw new RuntimeException("Failed to publish domain event", e);
