@@ -5,7 +5,7 @@ import lombok.Getter;
 
 @Getter
 @Builder
-public class CreateSkuCommand {
+public class SkuCreationData {
     private final SkuId id;
     private final SkuCode code;
     private final String name;

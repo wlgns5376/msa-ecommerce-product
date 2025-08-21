@@ -9,7 +9,8 @@ import com.commerce.inventory.domain.exception.InvalidReservationIdException;
 import com.commerce.inventory.domain.exception.InvalidReservationStateException;
 import com.commerce.inventory.domain.exception.InvalidInventoryException;
 import com.commerce.inventory.domain.model.*;
-import com.commerce.inventory.domain.repository.ReservationRepository;
+import com.commerce.inventory.application.port.out.LoadReservationPort;
+import com.commerce.inventory.application.port.out.SaveReservationPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -42,7 +43,10 @@ class ReleaseReservationUseCaseTest {
     private ReleaseReservationUseCase useCase;
 
     @Mock
-    private ReservationRepository reservationRepository;
+    private LoadReservationPort loadReservationPort;
+    
+    @Mock
+    private SaveReservationPort saveReservationPort;
     
     @Mock
     private LoadInventoryPort loadInventoryPort;
@@ -53,7 +57,8 @@ class ReleaseReservationUseCaseTest {
     @BeforeEach
     void setUp() {
         useCase = new ReleaseReservationService(
-            reservationRepository,
+            loadReservationPort,
+            saveReservationPort,
             loadInventoryPort,
             saveInventoryPort
         );
@@ -88,7 +93,7 @@ class ReleaseReservationUseCaseTest {
             Quantity.of(50)
         );
         
-        given(reservationRepository.findById(RESERVATION_ID))
+        given(loadReservationPort.findById(RESERVATION_ID))
             .willReturn(Optional.of(reservation));
         given(loadInventoryPort.load(SKU_ID))
             .willReturn(Optional.of(inventory));
@@ -99,7 +104,7 @@ class ReleaseReservationUseCaseTest {
         useCase.release(command);
         
         // Then
-        then(reservationRepository).should().save(reservation);
+        then(saveReservationPort).should().save(reservation);
         then(saveInventoryPort).should().save(inventory);
         
         assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.RELEASED);
@@ -113,7 +118,7 @@ class ReleaseReservationUseCaseTest {
         String reservationIdValue = "NOT_EXISTS";
         ReservationId reservationId = new ReservationId(reservationIdValue);
         
-        given(reservationRepository.findById(reservationId))
+        given(loadReservationPort.findById(reservationId))
             .willReturn(Optional.empty());
         
         ReleaseReservationCommand command = createCommand(reservationIdValue);
@@ -124,7 +129,7 @@ class ReleaseReservationUseCaseTest {
             .hasMessage("예약을 찾을 수 없습니다: " + reservationIdValue);
         
         then(saveInventoryPort).should(never()).save(any());
-        then(reservationRepository).should(never()).save(any());
+        then(saveReservationPort).should(never()).save(any());
     }
     
     @Test
@@ -134,7 +139,7 @@ class ReleaseReservationUseCaseTest {
         Reservation reservation = createDefaultReservation(RESERVATION_ID, SKU_ID);
         reservation.release(); // 이미 해제된 상태
         
-        given(reservationRepository.findById(RESERVATION_ID))
+        given(loadReservationPort.findById(RESERVATION_ID))
             .willReturn(Optional.of(reservation));
         
         ReleaseReservationCommand command = createCommand(RESERVATION_ID_VALUE);
@@ -169,7 +174,7 @@ class ReleaseReservationUseCaseTest {
             Quantity.of(50)
         );
         
-        given(reservationRepository.findById(RESERVATION_ID))
+        given(loadReservationPort.findById(RESERVATION_ID))
             .willReturn(Optional.of(reservation));
         given(loadInventoryPort.load(SKU_ID))
             .willReturn(Optional.of(inventory));
@@ -180,7 +185,7 @@ class ReleaseReservationUseCaseTest {
         useCase.release(command);
         
         // Then
-        then(reservationRepository).should().save(reservation);
+        then(saveReservationPort).should().save(reservation);
         then(saveInventoryPort).should().save(inventory);
         
         assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.RELEASED);
@@ -193,7 +198,7 @@ class ReleaseReservationUseCaseTest {
         // Given
         Reservation reservation = createDefaultReservation(RESERVATION_ID, SKU_ID);
         
-        given(reservationRepository.findById(RESERVATION_ID))
+        given(loadReservationPort.findById(RESERVATION_ID))
             .willReturn(Optional.of(reservation));
         given(loadInventoryPort.load(SKU_ID))
             .willReturn(Optional.empty());
@@ -206,7 +211,7 @@ class ReleaseReservationUseCaseTest {
             .hasMessage("재고를 찾을 수 없습니다: " + SKU_ID.value());
         
         then(saveInventoryPort).should(never()).save(any());
-        then(reservationRepository).should(never()).save(any());
+        then(saveReservationPort).should(never()).save(any());
     }
     
     @Test
@@ -216,7 +221,7 @@ class ReleaseReservationUseCaseTest {
         Reservation reservation = createDefaultReservation(RESERVATION_ID, SKU_ID);
         reservation.confirm(FIXED_TIME); // 확정된 상태
         
-        given(reservationRepository.findById(RESERVATION_ID))
+        given(loadReservationPort.findById(RESERVATION_ID))
             .willReturn(Optional.of(reservation));
         
         ReleaseReservationCommand command = createCommand(RESERVATION_ID_VALUE);
@@ -243,7 +248,7 @@ class ReleaseReservationUseCaseTest {
             Quantity.of(5) // 5개만 예약된 상태
         );
         
-        given(reservationRepository.findById(RESERVATION_ID))
+        given(loadReservationPort.findById(RESERVATION_ID))
             .willReturn(Optional.of(reservation));
         given(loadInventoryPort.load(SKU_ID))
             .willReturn(Optional.of(inventory));
@@ -256,6 +261,6 @@ class ReleaseReservationUseCaseTest {
             .hasMessage("해제할 예약 수량이 부족합니다. 현재 예약: 5, 해제 요청: 10");
         
         then(saveInventoryPort).should(never()).save(any());
-        then(reservationRepository).should(never()).save(any());
+        then(saveReservationPort).should(never()).save(any());
     }
 }

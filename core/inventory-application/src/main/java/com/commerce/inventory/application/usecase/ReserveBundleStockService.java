@@ -14,7 +14,8 @@ import com.commerce.inventory.domain.model.Inventory;
 import com.commerce.inventory.domain.model.Reservation;
 import com.commerce.inventory.domain.model.ReservationId;
 import com.commerce.inventory.domain.model.SkuId;
-import com.commerce.inventory.domain.repository.ReservationRepository;
+import com.commerce.inventory.application.port.out.LoadReservationPort;
+import com.commerce.inventory.application.port.out.SaveReservationPort;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
@@ -38,7 +39,8 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
     
     private final LoadInventoryPort loadInventoryPort;
     private final SaveInventoryPort saveInventoryPort;
-    private final ReservationRepository reservationRepository;
+    private final LoadReservationPort loadReservationPort;
+    private final SaveReservationPort saveReservationPort;
     private final Clock clock;
     private final Validator validator;
     
@@ -186,7 +188,9 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
         }
         
         // 예약 정보 일괄 저장
-        List<Reservation> savedReservations = reservationRepository.saveAll(reservationsToSave);
+        List<Reservation> savedReservations = reservationsToSave.stream()
+                .map(saveReservationPort::save)
+                .collect(Collectors.toList());
         
         // 변경된 재고 정보 일괄 저장
         saveInventoryPort.saveAll(modifiedInventories);

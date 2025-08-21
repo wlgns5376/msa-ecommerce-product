@@ -10,7 +10,8 @@ import com.commerce.inventory.application.port.out.SaveInventoryPort;
 import com.commerce.inventory.domain.exception.InsufficientStockException;
 import com.commerce.inventory.domain.exception.InvalidInventoryException;
 import com.commerce.inventory.domain.model.*;
-import com.commerce.inventory.domain.repository.ReservationRepository;
+import com.commerce.inventory.application.port.out.LoadReservationPort;
+import com.commerce.inventory.application.port.out.SaveReservationPort;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,7 +43,10 @@ class ReserveBundleStockServiceTest {
     private SaveInventoryPort saveInventoryPort;
 
     @Mock
-    private ReservationRepository reservationRepository;
+    private LoadReservationPort loadReservationPort;
+
+    @Mock
+    private SaveReservationPort saveReservationPort;
 
     @Mock
     private Validator validator;
@@ -59,7 +63,8 @@ class ReserveBundleStockServiceTest {
         sut = new ReserveBundleStockService(
             loadInventoryPort,
             saveInventoryPort,
-            reservationRepository,
+            loadReservationPort,
+            saveReservationPort,
             fixedClock,
             validator
         );
@@ -115,7 +120,7 @@ class ReserveBundleStockServiceTest {
             new SkuId("SKU-002"), inventory2
         );
         given(loadInventoryPort.loadAllByIds(anyList())).willReturn(inventoryMap);
-        given(reservationRepository.saveAll(anyList())).willAnswer(invocation -> invocation.getArgument(0));
+        given(saveReservationPort.save(any(Reservation.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         // When
         BundleReservationResponse response = sut.execute(command);
@@ -141,7 +146,7 @@ class ReserveBundleStockServiceTest {
 
         // 재고 저장 확인
         then(saveInventoryPort).should(times(1)).saveAll(anyCollection());
-        then(reservationRepository).should(times(1)).saveAll(anyList());
+        then(saveReservationPort).should(times(2)).save(any(Reservation.class)); // 2개의 예약 저장 확인
     }
 
     @Test
@@ -245,7 +250,7 @@ class ReserveBundleStockServiceTest {
             new SkuId("SKU-003"), inventory3
         );
         given(loadInventoryPort.loadAllByIds(anyList())).willReturn(inventoryMap);
-        given(reservationRepository.saveAll(anyList())).willAnswer(invocation -> invocation.getArgument(0));
+        given(saveReservationPort.save(any(Reservation.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         // When
         BundleReservationResponse response = sut.execute(command);
@@ -262,7 +267,7 @@ class ReserveBundleStockServiceTest {
         assertThat(sku001TotalQuantity).isEqualTo(2);
 
         then(saveInventoryPort).should(times(1)).saveAll(anyCollection());
-        then(reservationRepository).should(times(1)).saveAll(anyList());
+        then(saveReservationPort).should(times(3)).save(any(Reservation.class)); // 3개의 예약 저장 확인
     }
 
     @Test
@@ -309,7 +314,7 @@ class ReserveBundleStockServiceTest {
         
         // 사전 검증에서 실패하므로 save 메서드는 호출되지 않음
         then(saveInventoryPort).should(never()).saveAll(anyCollection());
-        then(reservationRepository).should(never()).saveAll(anyList());
+        then(saveReservationPort).should(never()).save(any(Reservation.class));
     }
 
     @Test
@@ -370,7 +375,7 @@ class ReserveBundleStockServiceTest {
         // 실제 예약 로직이 실행되지 않아 save 메서드들이 호출되지 않음
         then(saveInventoryPort).should(never()).saveAll(anyCollection());
         then(saveInventoryPort).should(never()).save(any(Inventory.class));
-        then(reservationRepository).should(never()).saveAll(anyList());
+        then(saveReservationPort).should(never()).save(any(Reservation.class));
     }
 
     @Test
@@ -400,7 +405,7 @@ class ReserveBundleStockServiceTest {
             new SkuId("SKU-001"), inventory
         );
         given(loadInventoryPort.loadAllByIds(anyList())).willReturn(inventoryMap);
-        given(reservationRepository.saveAll(anyList())).willAnswer(invocation -> invocation.getArgument(0));
+        given(saveReservationPort.save(any(Reservation.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         // When
         BundleReservationResponse response = sut.execute(command);
@@ -450,7 +455,7 @@ class ReserveBundleStockServiceTest {
             new SkuId("SKU-001"), inventory
         );
         given(loadInventoryPort.loadAllByIds(anyList())).willReturn(inventoryMap);
-        given(reservationRepository.saveAll(anyList())).willAnswer(invocation -> invocation.getArgument(0));
+        given(saveReservationPort.save(any(Reservation.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         // When
         BundleReservationResponse response = sut.execute(command);

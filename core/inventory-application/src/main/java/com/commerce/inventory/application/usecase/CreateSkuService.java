@@ -35,7 +35,7 @@ public class CreateSkuService implements CreateSkuUseCase {
             throw new DuplicateSkuCodeException("이미 존재하는 SKU 코드입니다: " + skuCode.value());
         }
         
-        com.commerce.inventory.domain.model.CreateSkuCommand command = buildCreateCommand(request, skuCode);
+        SkuCreationData command = buildCreateCommand(request, skuCode);
         Sku sku = Sku.create(command, LocalDateTime.now(clock));
         
         try {
@@ -47,8 +47,8 @@ public class CreateSkuService implements CreateSkuUseCase {
         }
     }
     
-    private com.commerce.inventory.domain.model.CreateSkuCommand buildCreateCommand(CreateSkuCommand request, SkuCode skuCode) {
-        com.commerce.inventory.domain.model.CreateSkuCommand.CreateSkuCommandBuilder builder = com.commerce.inventory.domain.model.CreateSkuCommand.builder()
+    private SkuCreationData buildCreateCommand(CreateSkuCommand request, SkuCode skuCode) {
+        SkuCreationData.SkuCreationDataBuilder builder = SkuCreationData.builder()
                 .id(SkuId.generate())
                 .code(skuCode)
                 .name(request.getName())
@@ -60,7 +60,7 @@ public class CreateSkuService implements CreateSkuUseCase {
         return builder.build();
     }
     
-    private void addWeightToCommand(com.commerce.inventory.domain.model.CreateSkuCommand.CreateSkuCommandBuilder builder, CreateSkuCommand request) {
+    private void addWeightToCommand(SkuCreationData.SkuCreationDataBuilder builder, CreateSkuCommand request) {
         boolean weightValueProvided = request.getWeight() != null;
         boolean weightUnitProvided = request.getWeightUnit() != null && !request.getWeightUnit().trim().isEmpty();
         if (weightValueProvided != weightUnitProvided) {
@@ -72,7 +72,7 @@ public class CreateSkuService implements CreateSkuUseCase {
         }
     }
     
-    private void addVolumeToCommand(com.commerce.inventory.domain.model.CreateSkuCommand.CreateSkuCommandBuilder builder, CreateSkuCommand request) {
+    private void addVolumeToCommand(SkuCreationData.SkuCreationDataBuilder builder, CreateSkuCommand request) {
         boolean volumeValueProvided = request.getVolume() != null;
         boolean volumeUnitProvided = request.getVolumeUnit() != null && !request.getVolumeUnit().trim().isEmpty();
         if (volumeValueProvided != volumeUnitProvided) {

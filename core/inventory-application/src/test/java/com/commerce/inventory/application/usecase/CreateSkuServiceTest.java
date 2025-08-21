@@ -60,7 +60,7 @@ class CreateSkuServiceTest {
         when(loadSkuPort.existsByCode(any(SkuCode.class))).thenReturn(false);
         
         Sku savedSku = Sku.create(
-                com.commerce.inventory.domain.model.CreateSkuCommand.builder()
+                SkuCreationData.builder()
                         .id(SkuId.generate())
                         .code(SkuCode.of("SKU-001"))
                         .name("테스트 상품")

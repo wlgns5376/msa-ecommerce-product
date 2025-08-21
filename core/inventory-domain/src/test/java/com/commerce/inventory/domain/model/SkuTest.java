@@ -30,7 +30,7 @@ class SkuTest {
 
         // when
         Sku sku = Sku.create(
-            CreateSkuCommand.builder()
+            SkuCreationData.builder()
                 .id(id)
                 .code(code)
                 .name(name)
@@ -62,7 +62,7 @@ class SkuTest {
 
         // when
         Sku sku = Sku.create(
-            CreateSkuCommand.builder()
+            SkuCreationData.builder()
                 .id(id)
                 .code(code)
                 .name(name)
@@ -88,7 +88,7 @@ class SkuTest {
 
         // when & then
         assertThatThrownBy(() -> Sku.create(
-            CreateSkuCommand.builder()
+            SkuCreationData.builder()
                 .code(code)
                 .name(name)
                 .build(),
@@ -107,7 +107,7 @@ class SkuTest {
 
         // when & then
         assertThatThrownBy(() -> Sku.create(
-            CreateSkuCommand.builder()
+            SkuCreationData.builder()
                 .id(id)
                 .name(name)
                 .build(),
@@ -127,7 +127,7 @@ class SkuTest {
 
         // when & then
         assertThatThrownBy(() -> Sku.create(
-            CreateSkuCommand.builder()
+            SkuCreationData.builder()
                 .id(id)
                 .code(code)
                 .name(invalidName)
@@ -208,7 +208,7 @@ class SkuTest {
 
     private Sku createDefaultSku() {
         return Sku.create(
-            CreateSkuCommand.builder()
+            SkuCreationData.builder()
                 .id(SkuId.generate())
                 .code(new SkuCode("TSHIRT-BLACK-L"))
                 .name("티셔츠 - 블랙 - L")

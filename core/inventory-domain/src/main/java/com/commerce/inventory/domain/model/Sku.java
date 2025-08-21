@@ -19,7 +19,7 @@ public class Sku extends AggregateRoot<SkuId> {
     private LocalDateTime updatedAt;
     private Long version;
     
-    private Sku(CreateSkuCommand command, LocalDateTime currentTime) {
+    private Sku(SkuCreationData command, LocalDateTime currentTime) {
         validateCreate(command);
         
         this.id = command.getId();
@@ -33,12 +33,12 @@ public class Sku extends AggregateRoot<SkuId> {
         this.version = 0L;
     }
     
-    public static Sku create(CreateSkuCommand command, LocalDateTime currentTime) {
+    public static Sku create(SkuCreationData command, LocalDateTime currentTime) {
         return new Sku(command, currentTime);
     }
     
     public static Sku create(SkuId id, SkuCode code, String name, Weight weight, Volume volume, LocalDateTime currentTime) {
-        CreateSkuCommand command = CreateSkuCommand.builder()
+        SkuCreationData command = SkuCreationData.builder()
             .id(id)
             .code(code)
             .name(name)
@@ -60,7 +60,7 @@ public class Sku extends AggregateRoot<SkuId> {
             Long version
     ) {
         Sku sku = new Sku(
-                CreateSkuCommand.builder()
+                SkuCreationData.builder()
                         .id(id)
                         .code(code)
                         .name(name)
@@ -98,7 +98,7 @@ public class Sku extends AggregateRoot<SkuId> {
         this.updatedAt = currentTime;
     }
     
-    private void validateCreate(CreateSkuCommand command) {
+    private void validateCreate(SkuCreationData command) {
         if (command.getId() == null) {
             throw new InvalidSkuException("SKU ID는 필수입니다");
         }

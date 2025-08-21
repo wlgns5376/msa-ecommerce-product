@@ -9,7 +9,8 @@ import com.commerce.inventory.domain.exception.InvalidReservationIdException;
 import com.commerce.inventory.domain.model.Inventory;
 import com.commerce.inventory.domain.model.Reservation;
 import com.commerce.inventory.domain.model.ReservationId;
-import com.commerce.inventory.domain.repository.ReservationRepository;
+import com.commerce.inventory.application.port.out.LoadReservationPort;
+import com.commerce.inventory.application.port.out.SaveReservationPort;
 import com.commerce.inventory.domain.model.SkuId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,7 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class ReleaseReservationService implements ReleaseReservationUseCase {
     
-    private final ReservationRepository reservationRepository;
+    private final LoadReservationPort loadReservationPort;
+    private final SaveReservationPort saveReservationPort;
     private final LoadInventoryPort loadInventoryPort;
     private final SaveInventoryPort saveInventoryPort;
     
@@ -41,13 +43,13 @@ public class ReleaseReservationService implements ReleaseReservationUseCase {
         inventory.releaseReservedQuantity(reservation.getQuantity());
 
         // 5. 영속성 처리
-        reservationRepository.save(reservation);
+        saveReservationPort.save(reservation);
         saveInventoryPort.save(inventory);
     }
 
     private Reservation findReservationOrThrow(String reservationIdValue) {
         ReservationId reservationId = new ReservationId(reservationIdValue);
-        return reservationRepository.findById(reservationId)
+        return loadReservationPort.findById(reservationId)
                 .orElseThrow(() -> new InvalidReservationIdException(
                         "예약을 찾을 수 없습니다: " + reservationIdValue
                 ));

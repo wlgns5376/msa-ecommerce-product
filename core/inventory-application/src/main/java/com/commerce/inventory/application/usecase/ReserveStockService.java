@@ -14,7 +14,8 @@ import com.commerce.inventory.domain.model.Inventory;
 import com.commerce.inventory.domain.model.Reservation;
 import com.commerce.inventory.domain.model.ReservationId;
 import com.commerce.inventory.domain.model.SkuId;
-import com.commerce.inventory.domain.repository.ReservationRepository;
+import com.commerce.inventory.application.port.out.LoadReservationPort;
+import com.commerce.inventory.application.port.out.SaveReservationPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,7 +35,8 @@ public class ReserveStockService implements ReserveStockUseCase {
     
     private final LoadInventoryPort loadInventoryPort;
     private final SaveInventoryPort saveInventoryPort;
-    private final ReservationRepository reservationRepository;
+    private final LoadReservationPort loadReservationPort;
+    private final SaveReservationPort saveReservationPort;
     private final Clock clock;
     
     @Override
@@ -53,7 +55,7 @@ public class ReserveStockService implements ReserveStockUseCase {
         );
         
         // 예약 저장 - 일괄 처리로 성능 개선
-        List<Reservation> savedReservations = reservationRepository.saveAll(reservations);
+        List<Reservation> savedReservations = saveAllReservations(reservations);
         
         // 변경된 모든 재고를 일괄 저장
         saveInventoryPort.saveAll(new ArrayList<>(inventoryMap.values()));
@@ -64,6 +66,12 @@ public class ReserveStockService implements ReserveStockUseCase {
         return ReserveStockResponse.builder()
                 .reservations(results)
                 .build();
+    }
+    
+    private List<Reservation> saveAllReservations(List<Reservation> reservations) {
+        return reservations.stream()
+                .map(saveReservationPort::save)
+                .collect(Collectors.toList());
     }
     
     private Map<String, Inventory> lockAndVerifyInventories(List<ReserveStockCommand.ReservationItem> items) {
