@@ -91,18 +91,22 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
                 .collect(Collectors.toList());
             inventoryJpaRepository.saveAll(entities);
         } catch (OptimisticLockException e) {
-            String conflictingSkuIds = inventories.stream()
-                .map(inv -> inv.getSkuId().value())
-                .limit(10)
-                .collect(Collectors.joining(", "));
-            if (inventories.size() > 10) {
-                conflictingSkuIds += " 등 (총 " + inventories.size() + "개)";
-            }
             throw new OptimisticLockingFailureException(
-                "동시성 충돌이 발생했습니다. 다시 시도해주세요. SKU IDs: " + conflictingSkuIds,
+                "동시성 충돌이 발생했습니다. 다시 시도해주세요. " + formatConflictingSkuIds(inventories),
                 e
             );
         }
+    }
+    
+    private String formatConflictingSkuIds(Collection<Inventory> inventories) {
+        String ids = inventories.stream()
+                .map(inv -> inv.getSkuId().value())
+                .limit(10)
+                .collect(Collectors.joining(", "));
+        if (inventories.size() > 10) {
+            ids += " 등 (총 " + inventories.size() + "개)";
+        }
+        return "SKU IDs: " + ids;
     }
     
     private Inventory toDomainEntity(InventoryJpaEntity entity) {
