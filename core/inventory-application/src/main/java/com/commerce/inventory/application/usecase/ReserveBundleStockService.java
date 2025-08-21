@@ -68,11 +68,12 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
             // 5. 성공 응답 생성
             return createSuccessResponse(sagaId, command.getOrderId(), savedReservations);
             
-        } catch (InsufficientStockException | InvalidInventoryException | ArithmeticException e) {
+        } catch (InsufficientStockException | InvalidInventoryException e) {
             log.error("번들 재고 예약 실패: sagaId={}, error={}", sagaId, e.getMessage(), e);
-            
-            // 실패 응답 생성 (트랜잭션이 자동으로 롤백됨)
             return createFailureResponse(sagaId, command.getOrderId(), e.getMessage());
+        } catch (ArithmeticException e) {
+            log.error("번들 재고 예약 실패 (수량 계산 오버플로우): sagaId={}, error={}", sagaId, e.getMessage(), e);
+            return createFailureResponse(sagaId, command.getOrderId(), "요청 수량이 너무 많아 처리할 수 없습니다.");
         } catch (org.springframework.dao.OptimisticLockingFailureException e) {
             log.warn("번들 재고 예약 중 동시성 충돌 발생: sagaId={}, error={}", sagaId, e.getMessage());
             return createFailureResponse(sagaId, command.getOrderId(), "일시적인 오류가 발생했습니다. 다시 시도해주세요.");

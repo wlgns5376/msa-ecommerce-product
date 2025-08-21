@@ -7,6 +7,7 @@ import com.commerce.inventory.domain.model.Inventory;
 import com.commerce.inventory.domain.model.SkuId;
 import com.commerce.inventory.infrastructure.persistence.entity.InventoryJpaEntity;
 import com.commerce.inventory.infrastructure.persistence.repository.InventoryJpaRepository;
+import jakarta.annotation.PostConstruct;
 import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,6 +32,13 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
     
     private final InventoryJpaRepository inventoryJpaRepository;
     
+    @PostConstruct
+    public void validateBatchSize() {
+        if (batchSize <= 0) {
+            throw new IllegalArgumentException("batchSize must be positive.");
+        }
+    }
+    
     @Override
     @Transactional(readOnly = true)
     public Optional<Inventory> load(SkuId skuId) {
@@ -46,15 +54,14 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
         }
         
         Map<SkuId, Inventory> resultMap = new HashMap<>();
-        List<String> skuIdValues = skuIds.stream()
-                .map(SkuId::value)
-                .collect(Collectors.toList());
         
-        for (int i = 0; i < skuIdValues.size(); i += batchSize) {
-            int endIndex = Math.min(i + batchSize, skuIdValues.size());
-            List<String> batch = skuIdValues.subList(i, endIndex);
+        for (int i = 0; i < skuIds.size(); i += batchSize) {
+            int endIndex = Math.min(i + batchSize, skuIds.size());
+            List<String> batchIds = skuIds.subList(i, endIndex).stream()
+                    .map(SkuId::value)
+                    .collect(Collectors.toList());
             
-            Map<SkuId, Inventory> batchResult = inventoryJpaRepository.findAllById(batch).stream()
+            Map<SkuId, Inventory> batchResult = inventoryJpaRepository.findAllById(batchIds).stream()
                     .map(this::toDomainEntity)
                     .collect(Collectors.toMap(
                             Inventory::getSkuId,

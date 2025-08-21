@@ -542,6 +542,6 @@ class ReserveBundleStockServiceTest {
 
         // Then
         assertThat(response.getStatus()).isEqualTo(BundleReservationStatus.FAILED);
-        assertThat(response.getFailureReason()).contains("integer overflow");
+        assertThat(response.getFailureReason()).isEqualTo("요청 수량이 너무 많아 처리할 수 없습니다.");
     }
 }
