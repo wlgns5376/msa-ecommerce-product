@@ -45,13 +45,18 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
     @Override
     @Transactional
     public BundleReservationResponse execute(ReserveBundleStockCommand command) {
-        String sagaId = null;
-        String orderId = null;
+        // command null 체크를 먼저 수행
+        if (command == null) {
+            log.error("번들 재고 예약 실패: command가 null입니다");
+            return createFailureResponse(null, null, "예약 요청이 null일 수 없습니다");
+        }
+        
+        // sagaId와 orderId를 try 블록 밖에서 먼저 추출
+        String sagaId = command.getSagaId();
+        String orderId = command.getOrderId();
         
         try {
             validateCommand(command);
-            sagaId = command.getSagaId();
-            orderId = command.getOrderId();
 
             // 1. 모든 개별 예약 요청 계산
             List<SkuReservationRequest> skuRequests = parseSkuRequests(command);
@@ -72,13 +77,7 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
             return createSuccessResponse(sagaId, orderId, savedReservations);
 
         } catch (IllegalArgumentException e) {
-            log.error("번들 재고 예약 실패 (잘못된 요청): {}", e.getMessage(), e);
-            if (sagaId == null && command != null) {
-                sagaId = command.getSagaId();
-            }
-            if (orderId == null && command != null) {
-                orderId = command.getOrderId();
-            }
+            log.error("번들 재고 예약 실패 (잘못된 요청): sagaId={}, error={}", sagaId, e.getMessage(), e);
             return createFailureResponse(sagaId, orderId, e.getMessage());
         } catch (InsufficientStockException | InvalidInventoryException e) {
             log.error("번들 재고 예약 실패: sagaId={}, error={}", sagaId, e.getMessage(), e);
@@ -234,9 +233,6 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
     }
     
     private void validateCommand(ReserveBundleStockCommand command) {
-        if (command == null) {
-            throw new IllegalArgumentException("예약 요청이 null일 수 없습니다");
-        }
         Set<ConstraintViolation<ReserveBundleStockCommand>> violations = validator.validate(command);
         if (!violations.isEmpty()) {
             String errorMessage = violations.stream()
