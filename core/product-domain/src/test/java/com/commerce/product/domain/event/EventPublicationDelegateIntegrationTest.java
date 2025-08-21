@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-@SpringBootTest(classes = EventPublicationDelegateIntegrationTest.TestConfig.class)
+@SpringBootTest(classes = {EventPublicationDelegateIntegrationTest.TestConfig.class, EventPublicationDelegate.class})
 @DisplayName("EventPublicationDelegate 통합 테스트")
 class EventPublicationDelegateIntegrationTest {
     
@@ -88,11 +88,10 @@ class EventPublicationDelegateIntegrationTest {
             .when(eventPublisher).publish(any(DomainEvent.class));
         
         // When & Then
-        try {
-            delegate.publishWithRetry(testEvent);
-        } catch (IllegalArgumentException e) {
-            // Expected exception
-        }
+        // assertThatThrownBy를 사용하는 것이 더 깔끔하지만,
+        // Spring Retry의 @Recover 메소드가 IllegalArgumentException도 처리하는 현재 구조에서는
+        // 예외가 발생하지 않으므로 기존 방식 유지
+        assertDoesNotThrow(() -> delegate.publishWithRetry(testEvent));
         
         // Then
         verify(eventPublisher, times(1)).publish(testEvent); // 재시도 없이 한 번만 호출
@@ -101,10 +100,6 @@ class EventPublicationDelegateIntegrationTest {
     @Configuration
     @EnableRetry
     static class TestConfig {
-        @Bean
-        public EventPublicationDelegate eventPublicationDelegate(DomainEventPublisher eventPublisher) {
-            return new EventPublicationDelegate(eventPublisher);
-        }
     }
     
     static class TestDomainEvent implements DomainEvent {

@@ -25,7 +25,9 @@ public abstract class AggregateRoot<ID> {
     
     /**
      * 모든 도메인 이벤트를 반환하고 클리어합니다.
+     * @deprecated pullDomainEvents() 메소드를 사용하세요. 더 명확한 이름으로 동일한 기능을 제공합니다.
      */
+    @Deprecated
     public List<DomainEvent> clearDomainEvents() {
         List<DomainEvent> events = new ArrayList<>(this.domainEvents);
         this.domainEvents.clear();
