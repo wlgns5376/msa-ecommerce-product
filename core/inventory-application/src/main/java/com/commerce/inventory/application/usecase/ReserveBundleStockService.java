@@ -45,10 +45,13 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
     @Override
     @Transactional
     public BundleReservationResponse execute(ReserveBundleStockCommand command) {
+        String sagaId = null;
+        String orderId = null;
+        
         try {
             validateCommand(command);
-            String sagaId = command.getSagaId();
-            String orderId = command.getOrderId();
+            sagaId = command.getSagaId();
+            orderId = command.getOrderId();
 
             // 1. 모든 개별 예약 요청 계산
             List<SkuReservationRequest> skuRequests = parseSkuRequests(command);
@@ -70,18 +73,22 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
 
         } catch (IllegalArgumentException e) {
             log.error("번들 재고 예약 실패 (잘못된 요청): {}", e.getMessage(), e);
-            String sagaId = (command != null) ? command.getSagaId() : null;
-            String orderId = (command != null) ? command.getOrderId() : null;
+            if (sagaId == null && command != null) {
+                sagaId = command.getSagaId();
+            }
+            if (orderId == null && command != null) {
+                orderId = command.getOrderId();
+            }
             return createFailureResponse(sagaId, orderId, e.getMessage());
         } catch (InsufficientStockException | InvalidInventoryException e) {
-            log.error("번들 재고 예약 실패: sagaId={}, error={}", command.getSagaId(), e.getMessage(), e);
-            return createFailureResponse(command.getSagaId(), command.getOrderId(), e.getMessage());
+            log.error("번들 재고 예약 실패: sagaId={}, error={}", sagaId, e.getMessage(), e);
+            return createFailureResponse(sagaId, orderId, e.getMessage());
         } catch (ArithmeticException e) {
-            log.error("번들 재고 예약 실패 (수량 계산 오버플로우): sagaId={}, error={}", command.getSagaId(), e.getMessage(), e);
-            return createFailureResponse(command.getSagaId(), command.getOrderId(), "요청 수량이 너무 많아 처리할 수 없습니다.");
+            log.error("번들 재고 예약 실패 (수량 계산 오버플로우): sagaId={}, error={}", sagaId, e.getMessage(), e);
+            return createFailureResponse(sagaId, orderId, "요청 수량이 너무 많아 처리할 수 없습니다.");
         } catch (org.springframework.dao.OptimisticLockingFailureException e) {
-            log.warn("번들 재고 예약 중 동시성 충돌 발생: sagaId={}, error={}", command.getSagaId(), e.getMessage());
-            return createFailureResponse(command.getSagaId(), command.getOrderId(), "일시적인 오류가 발생했습니다. 다시 시도해주세요.");
+            log.warn("번들 재고 예약 중 동시성 충돌 발생: sagaId={}, error={}", sagaId, e.getMessage());
+            return createFailureResponse(sagaId, orderId, "일시적인 오류가 발생했습니다. 다시 시도해주세요.");
         }
     }
 
