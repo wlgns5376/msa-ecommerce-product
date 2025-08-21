@@ -26,7 +26,7 @@ public class CreateProductService implements CreateProductUseCase {
         
         Product savedProduct = productRepository.save(product);
         
-        publishDomainEvents(savedProduct);
+        publishDomainEvents(product);
         
         return CreateProductResponse.from(savedProduct);
     }

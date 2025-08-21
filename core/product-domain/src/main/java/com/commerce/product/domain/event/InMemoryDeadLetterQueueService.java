@@ -2,6 +2,7 @@ package com.commerce.product.domain.event;
 
 import com.commerce.common.event.DomainEvent;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.PrintWriter;
@@ -17,6 +18,9 @@ public class InMemoryDeadLetterQueueService implements DeadLetterQueueService {
     
     private final Map<String, FailedEventRecord> deadLetterQueue = new ConcurrentHashMap<>();
     
+    @Value("${event.publication.retry.max-attempts:3}")
+    private int maxAttempts;
+    
     @Override
     public void storeFailedEvent(DomainEvent event, Exception failureReason) {
         String eventId = UUID.randomUUID().toString();
@@ -27,7 +31,7 @@ public class InMemoryDeadLetterQueueService implements DeadLetterQueueService {
             event,
             event.getClass().getSimpleName(),
             LocalDateTime.now(),
-            3, // maxAttempts from @Retryable
+            maxAttempts, // maxAttempts from configuration
             failureReason.getMessage(),
             stackTrace
         );

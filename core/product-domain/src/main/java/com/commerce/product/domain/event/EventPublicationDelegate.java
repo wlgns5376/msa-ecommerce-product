@@ -4,6 +4,7 @@ import com.commerce.common.event.DomainEvent;
 import com.commerce.common.event.DomainEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.TransientDataAccessException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
@@ -21,9 +22,25 @@ public class EventPublicationDelegate {
     private final DomainEventPublisher eventPublisher;
     private final DeadLetterQueueService deadLetterQueueService;
     
+    @Value("${event.publication.retry.max-attempts:3}")
+    private int maxAttempts;
+    
+    @Value("${event.publication.retry.initial-delay:1000}")
+    private long initialDelay;
+    
+    @Value("${event.publication.retry.max-delay:5000}")
+    private long maxDelay;
+    
+    @Value("${event.publication.retry.multiplier:2}")
+    private double multiplier;
+    
     @Retryable(
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 1000, multiplier = 2, maxDelay = 5000),
+        maxAttemptsExpression = "${event.publication.retry.max-attempts:3}",
+        backoff = @Backoff(
+            delayExpression = "${event.publication.retry.initial-delay:1000}",
+            multiplierExpression = "${event.publication.retry.multiplier:2}",
+            maxDelayExpression = "${event.publication.retry.max-delay:5000}"
+        ),
         retryFor = {
             IOException.class,
             TimeoutException.class,
