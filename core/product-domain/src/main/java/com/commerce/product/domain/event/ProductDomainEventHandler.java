@@ -16,6 +16,12 @@ public class ProductDomainEventHandler {
     
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleDomainEvent(DomainEvent event) {
-        delegate.publishWithRetry(event);
+        try {
+            delegate.publishWithRetry(event);
+        } catch (Exception e) {
+            // TransactionalEventListener는 checked exception을 던질 수 없으므로
+            // RuntimeException으로 감싸서 던짐
+            throw new RuntimeException("Failed to publish domain event", e);
+        }
     }
 }

@@ -4,10 +4,14 @@ import com.commerce.common.event.DomainEvent;
 import com.commerce.common.event.DomainEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.TransientDataAccessException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.util.concurrent.TimeoutException;
 
 @Slf4j
 @Component
@@ -15,40 +19,78 @@ import org.springframework.stereotype.Component;
 public class EventPublicationDelegate {
     
     private final DomainEventPublisher eventPublisher;
+    private final DeadLetterQueueService deadLetterQueueService;
     
     @Retryable(
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2, maxDelay = 5000),
-        retryFor = { RuntimeException.class },
-        noRetryFor = { IllegalArgumentException.class, IllegalStateException.class }
+        retryFor = {
+            IOException.class,
+            TimeoutException.class,
+            TransientDataAccessException.class
+        }
     )
-    public void publishWithRetry(DomainEvent event) {
+    public void publishWithRetry(DomainEvent event) throws IOException, TimeoutException {
         try {
             eventPublisher.publish(event);
             log.info("Successfully published domain event of type {}", event.getClass().getSimpleName());
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("Failed to publish domain event of type {}: {}. Event: {}", 
                 event.getClass().getSimpleName(), e.getMessage(), event, e);
+            
+            // RuntimeException 내부의 원인이 재시도 가능한 예외인지 확인
+            Throwable cause = e.getCause();
+            if (cause instanceof IOException) {
+                throw (IOException) cause;
+            } else if (cause instanceof TimeoutException) {
+                throw (TimeoutException) cause;
+            } else if (e instanceof TransientDataAccessException) {
+                throw e;
+            }
+            
+            // 그 외의 경우 원래 예외를 그대로 던짐
             throw e;
         }
     }
     
     @Recover
-    public void handleFailedEvent(RuntimeException e, DomainEvent event) {
+    public void handleFailedEvent(IOException e, DomainEvent event) {
+        handleEventFailure(e, event);
+    }
+    
+    @Recover
+    public void handleFailedEvent(TimeoutException e, DomainEvent event) {
+        handleEventFailure(e, event);
+    }
+    
+    @Recover
+    public void handleFailedEvent(TransientDataAccessException e, DomainEvent event) {
+        handleEventFailure(e, event);
+    }
+    
+    private void handleEventFailure(Exception e, DomainEvent event) {
         log.error("Failed to publish domain event after all retries. Event type: {}, Event: {}", 
             event.getClass().getSimpleName(), event, e);
         
-        // CRITICAL TODO: Dead Letter Queue 구현 필수 (프로덕션 배포 전 반드시 구현)
-        // WARNING: 현재는 이벤트 발행 실패 시 유실되는 심각한 문제가 있습니다.
-        // 이벤트 유실은 데이터 불일치를 야기할 수 있는 매우 중요한 이슈입니다.
-        // 
-        // 구현 요구사항:
-        // 1. 실패한 이벤트를 별도의 저장소(Redis, DB 등)에 저장
-        // 2. 주기적으로 실패한 이벤트를 재처리하는 배치 작업 구현
-        // 3. 모니터링 및 알림 시스템 연동
-        // 4. 실패 원인 분석을 위한 메타데이터 저장 (실패 시각, 재시도 횟수, 에러 메시지 등)
-        // 
-        // 현재는 로그만 남기고 정상 처리로 간주하여 시스템이 계속 동작하도록 함
-        // 이는 임시 조치이며, 프로덕션 환경에서는 절대 허용되지 않습니다.
+        // Dead Letter Queue에 실패한 이벤트 저장
+        try {
+            deadLetterQueueService.storeFailedEvent(event, e);
+            log.info("Failed event stored in Dead Letter Queue. Event type: {}", 
+                event.getClass().getSimpleName());
+        } catch (Exception dlqException) {
+            // DLQ 저장도 실패한 경우 - 이는 매우 심각한 상황
+            log.error("CRITICAL: Failed to store event in Dead Letter Queue. Event may be lost! " +
+                "Event type: {}, Event: {}", event.getClass().getSimpleName(), event, dlqException);
+            
+            // TODO: 다음 단계 구현 필요
+            // 1. 긴급 알림 시스템 호출 (PagerDuty, Slack 등)
+            // 2. 로컬 파일 시스템에 임시 저장
+            // 3. Circuit Breaker 패턴 적용하여 시스템 보호
+            // 4. Fallback 메커니즘 구현 (예: 이벤트를 메모리 큐에 보관)
+            
+            // 현재는 예외를 다시 던져서 트랜잭션 롤백을 유도
+            throw new EventPublicationException(
+                "Failed to publish event and store in DLQ", dlqException, event);
+        }
     }
 }
