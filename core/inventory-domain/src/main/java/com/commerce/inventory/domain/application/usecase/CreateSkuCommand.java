@@ -1,14 +1,11 @@
-package com.commerce.inventory.application.port.in;
+package com.commerce.inventory.domain.application.usecase;
 
 import lombok.Builder;
 import lombok.Getter;
 
-import java.time.LocalDateTime;
-
 @Getter
 @Builder
-public class CreateSkuResponse {
-    private final String id;
+public class CreateSkuCommand {
     private final String code;
     private final String name;
     private final String description;
@@ -16,5 +13,4 @@ public class CreateSkuResponse {
     private final String weightUnit;
     private final Double volume;
     private final String volumeUnit;
-    private final LocalDateTime createdAt;
 }

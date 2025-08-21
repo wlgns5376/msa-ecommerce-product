@@ -1,4 +1,4 @@
-package com.commerce.inventory.application.port.in;
+package com.commerce.inventory.domain.application.usecase;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;

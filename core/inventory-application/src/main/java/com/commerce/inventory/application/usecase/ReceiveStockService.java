@@ -1,8 +1,8 @@
 package com.commerce.inventory.application.usecase;
 
 import com.commerce.common.domain.model.Quantity;
-import com.commerce.inventory.application.port.in.ReceiveStockCommand;
-import com.commerce.inventory.application.port.in.ReceiveStockUseCase;
+import com.commerce.inventory.domain.application.usecase.ReceiveStockCommand;
+import com.commerce.inventory.domain.application.usecase.ReceiveStockUseCase;
 import com.commerce.inventory.application.port.out.LoadInventoryPort;
 import com.commerce.inventory.application.port.out.LoadSkuPort;
 import com.commerce.inventory.application.port.out.SaveInventoryPort;

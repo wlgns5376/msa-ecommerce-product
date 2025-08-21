@@ -1,7 +1,7 @@
 package com.commerce.inventory.application.usecase;
 
-import com.commerce.inventory.application.port.in.CreateSkuCommand;
-import com.commerce.inventory.application.port.in.CreateSkuResponse;
+import com.commerce.inventory.domain.application.usecase.CreateSkuCommand;
+import com.commerce.inventory.domain.application.usecase.CreateSkuResponse;
 import com.commerce.inventory.application.port.out.LoadSkuPort;
 import com.commerce.inventory.application.port.out.SaveSkuPort;
 import com.commerce.inventory.domain.model.*;

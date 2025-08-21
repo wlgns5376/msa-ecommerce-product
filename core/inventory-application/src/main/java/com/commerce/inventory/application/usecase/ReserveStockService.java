@@ -1,9 +1,9 @@
 package com.commerce.inventory.application.usecase;
 
 import com.commerce.common.domain.model.Quantity;
-import com.commerce.inventory.application.port.in.ReserveStockCommand;
-import com.commerce.inventory.application.port.in.ReserveStockResponse;
-import com.commerce.inventory.application.port.in.ReserveStockUseCase;
+import com.commerce.inventory.domain.application.usecase.ReserveStockCommand;
+import com.commerce.inventory.domain.application.usecase.ReserveStockResponse;
+import com.commerce.inventory.domain.application.usecase.ReserveStockUseCase;
 import com.commerce.inventory.application.port.out.LoadInventoryPort;
 import com.commerce.inventory.application.port.out.SaveInventoryPort;
 import com.commerce.inventory.application.util.ValidationHelper;

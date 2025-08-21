@@ -1,9 +1,9 @@
 package com.commerce.inventory.application.usecase;
 
 import com.commerce.common.domain.model.Quantity;
-import com.commerce.inventory.application.port.in.GetInventoryQuery;
-import com.commerce.inventory.application.port.in.GetInventoryUseCase;
-import com.commerce.inventory.application.port.in.InventoryResponse;
+import com.commerce.inventory.domain.application.usecase.GetInventoryQuery;
+import com.commerce.inventory.domain.application.usecase.GetInventoryUseCase;
+import com.commerce.inventory.domain.application.usecase.InventoryResponse;
 import com.commerce.inventory.application.port.out.LoadInventoryPort;
 import com.commerce.inventory.domain.model.Inventory;
 import com.commerce.inventory.domain.model.SkuId;

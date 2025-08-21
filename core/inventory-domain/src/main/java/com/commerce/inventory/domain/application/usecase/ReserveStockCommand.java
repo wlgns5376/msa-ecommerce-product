@@ -1,4 +1,4 @@
-package com.commerce.inventory.application.port.in;
+package com.commerce.inventory.domain.application.usecase;
 
 import lombok.Builder;
 import lombok.Getter;

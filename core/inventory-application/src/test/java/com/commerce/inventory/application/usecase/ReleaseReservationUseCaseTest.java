@@ -1,8 +1,8 @@
 package com.commerce.inventory.application.usecase;
 
 import com.commerce.common.domain.model.Quantity;
-import com.commerce.inventory.application.port.in.ReleaseReservationCommand;
-import com.commerce.inventory.application.port.in.ReleaseReservationUseCase;
+import com.commerce.inventory.domain.application.usecase.ReleaseReservationCommand;
+import com.commerce.inventory.domain.application.usecase.ReleaseReservationUseCase;
 import com.commerce.inventory.application.port.out.LoadInventoryPort;
 import com.commerce.inventory.application.port.out.SaveInventoryPort;
 import com.commerce.inventory.domain.exception.InvalidReservationIdException;

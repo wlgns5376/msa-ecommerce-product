@@ -1,10 +1,10 @@
 package com.commerce.inventory.application.usecase;
 
 import com.commerce.common.domain.model.Quantity;
-import com.commerce.inventory.application.port.in.BundleReservationResponse;
-import com.commerce.inventory.application.port.in.BundleReservationStatus;
-import com.commerce.inventory.application.port.in.ReserveBundleStockCommand;
-import com.commerce.inventory.application.port.in.SkuReservationStatus;
+import com.commerce.inventory.domain.application.usecase.BundleReservationResponse;
+import com.commerce.inventory.domain.application.usecase.BundleReservationStatus;
+import com.commerce.inventory.domain.application.usecase.ReserveBundleStockCommand;
+import com.commerce.inventory.domain.application.usecase.SkuReservationStatus;
 import com.commerce.inventory.application.port.out.LoadInventoryPort;
 import com.commerce.inventory.application.port.out.SaveInventoryPort;
 import com.commerce.inventory.domain.exception.InsufficientStockException;
