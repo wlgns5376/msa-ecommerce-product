@@ -9,7 +9,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
-import java.util.HashMap;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,8 +27,7 @@ class ProductOptionFactoryTest {
     @DisplayName("단일 상품 옵션 생성")
     void shouldCreateSingleProductOption() {
         // Given
-        Map<String, Integer> skuMappings = new HashMap<>();
-        skuMappings.put("SKU001", 1);
+        Map<String, Integer> skuMappings = Map.of("SKU001", 1);
 
         AddProductOptionRequest request = AddProductOptionRequest.builder()
                 .productId("test-product-id")
@@ -54,9 +52,7 @@ class ProductOptionFactoryTest {
     @DisplayName("묶음 상품 옵션 생성")
     void shouldCreateBundleProductOption() {
         // Given
-        Map<String, Integer> skuMappings = new HashMap<>();
-        skuMappings.put("SKU001", 2);
-        skuMappings.put("SKU002", 1);
+        Map<String, Integer> skuMappings = Map.of("SKU001", 2, "SKU002", 1);
 
         AddProductOptionRequest request = AddProductOptionRequest.builder()
                 .productId("test-product-id")
@@ -81,8 +77,7 @@ class ProductOptionFactoryTest {
     @DisplayName("USD 통화로 옵션 생성")
     void shouldCreateOptionWithUSDCurrency() {
         // Given
-        Map<String, Integer> skuMappings = new HashMap<>();
-        skuMappings.put("SKU001", 1);
+        Map<String, Integer> skuMappings = Map.of("SKU001", 1);
 
         AddProductOptionRequest request = AddProductOptionRequest.builder()
                 .productId("test-product-id")
@@ -105,8 +100,7 @@ class ProductOptionFactoryTest {
     @DisplayName("유효하지 않은 통화로 옵션 생성 시 예외 발생")
     void shouldThrowExceptionWhenInvalidCurrency() {
         // Given
-        Map<String, Integer> skuMappings = new HashMap<>();
-        skuMappings.put("SKU001", 1);
+        Map<String, Integer> skuMappings = Map.of("SKU001", 1);
 
         AddProductOptionRequest request = AddProductOptionRequest.builder()
                 .productId("test-product-id")

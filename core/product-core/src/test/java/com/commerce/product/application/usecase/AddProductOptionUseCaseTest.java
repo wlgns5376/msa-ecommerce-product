@@ -14,7 +14,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -39,8 +38,7 @@ class AddProductOptionUseCaseTest {
     }
 
     private AddProductOptionRequest createDefaultRequest(String productId) {
-        Map<String, Integer> skuMappings = new HashMap<>();
-        skuMappings.put("SKU001", 1);
+        Map<String, Integer> skuMappings = Map.of("SKU001", 1);
         return AddProductOptionRequest.builder()
                 .productId(productId)
                 .optionName("블랙 - L")
@@ -98,9 +96,7 @@ class AddProductOptionUseCaseTest {
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
         when(productRepository.save(any(Product.class))).thenReturn(product);
 
-        Map<String, Integer> skuMappings = new HashMap<>();
-        skuMappings.put("SKU001", 2);
-        skuMappings.put("SKU002", 1);
+        Map<String, Integer> skuMappings = Map.of("SKU001", 2, "SKU002", 1);
 
         AddProductOptionRequest request = AddProductOptionRequest.builder()
             .productId(productId.value())
@@ -180,8 +176,7 @@ class AddProductOptionUseCaseTest {
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
 
-        Map<String, Integer> skuMappings = new HashMap<>();
-        skuMappings.put("SKU001", 1);
+        Map<String, Integer> skuMappings = Map.of("SKU001", 1);
 
         AddProductOptionRequest request = AddProductOptionRequest.builder()
             .productId(productId.value())
@@ -212,8 +207,7 @@ class AddProductOptionUseCaseTest {
         );
 
         // 기존 옵션 추가
-        Map<String, Integer> existingSkuMappings = new HashMap<>();
-        existingSkuMappings.put("SKU001", 1);
+        Map<String, Integer> existingSkuMappings = Map.of("SKU001", 1);
         ProductOption existingOption = ProductOption.single(
             "블랙 - L",
             new Money(BigDecimal.valueOf(29900), Currency.KRW),
@@ -223,8 +217,7 @@ class AddProductOptionUseCaseTest {
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
 
-        Map<String, Integer> skuMappings = new HashMap<>();
-        skuMappings.put("SKU002", 1);
+        Map<String, Integer> skuMappings = Map.of("SKU002", 1);
 
         AddProductOptionRequest request = AddProductOptionRequest.builder()
             .productId(productId.value())
@@ -256,8 +249,7 @@ class AddProductOptionUseCaseTest {
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
 
-        Map<String, Integer> skuMappings = new HashMap<>();
-        skuMappings.put("SKU001", 1);
+        Map<String, Integer> skuMappings = Map.of("SKU001", 1);
         AddProductOptionRequest request = AddProductOptionRequest.builder()
             .productId(productId.value())
             .optionName("블랙 - L")
@@ -293,7 +285,7 @@ class AddProductOptionUseCaseTest {
             .optionName("블랙 - L")
             .price(BigDecimal.valueOf(29900))
             .currency("KRW")
-            .skuMappings(new HashMap<>())
+            .skuMappings(Map.of())
             .build();
 
         // When & Then
@@ -318,8 +310,7 @@ class AddProductOptionUseCaseTest {
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
 
-        Map<String, Integer> skuMappings = new HashMap<>();
-        skuMappings.put("SKU001", 0);
+        Map<String, Integer> skuMappings = Map.of("SKU001", 0);
 
         AddProductOptionRequest request = AddProductOptionRequest.builder()
             .productId(productId.value())
@@ -352,8 +343,7 @@ class AddProductOptionUseCaseTest {
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
         when(productRepository.save(any(Product.class))).thenReturn(product);
 
-        Map<String, Integer> skuMappings = new HashMap<>();
-        skuMappings.put("SKU001", 1);
+        Map<String, Integer> skuMappings = Map.of("SKU001", 1);
 
         AddProductOptionRequest request = AddProductOptionRequest.builder()
             .productId(productId.value())
@@ -391,8 +381,7 @@ class AddProductOptionUseCaseTest {
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
 
-        Map<String, Integer> skuMappings = new HashMap<>();
-        skuMappings.put("SKU001", 1);
+        Map<String, Integer> skuMappings = Map.of("SKU001", 1);
 
         AddProductOptionRequest request = AddProductOptionRequest.builder()
             .productId(productId.value())
@@ -424,9 +413,7 @@ class AddProductOptionUseCaseTest {
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
 
-        Map<String, Integer> skuMappings = new HashMap<>();
-        skuMappings.put("SKU001", 2);
-        skuMappings.put("SKU002", 1);
+        Map<String, Integer> skuMappings = Map.of("SKU001", 2, "SKU002", 1);
 
         AddProductOptionRequest request = AddProductOptionRequest.builder()
             .productId(productId.value())
