@@ -55,7 +55,6 @@ public class ProductRepositoryAdapter implements ProductRepository {
     @Transactional(readOnly = true)
     public List<Product> findAll() {
         return productJpaRepository.findAll().stream()
-                .filter(entity -> entity.getDeletedAt() == null)
                 .map(ProductJpaEntity::toDomainModel)
                 .collect(Collectors.toList());
     }

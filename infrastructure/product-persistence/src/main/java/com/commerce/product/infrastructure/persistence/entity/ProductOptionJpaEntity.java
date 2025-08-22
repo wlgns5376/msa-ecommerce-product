@@ -19,6 +19,8 @@ import java.util.HashMap;
 @Builder
 public class ProductOptionJpaEntity {
     
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    
     @Id
     @Column(name = "id", columnDefinition = "VARCHAR(36)")
     private String id;
@@ -64,8 +66,7 @@ public class ProductOptionJpaEntity {
     
     private static String serializeSkuMapping(SkuMapping skuMapping) {
         try {
-            ObjectMapper mapper = new ObjectMapper();
-            return mapper.writeValueAsString(skuMapping.mappings());
+            return OBJECT_MAPPER.writeValueAsString(skuMapping.mappings());
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to serialize SkuMapping", e);
         }
@@ -73,8 +74,7 @@ public class ProductOptionJpaEntity {
     
     private static SkuMapping deserializeSkuMapping(String skuMappingJson) {
         try {
-            ObjectMapper mapper = new ObjectMapper();
-            Map<String, Integer> mappings = mapper.readValue(skuMappingJson, new TypeReference<Map<String, Integer>>() {});
+            Map<String, Integer> mappings = OBJECT_MAPPER.readValue(skuMappingJson, new TypeReference<Map<String, Integer>>() {});
             return SkuMapping.of(mappings);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to deserialize SkuMapping", e);
