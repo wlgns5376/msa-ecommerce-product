@@ -383,4 +383,38 @@ class AddProductOptionUseCaseTest {
         assertThat(savedProduct.getOptions()).hasSize(1);
         assertThat(savedProduct.getOptions().get(0).getPrice().currency()).isEqualTo(Currency.USD);
     }
+
+    @Test
+    @DisplayName("유효하지 않은 통화로 옵션 추가 시 예외 발생")
+    void shouldThrowExceptionWhenAddingOptionWithInvalidCurrency() {
+        // Given
+        ProductId productId = ProductId.generate();
+        Product product = new Product(
+            productId,
+            new ProductName("테스트 상품"),
+            "테스트 설명",
+            ProductType.NORMAL
+        );
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+
+        Map<String, Integer> skuMappings = new HashMap<>();
+        skuMappings.put("SKU001", 1);
+
+        AddProductOptionRequest request = AddProductOptionRequest.builder()
+            .productId(productId.value())
+            .optionName("블랙 - L")
+            .price(BigDecimal.valueOf(29900))
+            .currency("INVALID_CURRENCY")
+            .skuMappings(skuMappings)
+            .build();
+
+        // When & Then
+        assertThatThrownBy(() -> useCase.addProductOption(request))
+            .isInstanceOf(InvalidProductOptionException.class)
+            .hasMessage("Invalid currency: INVALID_CURRENCY");
+
+        verify(productRepository, never()).save(any());
+        verify(eventPublisher, never()).publish(any());
+    }
 }

@@ -56,7 +56,12 @@ public class AddProductOptionService implements AddProductOptionUseCase {
     }
 
     private ProductOption createProductOption(AddProductOptionRequest request) {
-        Currency currency = Currency.valueOf(request.getCurrency());
+        Currency currency;
+        try {
+            currency = Currency.valueOf(request.getCurrency());
+        } catch (IllegalArgumentException e) {
+            throw new InvalidProductOptionException("Invalid currency: " + request.getCurrency());
+        }
         Money price = new Money(request.getPrice(), currency);
         SkuMapping skuMapping = SkuMapping.of(request.getSkuMappings());
 
