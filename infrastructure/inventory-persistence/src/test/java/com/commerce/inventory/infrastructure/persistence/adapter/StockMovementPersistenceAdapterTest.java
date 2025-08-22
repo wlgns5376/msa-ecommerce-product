@@ -95,7 +95,11 @@ class StockMovementPersistenceAdapterTest {
         verify(stockMovementJpaRepository).save(captor.capture());
         
         StockMovementJpaEntity savedEntity = captor.getValue();
-        assertThat(savedEntity.getMovementType()).isEqualTo(MovementType.OUTBOUND);
-        assertThat(savedEntity.getQuantity()).isEqualTo(50);
+        assertThat(savedEntity.getMovementId()).isEqualTo(shipmentMovement.getId().value());
+        assertThat(savedEntity.getSkuId()).isEqualTo(shipmentMovement.getSkuId().value());
+        assertThat(savedEntity.getQuantity()).isEqualTo(shipmentMovement.getQuantity().value());
+        assertThat(savedEntity.getMovementType()).isEqualTo(shipmentMovement.getType());
+        assertThat(savedEntity.getReference()).isEqualTo(shipmentMovement.getReference());
+        assertThat(savedEntity.getTimestamp()).isEqualTo(shipmentMovement.getTimestamp());
     }
 }
