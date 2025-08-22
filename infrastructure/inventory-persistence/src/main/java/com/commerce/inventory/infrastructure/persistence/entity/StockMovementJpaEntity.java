@@ -58,7 +58,7 @@ public class StockMovementJpaEntity {
     }
     
     public StockMovement toDomainModel() {
-        return StockMovement.restore(
+        return StockMovement.create(
                 new MovementId(movementId),
                 SkuId.of(skuId),
                 movementType,
