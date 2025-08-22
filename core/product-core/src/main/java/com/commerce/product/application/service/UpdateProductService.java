@@ -7,6 +7,7 @@ import com.commerce.product.domain.exception.InvalidProductException;
 import com.commerce.product.domain.model.Product;
 import com.commerce.product.domain.model.ProductId;
 import com.commerce.product.domain.model.ProductName;
+import com.commerce.product.domain.model.ProductStatus;
 import com.commerce.product.domain.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,10 @@ public class UpdateProductService implements UpdateProductUseCase {
         Product product = productRepository.findById(productId)
             .orElseThrow(() -> new InvalidProductException("Product not found with id: " + request.getProductId()));
 
+        if (product.getStatus() == ProductStatus.DELETED) {
+            throw new InvalidProductException("Cannot update deleted product");
+        }
+
         ProductName updatedName = request.getName() != null 
             ? new ProductName(request.getName()) 
             : product.getName();
@@ -34,11 +39,11 @@ public class UpdateProductService implements UpdateProductUseCase {
             ? request.getDescription() 
             : product.getDescription();
 
+        Product savedProduct = product;
         if (!updatedName.equals(product.getName()) || !updatedDescription.equals(product.getDescription())) {
             product.update(updatedName, updatedDescription);
+            savedProduct = productRepository.save(product);
         }
-        
-        Product savedProduct = productRepository.save(product);
 
         return UpdateProductResponse.builder()
             .productId(savedProduct.getId().value())
