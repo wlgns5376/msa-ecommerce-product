@@ -35,26 +35,23 @@ public class UpdateProductService implements UpdateProductUseCase {
             );
         }
 
-        final Product resultProduct;
-        try {
-            if (product.update(request.getName(), request.getDescription())) {
-                resultProduct = productRepository.save(product);
-            } else {
-                resultProduct = product;
+        if (product.update(request.getName(), request.getDescription())) {
+            try {
+                product = productRepository.save(product);
+            } catch (OptimisticLockingFailureException e) {
+                throw new ProductConflictException(
+                    "Product has been modified by another user. Please refresh and try again.", e
+                );
             }
-        } catch (OptimisticLockingFailureException e) {
-            throw new ProductConflictException(
-                "Product has been modified by another user. Please refresh and try again.", e
-            );
         }
 
         return UpdateProductResponse.builder()
-            .productId(resultProduct.getId().value())
-            .name(resultProduct.getName().value())
-            .description(resultProduct.getDescription())
-            .type(resultProduct.getType().name())
-            .status(resultProduct.getStatus().name())
-            .version(resultProduct.getVersion())
+            .productId(product.getId().value())
+            .name(product.getName().value())
+            .description(product.getDescription())
+            .type(product.getType().name())
+            .status(product.getStatus().name())
+            .version(product.getVersion())
             .build();
     }
 }

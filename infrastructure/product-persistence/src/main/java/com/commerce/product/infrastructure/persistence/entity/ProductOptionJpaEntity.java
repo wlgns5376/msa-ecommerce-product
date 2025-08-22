@@ -57,7 +57,9 @@ public class ProductOptionJpaEntity {
     }
     
     public ProductOption toDomainModel() {
-        throw new UnsupportedOperationException("ProductOption should be created through Product domain model");
+        Money price = Money.of(priceAmount, priceCurrency);
+        SkuMapping skuMapping = deserializeSkuMapping(this.skuMapping);
+        return ProductOption.restore(id, name, price, skuMapping);
     }
     
     private static String serializeSkuMapping(SkuMapping skuMapping) {

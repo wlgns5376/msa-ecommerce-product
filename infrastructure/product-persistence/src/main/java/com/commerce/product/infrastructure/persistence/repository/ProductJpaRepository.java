@@ -1,6 +1,8 @@
 package com.commerce.product.infrastructure.persistence.repository;
 
 import com.commerce.product.infrastructure.persistence.entity.ProductJpaEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,22 +17,32 @@ public interface ProductJpaRepository extends JpaRepository<ProductJpaEntity, St
     @Query("SELECT p FROM ProductJpaEntity p LEFT JOIN FETCH p.options LEFT JOIN FETCH p.categories WHERE p.id = :id")
     Optional<ProductJpaEntity> findByIdWithDetails(@Param("id") String id);
     
-    @Query("SELECT DISTINCT p FROM ProductJpaEntity p " +
+    @Query(value = "SELECT DISTINCT p FROM ProductJpaEntity p " +
            "LEFT JOIN FETCH p.options " +
            "LEFT JOIN p.categories c " +
            "WHERE c.categoryId = :categoryId " +
+           "AND p.deletedAt IS NULL",
+           countQuery = "SELECT COUNT(DISTINCT p) FROM ProductJpaEntity p " +
+           "LEFT JOIN p.categories c " +
+           "WHERE c.categoryId = :categoryId " +
            "AND p.deletedAt IS NULL")
-    List<ProductJpaEntity> findByCategoryId(@Param("categoryId") String categoryId);
+    Page<ProductJpaEntity> findByCategoryId(@Param("categoryId") String categoryId, Pageable pageable);
     
-    @Query("SELECT DISTINCT p FROM ProductJpaEntity p " +
+    @Query(value = "SELECT DISTINCT p FROM ProductJpaEntity p " +
            "LEFT JOIN FETCH p.options " +
            "WHERE p.status = 'ACTIVE' " +
+           "AND p.deletedAt IS NULL",
+           countQuery = "SELECT COUNT(DISTINCT p) FROM ProductJpaEntity p " +
+           "WHERE p.status = 'ACTIVE' " +
            "AND p.deletedAt IS NULL")
-    List<ProductJpaEntity> findActiveProducts();
+    Page<ProductJpaEntity> findActiveProducts(Pageable pageable);
     
-    @Query("SELECT DISTINCT p FROM ProductJpaEntity p " +
+    @Query(value = "SELECT DISTINCT p FROM ProductJpaEntity p " +
            "LEFT JOIN FETCH p.options " +
            "WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "AND p.deletedAt IS NULL",
+           countQuery = "SELECT COUNT(DISTINCT p) FROM ProductJpaEntity p " +
+           "WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "AND p.deletedAt IS NULL")
-    List<ProductJpaEntity> searchByName(@Param("keyword") String keyword);
+    Page<ProductJpaEntity> searchByName(@Param("keyword") String keyword, Pageable pageable);
 }

@@ -56,6 +56,10 @@ public class ProductOption implements ValueObject {
         );
     }
 
+    public static ProductOption restore(String id, String name, Money price, SkuMapping skuMapping) {
+        return new ProductOption(id, name, price, skuMapping);
+    }
+
     private void validate(String id, String name, Money price, SkuMapping skuMapping) {
         if (id == null || id.trim().isEmpty()) {
             throw new InvalidProductOptionException("Option ID cannot be null or empty");

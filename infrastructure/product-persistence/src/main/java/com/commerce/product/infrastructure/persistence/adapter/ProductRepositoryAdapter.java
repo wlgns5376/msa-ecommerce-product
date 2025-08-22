@@ -8,7 +8,9 @@ import com.commerce.product.domain.repository.ProductRepository;
 import com.commerce.product.infrastructure.persistence.entity.ProductJpaEntity;
 import com.commerce.product.infrastructure.persistence.repository.ProductJpaRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -87,10 +89,10 @@ public class ProductRepositoryAdapter implements ProductRepository {
     @Override
     @Transactional(readOnly = true)
     public List<Product> findByCategory(CategoryId categoryId, int offset, int limit) {
-        List<ProductJpaEntity> entities = productJpaRepository.findByCategoryId(categoryId.value());
-        return entities.stream()
-                .skip(offset)
-                .limit(limit)
+        int page = offset / limit;
+        Pageable pageable = PageRequest.of(page, limit);
+        Page<ProductJpaEntity> entityPage = productJpaRepository.findByCategoryId(categoryId.value(), pageable);
+        return entityPage.getContent().stream()
                 .map(ProductJpaEntity::toDomainModel)
                 .collect(Collectors.toList());
     }
@@ -106,10 +108,10 @@ public class ProductRepositoryAdapter implements ProductRepository {
     @Override
     @Transactional(readOnly = true)
     public List<Product> findActiveProducts(int offset, int limit) {
-        List<ProductJpaEntity> entities = productJpaRepository.findActiveProducts();
-        return entities.stream()
-                .skip(offset)
-                .limit(limit)
+        int page = offset / limit;
+        Pageable pageable = PageRequest.of(page, limit);
+        Page<ProductJpaEntity> entityPage = productJpaRepository.findActiveProducts(pageable);
+        return entityPage.getContent().stream()
                 .map(ProductJpaEntity::toDomainModel)
                 .collect(Collectors.toList());
     }
@@ -117,10 +119,10 @@ public class ProductRepositoryAdapter implements ProductRepository {
     @Override
     @Transactional(readOnly = true)
     public List<Product> searchByName(String keyword, int offset, int limit) {
-        List<ProductJpaEntity> entities = productJpaRepository.searchByName(keyword);
-        return entities.stream()
-                .skip(offset)
-                .limit(limit)
+        int page = offset / limit;
+        Pageable pageable = PageRequest.of(page, limit);
+        Page<ProductJpaEntity> entityPage = productJpaRepository.searchByName(keyword, pageable);
+        return entityPage.getContent().stream()
                 .map(ProductJpaEntity::toDomainModel)
                 .collect(Collectors.toList());
     }
