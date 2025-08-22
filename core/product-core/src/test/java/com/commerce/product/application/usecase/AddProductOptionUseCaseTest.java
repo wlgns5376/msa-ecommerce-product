@@ -1,6 +1,6 @@
 package com.commerce.product.application.usecase;
 
-import com.commerce.common.event.DomainEventPublisher;
+import org.springframework.context.ApplicationEventPublisher;
 import com.commerce.product.application.service.AddProductOptionService;
 import com.commerce.product.domain.exception.*;
 import com.commerce.product.domain.model.*;
@@ -20,7 +20,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -30,7 +30,7 @@ class AddProductOptionUseCaseTest {
     private ProductRepository productRepository;
 
     @Mock
-    private DomainEventPublisher eventPublisher;
+    private ApplicationEventPublisher eventPublisher;
 
     private AddProductOptionUseCase useCase;
 
@@ -79,7 +79,7 @@ class AddProductOptionUseCaseTest {
         assertThat(savedProduct.getOptions()).hasSize(1);
         assertThat(savedProduct.getOptions().get(0).getName()).isEqualTo("블랙 - L");
 
-        verify(eventPublisher).publish(any());
+        verify(eventPublisher).publishEvent(any(com.commerce.common.event.DomainEvent.class));
     }
 
     @Test
@@ -147,7 +147,7 @@ class AddProductOptionUseCaseTest {
             .hasMessage("Product not found");
 
         verify(productRepository, never()).save(any());
-        verify(eventPublisher, never()).publish(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -182,7 +182,7 @@ class AddProductOptionUseCaseTest {
             .hasMessage("Cannot add option to deleted product");
 
         verify(productRepository, never()).save(any());
-        verify(eventPublisher, never()).publish(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -216,7 +216,7 @@ class AddProductOptionUseCaseTest {
             .hasMessage("Bundle product must have bundle options");
 
         verify(productRepository, never()).save(any());
-        verify(eventPublisher, never()).publish(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -260,7 +260,7 @@ class AddProductOptionUseCaseTest {
             .hasMessage("An option with the same name already exists.");
 
         verify(productRepository, never()).save(any());
-        verify(eventPublisher, never()).publish(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -294,7 +294,7 @@ class AddProductOptionUseCaseTest {
             .hasMessage("Amount cannot be negative");
 
         verify(productRepository, never()).save(any());
-        verify(eventPublisher, never()).publish(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -302,6 +302,15 @@ class AddProductOptionUseCaseTest {
     void shouldThrowExceptionWhenAddingOptionWithoutSkuMappings() {
         // Given
         ProductId productId = ProductId.generate();
+        Product product = new Product(
+            productId,
+            new ProductName("테스트 상품"),
+            "테스트 설명",
+            ProductType.NORMAL
+        );
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+
         AddProductOptionRequest request = AddProductOptionRequest.builder()
             .productId(productId.value())
             .optionName("블랙 - L")
@@ -312,11 +321,11 @@ class AddProductOptionUseCaseTest {
 
         // When & Then
         assertThatThrownBy(() -> useCase.addProductOption(request))
-            .isInstanceOf(InvalidProductOptionException.class)
-            .hasMessage("Product option must have at least one SKU mapping");
+            .isInstanceOf(InvalidSkuMappingException.class)
+            .hasMessage("SKU mappings cannot be null or empty");
 
         verify(productRepository, never()).save(any());
-        verify(eventPublisher, never()).publish(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -324,6 +333,15 @@ class AddProductOptionUseCaseTest {
     void shouldThrowExceptionWhenAddingOptionWithInvalidSkuQuantity() {
         // Given
         ProductId productId = ProductId.generate();
+        Product product = new Product(
+            productId,
+            new ProductName("테스트 상품"),
+            "테스트 설명",
+            ProductType.NORMAL
+        );
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+
         Map<String, Integer> skuMappings = new HashMap<>();
         skuMappings.put("SKU001", 0);
 
@@ -338,10 +356,10 @@ class AddProductOptionUseCaseTest {
         // When & Then
         assertThatThrownBy(() -> useCase.addProductOption(request))
             .isInstanceOf(InvalidSkuMappingException.class)
-            .hasMessage("SKU quantity must be greater than 0");
+            .hasMessage("Quantity must be positive for SKU: SKU001");
 
         verify(productRepository, never()).save(any());
-        verify(eventPublisher, never()).publish(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -415,6 +433,6 @@ class AddProductOptionUseCaseTest {
             .hasMessage("Invalid currency: INVALID_CURRENCY");
 
         verify(productRepository, never()).save(any());
-        verify(eventPublisher, never()).publish(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 }
