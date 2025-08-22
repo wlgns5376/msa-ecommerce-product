@@ -55,7 +55,7 @@ class StockMovementPersistenceAdapterTest {
 
     @Test
     @DisplayName("재고 이동 기록을 저장할 수 있다")
-    void save() {
+    void saveInboundMovement() {
         // Given
         StockMovement inboundMovement = StockMovement.createInbound(
                 SkuId.of("SKU123"),
