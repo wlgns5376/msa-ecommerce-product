@@ -1,11 +1,13 @@
 package com.commerce.product.application.service;
 
+import com.commerce.product.application.factory.ProductOptionFactory;
 import com.commerce.product.application.usecase.AddProductOptionRequest;
 import com.commerce.product.application.usecase.AddProductOptionResponse;
 import com.commerce.product.application.usecase.AddProductOptionUseCase;
 import com.commerce.product.domain.exception.InvalidProductException;
-import com.commerce.product.domain.exception.InvalidProductOptionException;
-import com.commerce.product.domain.model.*;
+import com.commerce.product.domain.model.Product;
+import com.commerce.product.domain.model.ProductId;
+import com.commerce.product.domain.model.ProductOption;
 import com.commerce.product.domain.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AddProductOptionService implements AddProductOptionUseCase {
 
     private final ProductRepository productRepository;
+    private final ProductOptionFactory productOptionFactory;
 
     @Override
     @Transactional
@@ -24,7 +27,7 @@ public class AddProductOptionService implements AddProductOptionUseCase {
         Product product = productRepository.findById(productId)
             .orElseThrow(() -> new InvalidProductException("Product not found"));
 
-        ProductOption option = createProductOption(request);
+        ProductOption option = productOptionFactory.create(request);
 
         product.addOption(option);
         productRepository.save(product);
@@ -36,21 +39,5 @@ public class AddProductOptionService implements AddProductOptionUseCase {
             .build();
     }
 
-    private ProductOption createProductOption(AddProductOptionRequest request) {
-        Currency currency;
-        try {
-            currency = Currency.valueOf(request.getCurrency());
-        } catch (IllegalArgumentException e) {
-            throw new InvalidProductOptionException("Invalid currency: " + request.getCurrency());
-        }
-        Money price = new Money(request.getPrice(), currency);
-        SkuMapping skuMapping = SkuMapping.of(request.getSkuMappings());
-
-        if (skuMapping.isBundle()) {
-            return ProductOption.bundle(request.getOptionName(), price, skuMapping);
-        } else {
-            return ProductOption.single(request.getOptionName(), price, skuMapping);
-        }
-    }
 
 }

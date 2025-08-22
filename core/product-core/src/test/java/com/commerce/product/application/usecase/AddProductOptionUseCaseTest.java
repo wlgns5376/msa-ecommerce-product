@@ -1,5 +1,6 @@
 package com.commerce.product.application.usecase;
 
+import com.commerce.product.application.factory.ProductOptionFactory;
 import com.commerce.product.application.service.AddProductOptionService;
 import com.commerce.product.domain.exception.*;
 import com.commerce.product.domain.model.*;
@@ -33,7 +34,8 @@ class AddProductOptionUseCaseTest {
 
     @BeforeEach
     void setUp() {
-        useCase = new AddProductOptionService(productRepository);
+        ProductOptionFactory productOptionFactory = new ProductOptionFactory();
+        useCase = new AddProductOptionService(productRepository, productOptionFactory);
     }
 
     private AddProductOptionRequest createDefaultRequest(String productId) {

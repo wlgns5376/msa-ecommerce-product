@@ -52,7 +52,7 @@ class DomainEventPublishingAspectTest {
         aggregate.addTestEvent(event2);
 
         // When
-        aspect.publishDomainEvents(aggregate, aggregate);
+        aspect.publishDomainEvents(aggregate);
 
         // Then
         ArgumentCaptor<DomainEvent> eventCaptor = ArgumentCaptor.forClass(DomainEvent.class);
@@ -73,7 +73,7 @@ class DomainEventPublishingAspectTest {
         TestAggregate aggregate = new TestAggregate();
 
         // When
-        aspect.publishDomainEvents(aggregate, aggregate);
+        aspect.publishDomainEvents(aggregate);
 
         // Then
         verify(eventPublisher, never()).publishEvent(any());
@@ -82,21 +82,11 @@ class DomainEventPublishingAspectTest {
     @Test
     @DisplayName("savedAggregate가 null일 때는 아무것도 발행하지 않는다")
     void shouldNotPublishWhenSavedAggregateIsNull() {
-        // Given
-        TestAggregate aggregate = new TestAggregate();
-        aggregate.addTestEvent(new ProductCreatedEvent(
-            ProductId.generate(), 
-            "Test Product", 
-            ProductType.NORMAL
-        ));
-
         // When
-        aspect.publishDomainEvents(aggregate, null);
+        aspect.publishDomainEvents(null);
 
         // Then
         verify(eventPublisher, never()).publishEvent(any());
-        // 원본 aggregate의 이벤트는 그대로 유지됨
-        assertThat(aggregate.getDomainEvents()).hasSize(1);
     }
 
     // 테스트용 Aggregate 클래스
