@@ -5,14 +5,11 @@ include 'common'
 project(':common').projectDir = file('core/common')
 
 // Core modules
-include 'product-domain'
-project(':product-domain').projectDir = file('core/product-domain')
+include 'product-core'
+project(':product-core').projectDir = file('core/product-core')
 
-include 'inventory-domain'
-project(':inventory-domain').projectDir = file('core/inventory-domain')
-
-include 'inventory-application'
-project(':inventory-application').projectDir = file('core/inventory-application')
+include 'inventory-core'
+project(':inventory-core').projectDir = file('core/inventory-core')
 
 // Infrastructure modules
 include 'product-persistence'

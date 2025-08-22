@@ -86,7 +86,7 @@ project(':common') {
 }
 
 // Core 모듈들 설정
-configure(subprojects.findAll { it.path.contains(':product-domain') || it.path.contains(':inventory-domain') }) {
+configure(subprojects.findAll { it.path.contains(':product-core') || it.path.contains(':inventory-core') }) {
     dependencies {
         implementation project(':common')
         implementation 'org.springframework:spring-context'
@@ -99,19 +99,6 @@ configure(subprojects.findAll { it.path.contains(':product-domain') || it.path.c
     }
 }
 
-// Application 모듈 설정
-project(':inventory-application') {
-    dependencies {
-        implementation project(':common')
-        implementation project(':inventory-domain')
-        implementation 'org.springframework:spring-context'
-        implementation 'org.springframework:spring-tx'
-        implementation 'org.springframework.boot:spring-boot-starter-validation'
-        implementation 'org.springframework.retry:spring-retry'
-        implementation 'org.springframework:spring-aspects'
-        testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    }
-}
 
 // Infrastructure 모듈 설정
 configure(subprojects.findAll { it.path.contains(':product-persistence') || it.path.contains(':inventory-persistence') }) {
@@ -140,14 +127,13 @@ configure(subprojects.findAll { it.path.contains(':product-persistence') || it.p
 
 project(':product-persistence') {
     dependencies {
-        implementation project(':product-domain')
+        implementation project(':product-core')
     }
 }
 
 project(':inventory-persistence') {
     dependencies {
-        implementation project(':inventory-domain')
-        implementation project(':inventory-application')
+        implementation project(':inventory-core')
     }
 }
 
@@ -164,7 +150,7 @@ configure(subprojects.findAll { it.path.contains(':product-kafka') }) {
     
     dependencies {
         implementation project(':common')
-        implementation project(':product-domain')
+        implementation project(':product-core')
         implementation 'org.springframework.kafka:spring-kafka'
         implementation 'org.springframework.boot:spring-boot-starter'
         testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -180,7 +166,7 @@ configure(subprojects.findAll { it.path.contains(':product-api') }) {
     
     dependencies {
         implementation project(':common')
-        implementation project(':product-domain')
+        implementation project(':product-core')
         implementation project(':product-persistence')
         implementation project(':product-kafka')
         implementation 'org.springframework.boot:spring-boot-starter-web'
