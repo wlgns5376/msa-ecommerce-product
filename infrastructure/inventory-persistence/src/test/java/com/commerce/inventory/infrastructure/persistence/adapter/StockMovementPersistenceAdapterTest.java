@@ -60,6 +60,13 @@ class StockMovementPersistenceAdapterTest {
 
     private static Stream<Arguments> movementProvider() {
         return Stream.of(
+                Arguments.of(StockMovement.create(
+                        SkuId.of("SKU789"),
+                        Quantity.of(200),
+                        com.commerce.inventory.domain.model.MovementType.RECEIVE,
+                        "PO-001",
+                        FIXED_TIME
+                ), "재고 입고 기록"),
                 Arguments.of(StockMovement.createInbound(
                         SkuId.of("SKU123"),
                         Quantity.of(100),
