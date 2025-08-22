@@ -16,9 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class StockMovementPersistenceAdapterTest {
@@ -32,11 +30,6 @@ class StockMovementPersistenceAdapterTest {
     private StockMovementPersistenceAdapter adapter;
     
     private void assertMovementIsSavedCorrectly(StockMovement movement) {
-        // Given
-        StockMovementJpaEntity entity = StockMovementJpaEntity.fromDomainModel(movement);
-        when(stockMovementJpaRepository.save(any(StockMovementJpaEntity.class)))
-                .thenReturn(entity);
-
         // When
         adapter.save(movement);
 
