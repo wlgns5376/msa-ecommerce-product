@@ -26,17 +26,19 @@ public class UpdateProductService implements UpdateProductUseCase {
         Product product = productRepository.findById(productId)
             .orElseThrow(() -> new InvalidProductException("Product not found with id: " + request.getProductId()));
 
-        Product savedProduct = product;
+        final Product resultProduct;
         if (product.update(request.getName(), request.getDescription())) {
-            savedProduct = productRepository.save(product);
+            resultProduct = productRepository.save(product);
+        } else {
+            resultProduct = product;
         }
 
         return UpdateProductResponse.builder()
-            .productId(savedProduct.getId().value())
-            .name(savedProduct.getName().value())
-            .description(savedProduct.getDescription())
-            .type(savedProduct.getType().name())
-            .status(savedProduct.getStatus().name())
+            .productId(resultProduct.getId().value())
+            .name(resultProduct.getName().value())
+            .description(resultProduct.getDescription())
+            .type(resultProduct.getType().name())
+            .status(resultProduct.getStatus().name())
             .build();
     }
 }
