@@ -90,7 +90,7 @@ class UpdateProductUseCaseTest {
             .description("Updated description")
             .build();
 
-        when(productRepository.findById(any(ProductId.class))).thenReturn(Optional.empty());
+        when(productRepository.findById(eq(new ProductId(nonExistentId)))).thenReturn(Optional.empty());
 
         // When & Then
         assertThatThrownBy(() -> updateProductUseCase.updateProduct(request))

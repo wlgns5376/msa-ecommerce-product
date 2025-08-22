@@ -27,10 +27,6 @@ public class UpdateProductService implements UpdateProductUseCase {
         Product product = productRepository.findById(productId)
             .orElseThrow(() -> new InvalidProductException("Product not found with id: " + request.getProductId()));
 
-        if (product.getStatus() == ProductStatus.DELETED) {
-            throw new InvalidProductException("Cannot update deleted product");
-        }
-
         ProductName updatedName = request.getName() != null 
             ? new ProductName(request.getName()) 
             : product.getName();
