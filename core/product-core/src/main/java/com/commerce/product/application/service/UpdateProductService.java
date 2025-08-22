@@ -4,11 +4,13 @@ import com.commerce.product.application.usecase.UpdateProductRequest;
 import com.commerce.product.application.usecase.UpdateProductResponse;
 import com.commerce.product.application.usecase.UpdateProductUseCase;
 import com.commerce.product.domain.exception.InvalidProductException;
+import com.commerce.product.domain.exception.ProductConflictException;
 import com.commerce.product.domain.model.Product;
 import com.commerce.product.domain.model.ProductId;
 import com.commerce.product.domain.model.ProductStatus;
 import com.commerce.product.domain.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,12 +27,25 @@ public class UpdateProductService implements UpdateProductUseCase {
         
         Product product = productRepository.findById(productId)
             .orElseThrow(() -> new InvalidProductException("Product not found with id: " + request.getProductId()));
+        
+        // 버전 검증
+        if (request.getVersion() != null && !request.getVersion().equals(product.getVersion())) {
+            throw new ProductConflictException(
+                "Product has been modified by another user. Please refresh and try again."
+            );
+        }
 
         final Product resultProduct;
-        if (product.update(request.getName(), request.getDescription())) {
-            resultProduct = productRepository.save(product);
-        } else {
-            resultProduct = product;
+        try {
+            if (product.update(request.getName(), request.getDescription())) {
+                resultProduct = productRepository.save(product);
+            } else {
+                resultProduct = product;
+            }
+        } catch (OptimisticLockingFailureException e) {
+            throw new ProductConflictException(
+                "Product has been modified by another user. Please refresh and try again.", e
+            );
         }
 
         return UpdateProductResponse.builder()
@@ -39,6 +54,7 @@ public class UpdateProductService implements UpdateProductUseCase {
             .description(resultProduct.getDescription())
             .type(resultProduct.getType().name())
             .status(resultProduct.getStatus().name())
+            .version(resultProduct.getVersion())
             .build();
     }
 }

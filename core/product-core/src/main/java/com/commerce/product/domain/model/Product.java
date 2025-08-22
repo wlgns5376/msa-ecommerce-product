@@ -18,6 +18,7 @@ public class Product extends AggregateRoot<ProductId> {
     private final List<ProductOption> options;
     private final List<CategoryId> categoryIds;
     private boolean outOfStock;
+    private Long version;
 
     public Product(ProductId id, ProductName name, String description, ProductType type) {
         this.id = id;
@@ -28,6 +29,21 @@ public class Product extends AggregateRoot<ProductId> {
         this.options = new ArrayList<>();
         this.categoryIds = new ArrayList<>();
         this.outOfStock = false;
+        this.version = 0L;
+    }
+    
+    private Product(ProductId id, ProductName name, String description, ProductType type,
+                   ProductStatus status, List<ProductOption> options, List<CategoryId> categoryIds,
+                   boolean outOfStock, Long version) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.type = type;
+        this.status = status;
+        this.options = new ArrayList<>(options);
+        this.categoryIds = new ArrayList<>(categoryIds);
+        this.outOfStock = outOfStock;
+        this.version = version;
     }
 
     public static Product create(ProductName name, String description, ProductType type) {
@@ -151,5 +167,11 @@ public class Product extends AggregateRoot<ProductId> {
     @Override
     public int hashCode() {
         return id.hashCode();
+    }
+    
+    public static Product restore(ProductId id, ProductName name, String description, ProductType type,
+                                  ProductStatus status, List<ProductOption> options, List<CategoryId> categoryIds,
+                                  boolean outOfStock, Long version) {
+        return new Product(id, name, description, type, status, options, categoryIds, outOfStock, version);
     }
 }

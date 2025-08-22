@@ -4,6 +4,7 @@ import com.commerce.product.domain.event.ProductUpdatedEvent;
 import com.commerce.product.domain.exception.InvalidProductException;
 import com.commerce.product.domain.exception.InvalidProductIdException;
 import com.commerce.product.domain.exception.InvalidProductNameException;
+import com.commerce.product.domain.exception.ProductConflictException;
 import com.commerce.product.application.service.UpdateProductService;
 import com.commerce.product.domain.model.*;
 import com.commerce.product.domain.repository.ProductRepository;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.OptimisticLockingFailureException;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -53,6 +55,7 @@ class UpdateProductUseCaseTest {
             .productId(productId.value())
             .name("Updated Product")
             .description("Updated description")
+            .version(0L)
             .build();
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
@@ -68,6 +71,7 @@ class UpdateProductUseCaseTest {
         assertThat(response.getDescription()).isEqualTo("Updated description");
         assertThat(response.getType()).isEqualTo(ProductType.NORMAL.name());
         assertThat(response.getStatus()).isEqualTo(existingProduct.getStatus().name());
+        assertThat(response.getVersion()).isEqualTo(0L);
 
         ArgumentCaptor<Product> productCaptor = ArgumentCaptor.forClass(Product.class);
         verify(productRepository).save(productCaptor.capture());
@@ -313,5 +317,98 @@ class UpdateProductUseCaseTest {
         
         // 변경사항이 없으므로 도메인 이벤트가 발생하지 않아야 함
         assertThat(existingProduct.getDomainEvents()).isEmpty();
+    }
+    
+    @Test
+    @DisplayName("잘못된 버전으로 수정 요청하면 ProductConflictException이 발생한다")
+    void givenWrongVersion_whenUpdateProduct_thenThrowsProductConflictException() {
+        // Given
+        Product existingProduct = Product.create(
+            new ProductName("Original Product"),
+            "Original description",
+            ProductType.NORMAL
+        );
+        existingProduct.clearDomainEvents();
+        ProductId productId = existingProduct.getId();
+
+        UpdateProductRequest request = UpdateProductRequest.builder()
+            .productId(productId.value())
+            .name("Updated Product")
+            .description("Updated description")
+            .version(1L)  // 잘못된 버전 (실제는 0)
+            .build();
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
+
+        // When & Then
+        assertThatThrownBy(() -> updateProductUseCase.updateProduct(request))
+            .isInstanceOf(ProductConflictException.class)
+            .hasMessage("Product has been modified by another user. Please refresh and try again.");
+
+        verify(productRepository, never()).save(any(Product.class));
+    }
+    
+    @Test
+    @DisplayName("저장 시 OptimisticLockingFailureException이 발생하면 ProductConflictException으로 변환된다")
+    void givenOptimisticLockingFailure_whenUpdateProduct_thenThrowsProductConflictException() {
+        // Given
+        Product existingProduct = Product.create(
+            new ProductName("Original Product"),
+            "Original description",
+            ProductType.NORMAL
+        );
+        existingProduct.clearDomainEvents();
+        ProductId productId = existingProduct.getId();
+
+        UpdateProductRequest request = UpdateProductRequest.builder()
+            .productId(productId.value())
+            .name("Updated Product")
+            .description("Updated description")
+            .version(0L)
+            .build();
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
+        when(productRepository.save(any(Product.class)))
+            .thenThrow(new OptimisticLockingFailureException("Optimistic lock failed"));
+
+        // When & Then
+        assertThatThrownBy(() -> updateProductUseCase.updateProduct(request))
+            .isInstanceOf(ProductConflictException.class)
+            .hasMessage("Product has been modified by another user. Please refresh and try again.");
+
+        verify(productRepository).save(any(Product.class));
+    }
+    
+    @Test
+    @DisplayName("버전 정보가 없으면 버전 검증을 건너뛴다")
+    void givenNoVersion_whenUpdateProduct_thenSkipVersionCheck() {
+        // Given
+        Product existingProduct = Product.create(
+            new ProductName("Original Product"),
+            "Original description",
+            ProductType.NORMAL
+        );
+        existingProduct.clearDomainEvents();
+        ProductId productId = existingProduct.getId();
+
+        UpdateProductRequest request = UpdateProductRequest.builder()
+            .productId(productId.value())
+            .name("Updated Product")
+            .description("Updated description")
+            .version(null)  // 버전 정보 없음
+            .build();
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        UpdateProductResponse response = updateProductUseCase.updateProduct(request);
+
+        // Then
+        assertThat(response).isNotNull();
+        assertThat(response.getName()).isEqualTo("Updated Product");
+        assertThat(response.getDescription()).isEqualTo("Updated description");
+
+        verify(productRepository).save(any(Product.class));
     }
 }

@@ -11,4 +11,5 @@ public class UpdateProductResponse {
     private final String description;
     private final String type;
     private final String status;
+    private final Long version;
 }
