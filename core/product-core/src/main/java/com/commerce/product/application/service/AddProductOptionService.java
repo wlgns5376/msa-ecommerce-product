@@ -1,6 +1,5 @@
 package com.commerce.product.application.service;
 
-import org.springframework.context.ApplicationEventPublisher;
 import com.commerce.product.application.usecase.AddProductOptionRequest;
 import com.commerce.product.application.usecase.AddProductOptionResponse;
 import com.commerce.product.application.usecase.AddProductOptionUseCase;
@@ -18,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class AddProductOptionService implements AddProductOptionUseCase {
 
     private final ProductRepository productRepository;
-    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -31,8 +29,6 @@ public class AddProductOptionService implements AddProductOptionUseCase {
 
         product.addOption(option);
         productRepository.save(product);
-
-        product.getDomainEvents().forEach(eventPublisher::publishEvent);
 
         return AddProductOptionResponse.builder()
             .productId(product.getId().value())

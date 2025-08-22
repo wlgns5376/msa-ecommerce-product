@@ -1,6 +1,5 @@
 package com.commerce.product.application.usecase;
 
-import org.springframework.context.ApplicationEventPublisher;
 import com.commerce.product.application.service.AddProductOptionService;
 import com.commerce.product.domain.exception.*;
 import com.commerce.product.domain.model.*;
@@ -29,14 +28,12 @@ class AddProductOptionUseCaseTest {
     @Mock
     private ProductRepository productRepository;
 
-    @Mock
-    private ApplicationEventPublisher eventPublisher;
 
     private AddProductOptionUseCase useCase;
 
     @BeforeEach
     void setUp() {
-        useCase = new AddProductOptionService(productRepository, eventPublisher);
+        useCase = new AddProductOptionService(productRepository);
     }
 
     @Test
@@ -79,7 +76,6 @@ class AddProductOptionUseCaseTest {
         assertThat(savedProduct.getOptions()).hasSize(1);
         assertThat(savedProduct.getOptions().get(0).getName()).isEqualTo("블랙 - L");
 
-        verify(eventPublisher).publishEvent(any(com.commerce.common.event.DomainEvent.class));
     }
 
     @Test
@@ -147,7 +143,6 @@ class AddProductOptionUseCaseTest {
             .hasMessage("Product not found");
 
         verify(productRepository, never()).save(any());
-        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -182,7 +177,6 @@ class AddProductOptionUseCaseTest {
             .hasMessage("Cannot add option to deleted product");
 
         verify(productRepository, never()).save(any());
-        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -216,7 +210,6 @@ class AddProductOptionUseCaseTest {
             .hasMessage("Bundle product must have bundle options");
 
         verify(productRepository, never()).save(any());
-        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -260,7 +253,6 @@ class AddProductOptionUseCaseTest {
             .hasMessage("An option with the same name already exists.");
 
         verify(productRepository, never()).save(any());
-        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -294,7 +286,6 @@ class AddProductOptionUseCaseTest {
             .hasMessage("Amount cannot be negative");
 
         verify(productRepository, never()).save(any());
-        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -325,7 +316,6 @@ class AddProductOptionUseCaseTest {
             .hasMessage("SKU mappings cannot be null or empty");
 
         verify(productRepository, never()).save(any());
-        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -359,7 +349,6 @@ class AddProductOptionUseCaseTest {
             .hasMessage("Quantity must be positive for SKU: SKU001");
 
         verify(productRepository, never()).save(any());
-        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -433,6 +422,5 @@ class AddProductOptionUseCaseTest {
             .hasMessage("Invalid currency: INVALID_CURRENCY");
 
         verify(productRepository, never()).save(any());
-        verify(eventPublisher, never()).publishEvent(any());
     }
 }
