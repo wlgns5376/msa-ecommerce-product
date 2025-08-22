@@ -135,7 +135,7 @@ class CreateProductUseCaseTest {
         // When & Then
         assertThatThrownBy(() -> createProductUseCase.createProduct(request))
                 .isInstanceOf(InvalidProductException.class)
-                .hasMessageContaining("Product type is required");
+                .hasMessageContaining("상품 타입은 필수입니다");
 
         verify(productRepository, never()).save(any());
         verify(eventPublisher, never()).publishEvent(any());

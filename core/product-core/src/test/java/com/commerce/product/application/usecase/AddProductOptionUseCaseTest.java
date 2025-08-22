@@ -132,7 +132,7 @@ class AddProductOptionUseCaseTest {
         // When & Then
         assertThatThrownBy(() -> useCase.addProductOption(request))
             .isInstanceOf(InvalidProductException.class)
-            .hasMessage("Product not found");
+            .hasMessage("상품을 찾을 수 없습니다");
 
         verify(productRepository, never()).save(any());
     }
@@ -157,7 +157,7 @@ class AddProductOptionUseCaseTest {
         // When & Then
         assertThatThrownBy(() -> useCase.addProductOption(request))
             .isInstanceOf(InvalidProductException.class)
-            .hasMessage("Cannot add option to deleted product");
+            .hasMessage("삭제된 상품에는 옵션을 추가할 수 없습니다");
 
         verify(productRepository, never()).save(any());
     }
@@ -189,7 +189,7 @@ class AddProductOptionUseCaseTest {
         // When & Then
         assertThatThrownBy(() -> useCase.addProductOption(request))
             .isInstanceOf(InvalidOptionException.class)
-            .hasMessage("Bundle product must have bundle options");
+            .hasMessage("번들 상품은 번들 옵션만 가질 수 있습니다");
 
         verify(productRepository, never()).save(any());
     }
@@ -230,7 +230,7 @@ class AddProductOptionUseCaseTest {
         // When & Then
         assertThatThrownBy(() -> useCase.addProductOption(request))
             .isInstanceOf(DuplicateOptionException.class)
-            .hasMessage("An option with the same name already exists.");
+            .hasMessage("동일한 이름의 옵션이 이미 존재합니다");
 
         verify(productRepository, never()).save(any());
     }
@@ -394,7 +394,7 @@ class AddProductOptionUseCaseTest {
         // When & Then
         assertThatThrownBy(() -> useCase.addProductOption(request))
             .isInstanceOf(InvalidProductOptionException.class)
-            .hasMessage("Invalid currency: INVALID_CURRENCY");
+            .hasMessage("유효하지 않은 통화입니다: INVALID_CURRENCY");
 
         verify(productRepository, never()).save(any());
     }
@@ -426,7 +426,7 @@ class AddProductOptionUseCaseTest {
         // When & Then
         assertThatThrownBy(() -> useCase.addProductOption(request))
             .isInstanceOf(InvalidOptionException.class)
-            .hasMessage("Normal product cannot have bundle options");
+            .hasMessage("일반 상품은 번들 옵션을 가질 수 없습니다");
 
         verify(productRepository, never()).save(any());
     }

@@ -25,7 +25,7 @@ public class AddProductOptionService implements AddProductOptionUseCase {
     public AddProductOptionResponse addProductOption(AddProductOptionRequest request) {
         ProductId productId = new ProductId(request.getProductId());
         Product product = productRepository.findById(productId)
-            .orElseThrow(() -> new InvalidProductException("Product not found"));
+            .orElseThrow(() -> new InvalidProductException("상품을 찾을 수 없습니다"));
 
         ProductOption option = productOptionFactory.create(request);
 

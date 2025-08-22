@@ -15,8 +15,8 @@ public class ProductOptionFactory {
         Currency currency;
         try {
             currency = Currency.valueOf(request.getCurrency());
-        } catch (IllegalArgumentException e) {
-            throw new InvalidProductOptionException("Invalid currency: " + request.getCurrency());
+        } catch (IllegalArgumentException | NullPointerException e) {
+            throw new InvalidProductOptionException("유효하지 않은 통화입니다: " + request.getCurrency());
         }
         Money price = new Money(request.getPrice(), currency);
         SkuMapping skuMapping = SkuMapping.of(request.getSkuMappings());

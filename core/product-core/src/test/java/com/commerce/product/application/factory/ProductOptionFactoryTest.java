@@ -113,6 +113,6 @@ class ProductOptionFactoryTest {
         // When & Then
         assertThatThrownBy(() -> factory.create(request))
                 .isInstanceOf(InvalidProductOptionException.class)
-                .hasMessage("Invalid currency: INVALID_CURRENCY");
+                .hasMessage("유효하지 않은 통화입니다: INVALID_CURRENCY");
     }
 }
