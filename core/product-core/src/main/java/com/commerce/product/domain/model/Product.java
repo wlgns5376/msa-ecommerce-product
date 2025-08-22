@@ -72,14 +72,26 @@ public class Product extends AggregateRoot<ProductId> {
         }
     }
 
-    public void update(ProductName name, String description) {
+    public boolean update(ProductName name, String description) {
         if (status == ProductStatus.DELETED) {
             throw new InvalidProductException("Cannot update deleted product");
         }
         
-        this.name = name;
-        this.description = description;
-        addDomainEvent(new ProductUpdatedEvent(id, name.value(), description));
+        boolean changed = false;
+        if (!this.name.equals(name)) {
+            this.name = name;
+            changed = true;
+        }
+        if (!this.description.equals(description)) {
+            this.description = description;
+            changed = true;
+        }
+        
+        if (changed) {
+            addDomainEvent(new ProductUpdatedEvent(id, name.value(), description));
+        }
+        
+        return changed;
     }
 
     public void activate() {

@@ -40,8 +40,7 @@ public class UpdateProductService implements UpdateProductUseCase {
             : product.getDescription();
 
         Product savedProduct = product;
-        if (!updatedName.equals(product.getName()) || !updatedDescription.equals(product.getDescription())) {
-            product.update(updatedName, updatedDescription);
+        if (product.update(updatedName, updatedDescription)) {
             savedProduct = productRepository.save(product);
         }
 

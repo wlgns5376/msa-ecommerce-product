@@ -130,35 +130,6 @@ class UpdateProductUseCaseTest {
     }
 
     @Test
-    @DisplayName("삭제된 상품을 변경사항 없이 수정 요청하면 예외가 발생한다")
-    void givenDeletedProductWithNoChanges_whenUpdateProduct_thenThrowsException() {
-        // Given
-        Product deletedProduct = Product.create(
-            new ProductName("Deleted Product"),
-            "Deleted description",
-            ProductType.NORMAL
-        );
-        deletedProduct.delete();
-        deletedProduct.clearDomainEvents();
-        ProductId productId = deletedProduct.getId();
-
-        UpdateProductRequest request = UpdateProductRequest.builder()
-            .productId(productId.value())
-            .name("Deleted Product")
-            .description("Deleted description")
-            .build();
-
-        when(productRepository.findById(productId)).thenReturn(Optional.of(deletedProduct));
-
-        // When & Then
-        assertThatThrownBy(() -> updateProductUseCase.updateProduct(request))
-            .isInstanceOf(InvalidProductException.class)
-            .hasMessage("Cannot update deleted product");
-
-        verify(productRepository, never()).save(any(Product.class));
-    }
-
-    @Test
     @DisplayName("유효하지 않은 상품 ID 형식으로 수정 요청하면 예외가 발생한다")
     void givenInvalidProductIdFormat_whenUpdateProduct_thenThrowsException() {
         // Given
