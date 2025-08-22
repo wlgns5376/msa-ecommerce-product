@@ -27,10 +27,10 @@ import java.time.LocalDateTime;
 public class StockMovementJpaEntity {
     
     @Id
-    @Column(name = "movement_id", nullable = false)
+    @Column(name = "movement_id", nullable = false, length = 36)
     private String movementId;
     
-    @Column(name = "sku_id", nullable = false)
+    @Column(name = "sku_id", nullable = false, length = 36)
     private String skuId;
     
     @Column(name = "quantity", nullable = false)
