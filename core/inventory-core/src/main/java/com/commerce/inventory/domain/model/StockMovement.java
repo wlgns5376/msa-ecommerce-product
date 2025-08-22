@@ -89,17 +89,6 @@ public class StockMovement extends AggregateRoot<MovementId> {
         );
     }
     
-    public static StockMovement restore(
-            MovementId id,
-            SkuId skuId,
-            MovementType type,
-            Quantity quantity,
-            String reference,
-            LocalDateTime timestamp
-    ) {
-        return new StockMovement(id, skuId, type, quantity, reference, timestamp);
-    }
-    
     public boolean isInbound() {
         return type == MovementType.INBOUND;
     }
