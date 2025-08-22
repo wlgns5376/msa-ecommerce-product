@@ -8,12 +8,16 @@ import com.commerce.inventory.infrastructure.persistence.repository.StockMovemen
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
@@ -46,33 +50,28 @@ class StockMovementPersistenceAdapterTest {
         assertThat(savedEntity.getTimestamp()).isEqualTo(movement.getTimestamp());
     }
 
-    @Test
-    @DisplayName("입고 이동 기록을 저장할 수 있다")
-    void saveInboundMovement() {
-        // Given
-        StockMovement inboundMovement = StockMovement.createInbound(
-                SkuId.of("SKU123"),
-                Quantity.of(100),
-                "Initial stock",
-                FIXED_TIME
-        );
-
+    @DisplayName("이동 기록을 저장할 수 있다")
+    @ParameterizedTest(name = "{index}: {1}")
+    @MethodSource("movementProvider")
+    void saveMovement(StockMovement movement, String testName) {
         // When & Then
-        assertMovementIsSavedCorrectly(inboundMovement);
+        assertMovementIsSavedCorrectly(movement);
     }
 
-    @Test
-    @DisplayName("출고 이동 기록을 저장할 수 있다")
-    void saveShipmentMovement() {
-        // Given
-        StockMovement shipmentMovement = StockMovement.createOutbound(
-                SkuId.of("SKU456"),
-                Quantity.of(50),
-                "Order fulfilled",
-                FIXED_TIME
+    private static Stream<Arguments> movementProvider() {
+        return Stream.of(
+                Arguments.of(StockMovement.createInbound(
+                        SkuId.of("SKU123"),
+                        Quantity.of(100),
+                        "Initial stock",
+                        FIXED_TIME
+                ), "입고 이동 기록"),
+                Arguments.of(StockMovement.createOutbound(
+                        SkuId.of("SKU456"),
+                        Quantity.of(50),
+                        "Order fulfilled",
+                        FIXED_TIME
+                ), "출고 이동 기록")
         );
-
-        // When & Then
-        assertMovementIsSavedCorrectly(shipmentMovement);
     }
 }
