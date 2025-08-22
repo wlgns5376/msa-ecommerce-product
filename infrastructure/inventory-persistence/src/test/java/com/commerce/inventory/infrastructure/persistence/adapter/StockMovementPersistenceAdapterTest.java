@@ -6,7 +6,6 @@ import com.commerce.inventory.domain.model.StockMovement;
 import com.commerce.inventory.infrastructure.persistence.entity.StockMovementJpaEntity;
 import com.commerce.inventory.infrastructure.persistence.repository.StockMovementJpaRepository;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -61,24 +60,18 @@ class StockMovementPersistenceAdapterTest {
     private static Stream<Arguments> movementProvider() {
         return Stream.of(
                 Arguments.of(StockMovement.create(
-                        SkuId.of("SKU789"),
-                        Quantity.of(200),
-                        com.commerce.inventory.domain.model.MovementType.RECEIVE,
-                        "PO-001",
-                        FIXED_TIME
-                ), "재고 입고 기록"),
-                Arguments.of(StockMovement.createInbound(
                         SkuId.of("SKU123"),
                         Quantity.of(100),
-                        "Initial stock",
+                        com.commerce.inventory.domain.model.MovementType.RECEIVE,
+                        "PO-123",
                         FIXED_TIME
-                ), "입고 이동 기록"),
+                ), "재고 입고(RECEIVE) 이동 기록"),
                 Arguments.of(StockMovement.createOutbound(
                         SkuId.of("SKU456"),
                         Quantity.of(50),
                         "Order fulfilled",
                         FIXED_TIME
-                ), "출고 이동 기록")
+                ), "출고(OUTBOUND) 이동 기록")
         );
     }
 }
