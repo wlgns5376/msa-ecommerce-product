@@ -26,6 +26,8 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class StockMovementPersistenceAdapterTest {
     
+    private static final LocalDateTime FIXED_TIME = LocalDateTime.of(2024, 1, 1, 10, 0);
+    
     @Mock
     private StockMovementJpaRepository stockMovementJpaRepository;
     
@@ -37,12 +39,11 @@ class StockMovementPersistenceAdapterTest {
     
     @BeforeEach
     void setUp() {
-        LocalDateTime now = LocalDateTime.now();
         stockMovement = StockMovement.createInbound(
                 SkuId.of("SKU123"),
                 Quantity.of(100),
                 "Initial stock",
-                now
+                FIXED_TIME
         );
         
         jpaEntity = StockMovementJpaEntity.fromDomainModel(stockMovement);
@@ -75,12 +76,11 @@ class StockMovementPersistenceAdapterTest {
     @DisplayName("출고 이동 기록을 저장할 수 있다")
     void saveShipmentMovement() {
         // Given
-        LocalDateTime shipmentTime = LocalDateTime.now();
         StockMovement shipmentMovement = StockMovement.createOutbound(
                 SkuId.of("SKU456"),
                 Quantity.of(50),
                 "Order fulfilled",
-                shipmentTime
+                FIXED_TIME
         );
         
         StockMovementJpaEntity shipmentEntity = StockMovementJpaEntity.fromDomainModel(shipmentMovement);
