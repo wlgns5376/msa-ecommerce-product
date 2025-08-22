@@ -14,7 +14,7 @@ public class ProductOptionFactory {
     public ProductOption create(AddProductOptionRequest request) {
         Currency currency;
         try {
-            currency = Currency.valueOf(request.getCurrency());
+            currency = Currency.valueOf(request.getCurrency().toUpperCase());
         } catch (IllegalArgumentException | NullPointerException e) {
             throw new InvalidProductOptionException("유효하지 않은 통화입니다: " + request.getCurrency());
         }

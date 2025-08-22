@@ -17,6 +17,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -87,6 +88,39 @@ class DomainEventPublishingAspectTest {
 
         // Then
         verify(eventPublisher, never()).publishEvent(any());
+    }
+    
+    @Test
+    @DisplayName("이벤트 발행 중 예외가 발생하면 이벤트가 aggregate에 남아있어야 한다")
+    void shouldRetainEventsWhenPublishingFails() {
+        // Given
+        TestAggregate aggregate = new TestAggregate();
+        ProductCreatedEvent event1 = new ProductCreatedEvent(
+            ProductId.generate(), 
+            "Test Product", 
+            ProductType.NORMAL
+        );
+        ProductCreatedEvent event2 = new ProductCreatedEvent(
+            ProductId.generate(), 
+            "Another Product", 
+            ProductType.BUNDLE
+        );
+        
+        aggregate.addTestEvent(event1);
+        aggregate.addTestEvent(event2);
+        
+        // 첫 번째 이벤트 발행 시 예외 발생
+        doThrow(new RuntimeException("Publishing failed"))
+            .when(eventPublisher).publishEvent(event1);
+
+        // When & Then
+        assertThatThrownBy(() -> aspect.publishDomainEvents(aggregate))
+            .isInstanceOf(RuntimeException.class)
+            .hasMessage("Publishing failed");
+        
+        // 이벤트가 여전히 aggregate에 남아있는지 확인
+        assertThat(aggregate.getDomainEvents()).hasSize(2);
+        assertThat(aggregate.getDomainEvents()).containsExactly(event1, event2);
     }
 
     // 테스트용 Aggregate 클래스
