@@ -4,7 +4,7 @@ import com.commerce.common.domain.model.Quantity;
 import com.commerce.inventory.application.usecase.GetInventoryQuery;
 import com.commerce.inventory.application.usecase.GetInventoryUseCase;
 import com.commerce.inventory.application.usecase.InventoryResponse;
-import com.commerce.inventory.application.port.out.LoadInventoryPort;
+import com.commerce.inventory.application.service.port.out.LoadInventoryPort;
 import com.commerce.inventory.domain.model.Inventory;
 import com.commerce.inventory.domain.model.SkuId;
 import jakarta.validation.ConstraintViolation;
