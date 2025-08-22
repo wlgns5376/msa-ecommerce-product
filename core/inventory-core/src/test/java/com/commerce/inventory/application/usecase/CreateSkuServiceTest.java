@@ -2,8 +2,8 @@ package com.commerce.inventory.application.usecase;
 
 import com.commerce.inventory.application.usecase.CreateSkuCommand;
 import com.commerce.inventory.application.usecase.CreateSkuResponse;
-import com.commerce.inventory.application.port.out.LoadSkuPort;
-import com.commerce.inventory.application.port.out.SaveSkuPort;
+import com.commerce.inventory.application.service.port.out.LoadSkuPort;
+import com.commerce.inventory.application.service.port.out.SaveSkuPort;
 import com.commerce.inventory.domain.model.*;
 import com.commerce.inventory.domain.exception.*;
 import org.junit.jupiter.api.BeforeEach;

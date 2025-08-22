@@ -1,4 +1,4 @@
-package com.commerce.inventory.application.port.out;
+package com.commerce.inventory.application.service.port.out;
 
 import com.commerce.inventory.domain.model.Sku;
 import com.commerce.inventory.domain.model.SkuCode;
