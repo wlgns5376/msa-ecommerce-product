@@ -41,13 +41,13 @@ class UpdateProductUseCaseTest {
     @DisplayName("정상적인 상품 수정 요청이 주어지면 상품이 수정된다")
     void givenValidUpdateRequest_whenUpdateProduct_thenProductIsUpdated() {
         // Given
-        ProductId productId = ProductId.generate();
         Product existingProduct = Product.create(
             new ProductName("Original Product"),
             "Original description",
             ProductType.NORMAL
         );
         existingProduct.clearDomainEvents(); // 생성 이벤트 제거
+        ProductId productId = existingProduct.getId();
 
         UpdateProductRequest request = UpdateProductRequest.builder()
             .productId(productId.value())
@@ -55,7 +55,7 @@ class UpdateProductUseCaseTest {
             .description("Updated description")
             .build();
 
-        when(productRepository.findById(any(ProductId.class))).thenReturn(Optional.of(existingProduct));
+        when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
         when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
@@ -104,7 +104,6 @@ class UpdateProductUseCaseTest {
     @DisplayName("삭제된 상품을 수정하려고 하면 예외가 발생한다")
     void givenDeletedProduct_whenUpdateProduct_thenThrowsException() {
         // Given
-        ProductId productId = ProductId.generate();
         Product deletedProduct = Product.create(
             new ProductName("Deleted Product"),
             "Deleted description",
@@ -112,6 +111,7 @@ class UpdateProductUseCaseTest {
         );
         deletedProduct.delete();
         deletedProduct.clearDomainEvents();
+        ProductId productId = deletedProduct.getId();
 
         UpdateProductRequest request = UpdateProductRequest.builder()
             .productId(productId.value())
@@ -119,7 +119,7 @@ class UpdateProductUseCaseTest {
             .description("Updated description")
             .build();
 
-        when(productRepository.findById(any(ProductId.class))).thenReturn(Optional.of(deletedProduct));
+        when(productRepository.findById(productId)).thenReturn(Optional.of(deletedProduct));
 
         // When & Then
         assertThatThrownBy(() -> updateProductUseCase.updateProduct(request))
@@ -151,12 +151,12 @@ class UpdateProductUseCaseTest {
     @DisplayName("유효하지 않은 상품명으로 수정 요청하면 예외가 발생한다")
     void givenInvalidProductName_whenUpdateProduct_thenThrowsException() {
         // Given
-        ProductId productId = ProductId.generate();
         Product existingProduct = Product.create(
             new ProductName("Original Product"),
             "Original description",
             ProductType.NORMAL
         );
+        ProductId productId = existingProduct.getId();
 
         UpdateProductRequest request = UpdateProductRequest.builder()
             .productId(productId.value())
@@ -164,7 +164,7 @@ class UpdateProductUseCaseTest {
             .description("Updated description")
             .build();
 
-        when(productRepository.findById(any(ProductId.class))).thenReturn(Optional.of(existingProduct));
+        when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
 
         // When & Then
         assertThatThrownBy(() -> updateProductUseCase.updateProduct(request))
@@ -177,13 +177,13 @@ class UpdateProductUseCaseTest {
     @DisplayName("상품명만 수정하면 설명은 기존 값을 유지한다")
     void givenOnlyNameUpdate_whenUpdateProduct_thenDescriptionRemainsSame() {
         // Given
-        ProductId productId = ProductId.generate();
         Product existingProduct = Product.create(
             new ProductName("Original Product"),
             "Original description",
             ProductType.NORMAL
         );
         existingProduct.clearDomainEvents();
+        ProductId productId = existingProduct.getId();
 
         UpdateProductRequest request = UpdateProductRequest.builder()
             .productId(productId.value())
@@ -191,7 +191,7 @@ class UpdateProductUseCaseTest {
             .description(null)  // null로 설정
             .build();
 
-        when(productRepository.findById(any(ProductId.class))).thenReturn(Optional.of(existingProduct));
+        when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
         when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
@@ -212,13 +212,13 @@ class UpdateProductUseCaseTest {
     @DisplayName("설명만 수정하면 상품명은 기존 값을 유지한다")
     void givenOnlyDescriptionUpdate_whenUpdateProduct_thenNameRemainsSame() {
         // Given
-        ProductId productId = ProductId.generate();
         Product existingProduct = Product.create(
             new ProductName("Original Product"),
             "Original description",
             ProductType.NORMAL
         );
         existingProduct.clearDomainEvents();
+        ProductId productId = existingProduct.getId();
 
         UpdateProductRequest request = UpdateProductRequest.builder()
             .productId(productId.value())
@@ -226,7 +226,7 @@ class UpdateProductUseCaseTest {
             .description("Updated description")
             .build();
 
-        when(productRepository.findById(any(ProductId.class))).thenReturn(Optional.of(existingProduct));
+        when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
         when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
@@ -247,7 +247,6 @@ class UpdateProductUseCaseTest {
     @DisplayName("활성화된 상품도 수정할 수 있다")
     void givenActiveProduct_whenUpdateProduct_thenProductIsUpdated() {
         // Given
-        ProductId productId = ProductId.generate();
         Product activeProduct = Product.create(
             new ProductName("Active Product"),
             "Active description",
@@ -260,6 +259,7 @@ class UpdateProductUseCaseTest {
         ));
         activeProduct.activate();
         activeProduct.clearDomainEvents();
+        ProductId productId = activeProduct.getId();
 
         UpdateProductRequest request = UpdateProductRequest.builder()
             .productId(productId.value())
@@ -267,7 +267,7 @@ class UpdateProductUseCaseTest {
             .description("Updated active description")
             .build();
 
-        when(productRepository.findById(any(ProductId.class))).thenReturn(Optional.of(activeProduct));
+        when(productRepository.findById(productId)).thenReturn(Optional.of(activeProduct));
         when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
@@ -279,5 +279,41 @@ class UpdateProductUseCaseTest {
         assertThat(response.getDescription()).isEqualTo("Updated active description");
 
         verify(productRepository).save(any(Product.class));
+    }
+
+    @Test
+    @DisplayName("변경사항이 없으면 도메인 이벤트가 발생하지 않는다")
+    void givenNoChanges_whenUpdateProduct_thenNoDomainEventFired() {
+        // Given
+        Product existingProduct = Product.create(
+            new ProductName("Original Product"),
+            "Original description",
+            ProductType.NORMAL
+        );
+        existingProduct.clearDomainEvents();
+        ProductId productId = existingProduct.getId();
+
+        UpdateProductRequest request = UpdateProductRequest.builder()
+            .productId(productId.value())
+            .name("Original Product")  // 동일한 이름
+            .description("Original description")  // 동일한 설명
+            .build();
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        UpdateProductResponse response = updateProductUseCase.updateProduct(request);
+
+        // Then
+        assertThat(response.getName()).isEqualTo("Original Product");
+        assertThat(response.getDescription()).isEqualTo("Original description");
+
+        ArgumentCaptor<Product> productCaptor = ArgumentCaptor.forClass(Product.class);
+        verify(productRepository).save(productCaptor.capture());
+        Product savedProduct = productCaptor.getValue();
+
+        // 변경사항이 없으므로 도메인 이벤트가 발생하지 않아야 함
+        assertThat(savedProduct.getDomainEvents()).isEmpty();
     }
 }
