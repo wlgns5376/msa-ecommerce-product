@@ -36,6 +36,18 @@ class AddProductOptionUseCaseTest {
         useCase = new AddProductOptionService(productRepository);
     }
 
+    private AddProductOptionRequest createDefaultRequest(String productId) {
+        Map<String, Integer> skuMappings = new HashMap<>();
+        skuMappings.put("SKU001", 1);
+        return AddProductOptionRequest.builder()
+                .productId(productId)
+                .optionName("블랙 - L")
+                .price(BigDecimal.valueOf(29900))
+                .currency("KRW")
+                .skuMappings(skuMappings)
+                .build();
+    }
+
     @Test
     @DisplayName("정상적인 상품 옵션 추가")
     void shouldAddProductOption() {
@@ -51,16 +63,7 @@ class AddProductOptionUseCaseTest {
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
         when(productRepository.save(any(Product.class))).thenReturn(product);
 
-        Map<String, Integer> skuMappings = new HashMap<>();
-        skuMappings.put("SKU001", 1);
-
-        AddProductOptionRequest request = AddProductOptionRequest.builder()
-            .productId(productId.value())
-            .optionName("블랙 - L")
-            .price(BigDecimal.valueOf(29900))
-            .currency("KRW")
-            .skuMappings(skuMappings)
-            .build();
+        AddProductOptionRequest request = createDefaultRequest(productId.value());
 
         // When
         AddProductOptionResponse response = useCase.addProductOption(request);
@@ -126,16 +129,7 @@ class AddProductOptionUseCaseTest {
         String productId = ProductId.generate().value();
         when(productRepository.findById(any(ProductId.class))).thenReturn(Optional.empty());
 
-        Map<String, Integer> skuMappings = new HashMap<>();
-        skuMappings.put("SKU001", 1);
-
-        AddProductOptionRequest request = AddProductOptionRequest.builder()
-            .productId(productId)
-            .optionName("블랙 - L")
-            .price(BigDecimal.valueOf(29900))
-            .currency("KRW")
-            .skuMappings(skuMappings)
-            .build();
+        AddProductOptionRequest request = createDefaultRequest(productId);
 
         // When & Then
         assertThatThrownBy(() -> useCase.addProductOption(request))
@@ -160,16 +154,7 @@ class AddProductOptionUseCaseTest {
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
 
-        Map<String, Integer> skuMappings = new HashMap<>();
-        skuMappings.put("SKU001", 1);
-
-        AddProductOptionRequest request = AddProductOptionRequest.builder()
-            .productId(productId.value())
-            .optionName("블랙 - L")
-            .price(BigDecimal.valueOf(29900))
-            .currency("KRW")
-            .skuMappings(skuMappings)
-            .build();
+        AddProductOptionRequest request = createDefaultRequest(productId.value());
 
         // When & Then
         assertThatThrownBy(() -> useCase.addProductOption(request))
@@ -271,7 +256,6 @@ class AddProductOptionUseCaseTest {
 
         Map<String, Integer> skuMappings = new HashMap<>();
         skuMappings.put("SKU001", 1);
-
         AddProductOptionRequest request = AddProductOptionRequest.builder()
             .productId(productId.value())
             .optionName("블랙 - L")
@@ -420,6 +404,40 @@ class AddProductOptionUseCaseTest {
         assertThatThrownBy(() -> useCase.addProductOption(request))
             .isInstanceOf(InvalidProductOptionException.class)
             .hasMessage("Invalid currency: INVALID_CURRENCY");
+
+        verify(productRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("일반 상품에 묶음 SKU 옵션 추가 시 예외 발생")
+    void shouldThrowExceptionWhenAddingBundleOptionToNormalProduct() {
+        // Given
+        ProductId productId = ProductId.generate();
+        Product product = new Product(
+            productId,
+            new ProductName("일반 상품"),
+            "일반 상품 설명",
+            ProductType.NORMAL
+        );
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+
+        Map<String, Integer> skuMappings = new HashMap<>();
+        skuMappings.put("SKU001", 2);
+        skuMappings.put("SKU002", 1);
+
+        AddProductOptionRequest request = AddProductOptionRequest.builder()
+            .productId(productId.value())
+            .optionName("묶음 옵션")
+            .price(BigDecimal.valueOf(29900))
+            .currency("KRW")
+            .skuMappings(skuMappings)
+            .build();
+
+        // When & Then
+        assertThatThrownBy(() -> useCase.addProductOption(request))
+            .isInstanceOf(InvalidOptionException.class)
+            .hasMessage("Normal product cannot have bundle options");
 
         verify(productRepository, never()).save(any());
     }

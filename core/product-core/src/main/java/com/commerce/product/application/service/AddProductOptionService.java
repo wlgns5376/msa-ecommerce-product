@@ -5,7 +5,6 @@ import com.commerce.product.application.usecase.AddProductOptionResponse;
 import com.commerce.product.application.usecase.AddProductOptionUseCase;
 import com.commerce.product.domain.exception.InvalidProductException;
 import com.commerce.product.domain.exception.InvalidProductOptionException;
-import com.commerce.product.domain.exception.InvalidSkuMappingException;
 import com.commerce.product.domain.model.*;
 import com.commerce.product.domain.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
