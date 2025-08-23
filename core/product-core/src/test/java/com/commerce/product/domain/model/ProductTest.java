@@ -208,14 +208,15 @@ class ProductTest {
     void shouldUpdateProductInfo() {
         // Given
         Product product = Product.create(productName, description, ProductType.NORMAL);
-        ProductName newName = new ProductName("맥북 프로 14인치");
+        String newName = "맥북 프로 14인치";
         String newDescription = "2023년형 M2 Max 칩셋 탑재";
 
         // When
-        product.update(newName, newDescription);
+        boolean updated = product.update(newName, newDescription);
 
         // Then
-        assertThat(product.getName()).isEqualTo(newName);
+        assertThat(updated).isTrue();
+        assertThat(product.getName().value()).isEqualTo(newName);
         assertThat(product.getDescription()).isEqualTo(newDescription);
         assertThat(product.getDomainEvents()).hasSize(2); // Created + Updated
         assertThat(product.getDomainEvents().get(1)).isInstanceOf(ProductUpdatedEvent.class);
@@ -315,7 +316,7 @@ class ProductTest {
         product.delete();
 
         // When & Then
-        assertThatThrownBy(() -> product.update(new ProductName("새이름"), "새설명"))
+        assertThatThrownBy(() -> product.update("새이름", "새설명"))
                 .isInstanceOf(InvalidProductException.class)
                 .hasMessageContaining("삭제된 상품은 수정할 수 없습니다");
     }
@@ -448,5 +449,75 @@ class ProductTest {
         // Then
         assertThatThrownBy(() -> retrievedCategoryIds.add(new CategoryId(UUID.randomUUID().toString())))
                 .isInstanceOf(UnsupportedOperationException.class);
+    }
+    
+    @Test
+    @DisplayName("null 값으로 상품 정보를 수정하면 해당 필드는 변경되지 않는다")
+    void shouldNotUpdateWhenNullValuesProvided() {
+        // Given
+        Product product = Product.create(productName, description, ProductType.NORMAL);
+        String originalName = product.getName().value();
+        String originalDescription = product.getDescription();
+
+        // When
+        boolean updated = product.update(null, null);
+
+        // Then
+        assertThat(updated).isFalse();
+        assertThat(product.getName().value()).isEqualTo(originalName);
+        assertThat(product.getDescription()).isEqualTo(originalDescription);
+        assertThat(product.getDomainEvents()).hasSize(1); // Only Created event
+    }
+    
+    @Test
+    @DisplayName("이름만 수정할 수 있다")
+    void shouldUpdateOnlyName() {
+        // Given
+        Product product = Product.create(productName, description, ProductType.NORMAL);
+        String newName = "맥북 프로 14인치";
+        String originalDescription = product.getDescription();
+
+        // When
+        boolean updated = product.update(newName, null);
+
+        // Then
+        assertThat(updated).isTrue();
+        assertThat(product.getName().value()).isEqualTo(newName);
+        assertThat(product.getDescription()).isEqualTo(originalDescription);
+        assertThat(product.getDomainEvents()).hasSize(2); // Created + Updated
+    }
+    
+    @Test
+    @DisplayName("설명만 수정할 수 있다")
+    void shouldUpdateOnlyDescription() {
+        // Given
+        Product product = Product.create(productName, description, ProductType.NORMAL);
+        String originalName = product.getName().value();
+        String newDescription = "2024년형 M3 칩셋 탑재";
+
+        // When
+        boolean updated = product.update(null, newDescription);
+
+        // Then
+        assertThat(updated).isTrue();
+        assertThat(product.getName().value()).isEqualTo(originalName);
+        assertThat(product.getDescription()).isEqualTo(newDescription);
+        assertThat(product.getDomainEvents()).hasSize(2); // Created + Updated
+    }
+    
+    @Test
+    @DisplayName("동일한 값으로 수정하면 변경사항이 없다고 반환된다")
+    void shouldReturnFalseWhenNoChanges() {
+        // Given
+        Product product = Product.create(productName, description, ProductType.NORMAL);
+        String currentName = product.getName().value();
+        String currentDescription = product.getDescription();
+
+        // When
+        boolean updated = product.update(currentName, currentDescription);
+
+        // Then
+        assertThat(updated).isFalse();
+        assertThat(product.getDomainEvents()).hasSize(1); // Only Created event
     }
 }

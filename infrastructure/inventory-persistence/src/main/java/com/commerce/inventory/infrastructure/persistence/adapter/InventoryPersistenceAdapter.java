@@ -1,8 +1,8 @@
 package com.commerce.inventory.infrastructure.persistence.adapter;
 
 import com.commerce.common.domain.model.Quantity;
-import com.commerce.inventory.application.port.out.LoadInventoryPort;
-import com.commerce.inventory.application.port.out.SaveInventoryPort;
+import com.commerce.inventory.application.service.port.out.LoadInventoryPort;
+import com.commerce.inventory.application.service.port.out.SaveInventoryPort;
 import com.commerce.inventory.domain.model.Inventory;
 import com.commerce.inventory.domain.model.SkuId;
 import com.commerce.inventory.infrastructure.persistence.entity.InventoryJpaEntity;

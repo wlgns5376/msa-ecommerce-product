@@ -1,8 +1,8 @@
 package com.commerce.inventory.infrastructure.persistence.adapter;
 
 import com.commerce.common.domain.model.Quantity;
-import com.commerce.inventory.application.port.out.LoadReservationPort;
-import com.commerce.inventory.application.port.out.SaveReservationPort;
+import com.commerce.inventory.application.service.port.out.LoadReservationPort;
+import com.commerce.inventory.application.service.port.out.SaveReservationPort;
 import com.commerce.inventory.domain.model.*;
 import com.commerce.inventory.infrastructure.persistence.entity.ReservationJpaEntity;
 import com.commerce.inventory.infrastructure.persistence.repository.ReservationJpaRepository;

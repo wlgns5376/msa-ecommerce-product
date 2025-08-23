@@ -1,7 +1,7 @@
 package com.commerce.inventory.infrastructure.persistence.adapter;
 
-import com.commerce.inventory.application.port.out.LoadSkuPort;
-import com.commerce.inventory.application.port.out.SaveSkuPort;
+import com.commerce.inventory.application.service.port.out.LoadSkuPort;
+import com.commerce.inventory.application.service.port.out.SaveSkuPort;
 import com.commerce.inventory.domain.model.Sku;
 import com.commerce.inventory.domain.model.SkuCode;
 import com.commerce.inventory.domain.model.SkuId;
