@@ -69,8 +69,8 @@ class CategoryIdTest {
     }
 
     @Test
-    @DisplayName("toString 메서드는 ID 값을 반환한다")
-    void shouldReturnIdValueWhenCallingToString() {
+    @DisplayName("toString 메서드는 record 형식으로 값을 반환한다")
+    void shouldReturnRecordFormatWhenCallingToString() {
         // Given
         String id = "CAT001";
         CategoryId categoryId = new CategoryId(id);
@@ -79,6 +79,6 @@ class CategoryIdTest {
         String result = categoryId.toString();
 
         // Then
-        assertThat(result).isEqualTo(id);
+        assertThat(result).isEqualTo("CategoryId[value=" + id + "]");
     }
 }

@@ -24,6 +24,11 @@ public interface ProductRepository extends Repository<Product, ProductId> {
     Optional<Product> findById(ProductId id);
     
     /**
+     * ID로 상품 기본 정보만 조회합니다. (연관 엔티티 제외)
+     */
+    Optional<Product> findByIdWithoutAssociations(ProductId id);
+    
+    /**
      * 카테고리별 상품을 조회합니다.
      */
     List<Product> findByCategory(CategoryId categoryId, int offset, int limit);
