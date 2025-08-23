@@ -58,7 +58,7 @@ class UpdateProductUseCaseTest {
             .version(0L)
             .build();
 
-        when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
+        when(productRepository.findByIdWithoutAssociations(productId)).thenReturn(Optional.of(existingProduct));
         when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
@@ -94,7 +94,7 @@ class UpdateProductUseCaseTest {
             .description("Updated description")
             .build();
 
-        when(productRepository.findById(eq(new ProductId(nonExistentId)))).thenReturn(Optional.empty());
+        when(productRepository.findByIdWithoutAssociations(eq(new ProductId(nonExistentId)))).thenReturn(Optional.empty());
 
         // When & Then
         assertThatThrownBy(() -> updateProductUseCase.updateProduct(request))
@@ -123,7 +123,7 @@ class UpdateProductUseCaseTest {
             .description("Updated description")
             .build();
 
-        when(productRepository.findById(productId)).thenReturn(Optional.of(deletedProduct));
+        when(productRepository.findByIdWithoutAssociations(productId)).thenReturn(Optional.of(deletedProduct));
 
         // When & Then
         assertThatThrownBy(() -> updateProductUseCase.updateProduct(request))
@@ -147,7 +147,7 @@ class UpdateProductUseCaseTest {
         assertThatThrownBy(() -> updateProductUseCase.updateProduct(request))
             .isInstanceOf(InvalidProductIdException.class);
 
-        verify(productRepository, never()).findById(any(ProductId.class));
+        verify(productRepository, never()).findByIdWithoutAssociations(any(ProductId.class));
         verify(productRepository, never()).save(any(Product.class));
     }
 
@@ -168,7 +168,7 @@ class UpdateProductUseCaseTest {
             .description("Updated description")
             .build();
 
-        when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
+        when(productRepository.findByIdWithoutAssociations(productId)).thenReturn(Optional.of(existingProduct));
 
         // When & Then
         assertThatThrownBy(() -> updateProductUseCase.updateProduct(request))
@@ -195,7 +195,7 @@ class UpdateProductUseCaseTest {
             .description(null)  // null로 설정
             .build();
 
-        when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
+        when(productRepository.findByIdWithoutAssociations(productId)).thenReturn(Optional.of(existingProduct));
         when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
@@ -230,7 +230,7 @@ class UpdateProductUseCaseTest {
             .description("Updated description")
             .build();
 
-        when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
+        when(productRepository.findByIdWithoutAssociations(productId)).thenReturn(Optional.of(existingProduct));
         when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
@@ -271,7 +271,7 @@ class UpdateProductUseCaseTest {
             .description("Updated active description")
             .build();
 
-        when(productRepository.findById(productId)).thenReturn(Optional.of(activeProduct));
+        when(productRepository.findByIdWithoutAssociations(productId)).thenReturn(Optional.of(activeProduct));
         when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
@@ -303,7 +303,7 @@ class UpdateProductUseCaseTest {
             .description("Original description")  // 동일한 설명
             .build();
 
-        when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
+        when(productRepository.findByIdWithoutAssociations(productId)).thenReturn(Optional.of(existingProduct));
 
         // When
         UpdateProductResponse response = updateProductUseCase.updateProduct(request);
@@ -338,7 +338,7 @@ class UpdateProductUseCaseTest {
             .version(1L)  // 잘못된 버전 (실제는 0)
             .build();
 
-        when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
+        when(productRepository.findByIdWithoutAssociations(productId)).thenReturn(Optional.of(existingProduct));
 
         // When & Then
         assertThatThrownBy(() -> updateProductUseCase.updateProduct(request))
@@ -367,7 +367,7 @@ class UpdateProductUseCaseTest {
             .version(0L)
             .build();
 
-        when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
+        when(productRepository.findByIdWithoutAssociations(productId)).thenReturn(Optional.of(existingProduct));
         when(productRepository.save(any(Product.class)))
             .thenThrow(new OptimisticLockingFailureException("Optimistic lock failed"));
 
@@ -398,7 +398,7 @@ class UpdateProductUseCaseTest {
             .version(null)  // 버전 정보 없음
             .build();
 
-        when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
+        when(productRepository.findByIdWithoutAssociations(productId)).thenReturn(Optional.of(existingProduct));
         when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // When

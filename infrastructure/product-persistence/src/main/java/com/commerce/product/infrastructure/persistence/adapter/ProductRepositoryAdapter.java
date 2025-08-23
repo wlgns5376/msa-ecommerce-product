@@ -53,6 +53,13 @@ public class ProductRepositoryAdapter implements ProductRepository {
     
     @Override
     @Transactional(readOnly = true)
+    public Optional<Product> findByIdWithoutAssociations(ProductId id) {
+        return productJpaRepository.findById(id.value())
+                .map(ProductJpaEntity::toDomainModel);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
     public List<Product> findAll() {
         return productJpaRepository.findAll().stream()
                 .map(ProductJpaEntity::toDomainModel)

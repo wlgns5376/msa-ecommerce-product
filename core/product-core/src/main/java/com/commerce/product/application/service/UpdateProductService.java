@@ -18,6 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class UpdateProductService implements UpdateProductUseCase {
 
+    private static final String PRODUCT_CONFLICT_MESSAGE = 
+        "Product has been modified by another user. Please refresh and try again.";
+    
     private final ProductRepository productRepository;
 
     @Override
@@ -25,7 +28,7 @@ public class UpdateProductService implements UpdateProductUseCase {
     public UpdateProductResponse updateProduct(UpdateProductRequest request) {
         ProductId productId = new ProductId(request.getProductId());
         
-        Product product = productRepository.findById(productId)
+        Product product = productRepository.findByIdWithoutAssociations(productId)
             .orElseThrow(() -> new InvalidProductException("Product not found with id: " + request.getProductId()));
         
         // 버전 검증
