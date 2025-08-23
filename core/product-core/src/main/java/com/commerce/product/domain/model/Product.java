@@ -60,10 +60,10 @@ public class Product extends AggregateRoot<ProductId> {
 
     private static void validateCreation(ProductName name, ProductType type) {
         if (name == null) {
-            throw new InvalidProductException("Product name is required");
+            throw new InvalidProductException("상품명은 필수입니다");
         }
         if (type == null) {
-            throw new InvalidProductException("Product type is required");
+            throw new InvalidProductException("상품 타입은 필수입니다");
         }
     }
 
@@ -76,21 +76,25 @@ public class Product extends AggregateRoot<ProductId> {
 
     private void validateOptionAddition(ProductOption option) {
         if (status == ProductStatus.DELETED) {
-            throw new InvalidProductException("Cannot add option to deleted product");
+            throw new InvalidProductException("삭제된 상품에는 옵션을 추가할 수 없습니다");
         }
         
         if (type == ProductType.BUNDLE && !option.isBundle()) {
-            throw new InvalidOptionException("Bundle product must have bundle options");
+            throw new InvalidOptionException("번들 상품은 번들 옵션만 가질 수 있습니다");
+        }
+        
+        if (type == ProductType.NORMAL && option.isBundle()) {
+            throw new InvalidOptionException("일반 상품은 번들 옵션을 가질 수 없습니다");
         }
         
         if (options.stream().anyMatch(o -> o.getName().equals(option.getName()))) {
-            throw new DuplicateOptionException("An option with the same name already exists.");
+            throw new DuplicateOptionException("동일한 이름의 옵션이 이미 존재합니다");
         }
     }
 
     public boolean update(String name, String description) {
         if (status == ProductStatus.DELETED) {
-            throw new InvalidProductException("Cannot update deleted product");
+            throw new InvalidProductException("삭제된 상품은 수정할 수 없습니다");
         }
         
         boolean changed = false;
@@ -112,7 +116,7 @@ public class Product extends AggregateRoot<ProductId> {
 
     public void activate() {
         if (options.isEmpty()) {
-            throw new InvalidProductException("Product must have at least one option to be activated");
+            throw new InvalidProductException("상품을 활성화하려면 최소 하나의 옵션이 필요합니다");
         }
         
         this.status = ProductStatus.ACTIVE;
@@ -131,7 +135,7 @@ public class Product extends AggregateRoot<ProductId> {
 
     public void assignCategories(List<CategoryId> categoryIds) {
         if (categoryIds.size() > 5) {
-            throw new MaxCategoryLimitException("Product can be assigned to maximum 5 categories");
+            throw new MaxCategoryLimitException("상품은 최대 5개의 카테고리에만 할당할 수 있습니다");
         }
         
         this.categoryIds.clear();

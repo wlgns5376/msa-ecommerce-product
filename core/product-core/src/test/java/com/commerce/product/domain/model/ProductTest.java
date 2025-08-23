@@ -177,7 +177,7 @@ class ProductTest {
         // When & Then
         assertThatThrownBy(() -> product.addOption(singleSkuOption))
                 .isInstanceOf(InvalidOptionException.class)
-                .hasMessageContaining("Bundle product must have bundle options");
+                .hasMessageContaining("번들 상품은 번들 옵션만 가질 수 있습니다");
     }
 
     @Test
@@ -200,7 +200,7 @@ class ProductTest {
         // When & Then
         assertThatThrownBy(() -> product.addOption(option2))
                 .isInstanceOf(DuplicateOptionException.class)
-                .hasMessageContaining("An option with the same name already exists.");
+                .hasMessageContaining("동일한 이름의 옵션이 이미 존재합니다");
     }
 
     @Test
@@ -251,7 +251,7 @@ class ProductTest {
         // When & Then
         assertThatThrownBy(() -> product.activate())
                 .isInstanceOf(InvalidProductException.class)
-                .hasMessageContaining("Product must have at least one option to be activated");
+                .hasMessageContaining("상품을 활성화하려면 최소 하나의 옵션이 필요합니다");
     }
 
     @Test
@@ -305,7 +305,7 @@ class ProductTest {
         // When & Then
         assertThatThrownBy(() -> product.addOption(option))
                 .isInstanceOf(InvalidProductException.class)
-                .hasMessageContaining("Cannot add option to deleted product");
+                .hasMessageContaining("삭제된 상품에는 옵션을 추가할 수 없습니다");
     }
 
     @Test
@@ -318,7 +318,7 @@ class ProductTest {
         // When & Then
         assertThatThrownBy(() -> product.update("새이름", "새설명"))
                 .isInstanceOf(InvalidProductException.class)
-                .hasMessageContaining("Cannot update deleted product");
+                .hasMessageContaining("삭제된 상품은 수정할 수 없습니다");
     }
 
     @Test
@@ -352,7 +352,7 @@ class ProductTest {
         // When & Then
         assertThatThrownBy(() -> product.assignCategories(categoryIds))
                 .isInstanceOf(MaxCategoryLimitException.class)
-                .hasMessageContaining("Product can be assigned to maximum 5 categories");
+                .hasMessageContaining("상품은 최대 5개의 카테고리에만 할당할 수 있습니다");
     }
 
     @Test
