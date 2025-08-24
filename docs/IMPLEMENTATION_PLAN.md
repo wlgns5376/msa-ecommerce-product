@@ -94,8 +94,8 @@ PRD 문서와 설계 문서를 기반으로 수립한 구현 작업 계획입니
 - [x] CreateProductUseCase
 - [x] UpdateProductUseCase
 - [x] AddProductOptionUseCase
-- [ ] GetProductUseCase
-- [ ] SearchProductsUseCase
+- [x] GetProductUseCase
+- [x] SearchProductsUseCase
 
 #### 5.3 Category UseCase
 - [ ] CreateCategoryUseCase
