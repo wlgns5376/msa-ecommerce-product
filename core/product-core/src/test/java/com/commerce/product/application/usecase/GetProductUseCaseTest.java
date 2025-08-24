@@ -1,5 +1,6 @@
 package com.commerce.product.application.usecase;
 
+import com.commerce.product.domain.exception.ProductNotFoundException;
 import com.commerce.product.domain.model.*;
 import com.commerce.product.domain.repository.ProductRepository;
 import com.commerce.product.domain.service.StockAvailabilityService;
@@ -37,8 +38,7 @@ class GetProductUseCaseTest {
     
     @BeforeEach
     void setUp() {
-        getProductUseCase = new GetProductService(productRepository, stockAvailabilityService);
-        org.springframework.test.util.ReflectionTestUtils.setField(getProductUseCase, "stockAvailabilityTimeoutSeconds", 1L);
+        getProductUseCase = new GetProductService(productRepository, stockAvailabilityService, 1L);
     }
     
     @Nested
@@ -81,7 +81,7 @@ class GetProductUseCaseTest {
             
             // When & Then
             assertThatThrownBy(() -> getProductUseCase.execute(new GetProductRequest(productId.value())))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ProductNotFoundException.class)
                 .hasMessage("Product not found: " + productId.value());
         }
         
