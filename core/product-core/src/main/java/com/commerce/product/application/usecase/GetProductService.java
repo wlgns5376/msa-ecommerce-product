@@ -54,7 +54,9 @@ public class GetProductService implements GetProductUseCase {
         
         // 모든 Future가 완료될 때까지 대기
         CompletableFuture<Void> allFutures = CompletableFuture.allOf(
-            futures.values().toArray(new CompletableFuture[0])
+            futures.values().stream()
+                .map(f -> f.exceptionally(ex -> null)) // 개별 future 실패 시 allOf가 즉시 실패하는 것을 방지합니다.
+                .toArray(CompletableFuture[]::new)
         );
         
         try {

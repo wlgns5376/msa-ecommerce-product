@@ -173,6 +173,56 @@ class GetProductUseCaseTest {
             assertThat(response.getOptions().get(0).getAvailableQuantity()).isEqualTo(0);
             assertThat(response.getOptions().get(0).isAvailable()).isFalse();
         }
+        
+        @Test
+        @DisplayName("여러 옵션 중 일부만 재고 조회가 실패해도 성공한 옵션의 재고는 정확히 표시된다")
+        void should_show_correct_stock_for_successful_options_when_some_fail() {
+            // Given
+            ProductId productId = ProductId.of("550e8400-e29b-41d4-a716-446655440005");
+            Product product = createProductWithMultipleOptions(productId);
+            given(productRepository.findById(productId)).willReturn(Optional.of(product));
+            
+            // 첫 번째 옵션은 성공
+            given(stockAvailabilityService.checkProductOptionAvailability("option1"))
+                .willReturn(CompletableFuture.completedFuture(new AvailabilityResult(true, 50)));
+            
+            // 두 번째 옵션은 실패
+            given(stockAvailabilityService.checkProductOptionAvailability("option2"))
+                .willReturn(CompletableFuture.failedFuture(new RuntimeException("Stock service error")));
+            
+            // 세 번째 옵션은 성공 (지연됨)
+            given(stockAvailabilityService.checkProductOptionAvailability("option3"))
+                .willReturn(CompletableFuture.supplyAsync(() -> {
+                    try {
+                        Thread.sleep(100); // 지연 시뮬레이션
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                    return new AvailabilityResult(true, 30);
+                }));
+            
+            // When
+            GetProductResponse response = getProductUseCase.execute(new GetProductRequest(productId.value()));
+            
+            // Then
+            assertThat(response).isNotNull();
+            assertThat(response.getOptions()).hasSize(3);
+            
+            // 첫 번째 옵션: 성공
+            assertThat(response.getOptions().get(0).getOptionId()).isEqualTo("option1");
+            assertThat(response.getOptions().get(0).isAvailable()).isTrue();
+            assertThat(response.getOptions().get(0).getAvailableQuantity()).isEqualTo(50);
+            
+            // 두 번째 옵션: 실패 (재고 없음으로 표시)
+            assertThat(response.getOptions().get(1).getOptionId()).isEqualTo("option2");
+            assertThat(response.getOptions().get(1).isAvailable()).isFalse();
+            assertThat(response.getOptions().get(1).getAvailableQuantity()).isEqualTo(0);
+            
+            // 세 번째 옵션: 성공 (지연되었지만 완료됨)
+            assertThat(response.getOptions().get(2).getOptionId()).isEqualTo("option3");
+            assertThat(response.getOptions().get(2).isAvailable()).isTrue();
+            assertThat(response.getOptions().get(2).getAvailableQuantity()).isEqualTo(30);
+        }
     }
     
     private Product createNormalProduct(ProductId productId) {
@@ -232,5 +282,45 @@ class GetProductUseCaseTest {
         );
         
         return BundleAvailabilityResult.available(10, details);
+    }
+    
+    private Product createProductWithMultipleOptions(ProductId productId) {
+        Product product = Product.create(
+            productId,
+            ProductName.of("다중 옵션 상품"),
+            "여러 옵션이 있는 상품",
+            ProductType.NORMAL,
+            ProductStatus.ACTIVE
+        );
+        
+        // 옵션 1
+        ProductOption option1 = ProductOption.restore(
+            "option1",
+            "옵션 1",
+            Money.of(10000),
+            SkuMapping.single("SKU001")
+        );
+        
+        // 옵션 2
+        ProductOption option2 = ProductOption.restore(
+            "option2",
+            "옵션 2",
+            Money.of(15000),
+            SkuMapping.single("SKU002")
+        );
+        
+        // 옵션 3
+        ProductOption option3 = ProductOption.restore(
+            "option3",
+            "옵션 3",
+            Money.of(20000),
+            SkuMapping.single("SKU003")
+        );
+        
+        product.addOption(option1);
+        product.addOption(option2);
+        product.addOption(option3);
+        
+        return product;
     }
 }
