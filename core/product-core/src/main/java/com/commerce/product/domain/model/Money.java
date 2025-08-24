@@ -23,6 +23,14 @@ public record Money(BigDecimal amount, Currency currency) implements ValueObject
     public static Money of(BigDecimal amount, Currency currency) {
         return new Money(amount, currency);
     }
+    
+    public static Money of(long amount) {
+        return new Money(BigDecimal.valueOf(amount), Currency.KRW);
+    }
+    
+    public static Money of(long amount, Currency currency) {
+        return new Money(BigDecimal.valueOf(amount), currency);
+    }
 
     private static void validate(BigDecimal amount) {
         if (amount == null) {

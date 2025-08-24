@@ -57,6 +57,18 @@ public class Product extends AggregateRoot<ProductId> {
         
         return product;
     }
+    
+    public static Product create(ProductId id, ProductName name, String description, ProductType type, ProductStatus status) {
+        validateCreation(name, type);
+        
+        String validDescription = description != null ? description : "";
+        
+        Product product = new Product(id, name, validDescription, type);
+        product.status = status;
+        product.addDomainEvent(new ProductCreatedEvent(id, name.value(), type));
+        
+        return product;
+    }
 
     private static void validateCreation(ProductName name, ProductType type) {
         if (name == null) {

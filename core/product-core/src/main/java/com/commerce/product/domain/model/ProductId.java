@@ -14,6 +14,10 @@ public record ProductId(String value) implements ValueObject {
     public static ProductId generate() {
         return new ProductId(UUID.randomUUID().toString());
     }
+    
+    public static ProductId of(String value) {
+        return new ProductId(value);
+    }
 
     private static void validate(String value) {
         if (value == null || value.trim().isEmpty()) {
