@@ -308,6 +308,18 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
     }
     
     @Override
+    public CompletableFuture<AvailabilityResult> checkSingleSkuAvailability(String skuId) {
+        return CompletableFuture.supplyAsync(() -> {
+            // N+1 문제를 방지하기 위해 SKU ID를 직접 받아 처리
+            int availableQuantity = inventoryRepository.getAvailableQuantity(skuId);
+            AvailabilityResult result = availableQuantity > 0 
+                ? AvailabilityResult.available(availableQuantity)
+                : AvailabilityResult.unavailable();
+            return result;
+        });
+    }
+    
+    @Override
     public CompletableFuture<BundleAvailabilityResult> checkBundleAvailability(SkuMapping skuMapping) {
         return CompletableFuture.supplyAsync(() -> {
             // 분산 락을 사용하여 번들 재고 확인의 원자성 보장

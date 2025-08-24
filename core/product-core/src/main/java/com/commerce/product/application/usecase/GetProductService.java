@@ -91,7 +91,9 @@ public class GetProductService implements GetProductUseCase {
             return stockAvailabilityService.checkBundleAvailability(option.getSkuMapping())
                 .thenApply(r -> new Availability(r.isAvailable(), r.availableSets()));
         } else {
-            return stockAvailabilityService.checkProductOptionAvailability(option.getId())
+            // N+1 문제를 방지하기 위해 SKU ID를 직접 사용
+            String skuId = option.getSingleSkuId();
+            return stockAvailabilityService.checkSingleSkuAvailability(skuId)
                 .thenApply(r -> new Availability(r.isAvailable(), r.availableQuantity()));
         }
     }

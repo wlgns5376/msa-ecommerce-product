@@ -55,7 +55,7 @@ class GetProductUseCaseTest {
             given(productRepository.findById(productId)).willReturn(Optional.of(product));
             
             // 재고 조회 Mock
-            given(stockAvailabilityService.checkProductOptionAvailability(any()))
+            given(stockAvailabilityService.checkSingleSkuAvailability("SKU001"))
                 .willReturn(CompletableFuture.completedFuture(createAvailableResult()));
             
             // When
@@ -70,7 +70,7 @@ class GetProductUseCaseTest {
             assertThat(response.getOptions()).hasSize(1);
             
             // 재고 확인이 호출되었는지 검증
-            verify(stockAvailabilityService, times(1)).checkProductOptionAvailability(any());
+            verify(stockAvailabilityService, times(1)).checkSingleSkuAvailability("SKU001");
         }
         
         @Test
@@ -120,7 +120,7 @@ class GetProductUseCaseTest {
             given(productRepository.findById(productId)).willReturn(Optional.of(product));
             
             // 재고 없음 Mock
-            given(stockAvailabilityService.checkProductOptionAvailability(any()))
+            given(stockAvailabilityService.checkSingleSkuAvailability("SKU001"))
                 .willReturn(CompletableFuture.completedFuture(createOutOfStockResult()));
             
             // When
@@ -140,7 +140,7 @@ class GetProductUseCaseTest {
             given(productRepository.findById(productId)).willReturn(Optional.of(product));
             
             // 재고 조회 실패 Mock
-            given(stockAvailabilityService.checkProductOptionAvailability(any()))
+            given(stockAvailabilityService.checkSingleSkuAvailability("SKU001"))
                 .willReturn(CompletableFuture.failedFuture(new RuntimeException("Stock service error")));
             
             // When
@@ -162,7 +162,7 @@ class GetProductUseCaseTest {
             given(productRepository.findById(productId)).willReturn(Optional.of(product));
 
             // 재고 조회 타임아웃 Mock (완료되지 않는 Future)
-            given(stockAvailabilityService.checkProductOptionAvailability(any()))
+            given(stockAvailabilityService.checkSingleSkuAvailability("SKU001"))
                 .willReturn(new CompletableFuture<>());
 
             // When
@@ -184,15 +184,15 @@ class GetProductUseCaseTest {
             given(productRepository.findById(productId)).willReturn(Optional.of(product));
             
             // 첫 번째 옵션은 성공
-            given(stockAvailabilityService.checkProductOptionAvailability("option1"))
+            given(stockAvailabilityService.checkSingleSkuAvailability("SKU001"))
                 .willReturn(CompletableFuture.completedFuture(new AvailabilityResult(true, 50)));
             
             // 두 번째 옵션은 실패
-            given(stockAvailabilityService.checkProductOptionAvailability("option2"))
+            given(stockAvailabilityService.checkSingleSkuAvailability("SKU002"))
                 .willReturn(CompletableFuture.failedFuture(new RuntimeException("Stock service error")));
             
             // 세 번째 옵션은 성공 (지연됨)
-            given(stockAvailabilityService.checkProductOptionAvailability("option3"))
+            given(stockAvailabilityService.checkSingleSkuAvailability("SKU003"))
                 .willReturn(CompletableFuture.supplyAsync(() -> new AvailabilityResult(true, 30),
                     CompletableFuture.delayedExecutor(100, java.util.concurrent.TimeUnit.MILLISECONDS)));
             
