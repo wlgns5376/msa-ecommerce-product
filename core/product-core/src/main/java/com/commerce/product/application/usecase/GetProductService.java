@@ -64,8 +64,9 @@ public class GetProductService implements GetProductUseCase {
         } catch (TimeoutException e) {
             log.error("Timed out while checking stock availability for all options", e);
         } catch (InterruptedException e) {
-            log.error("Stock availability check interrupted", e);
+            log.warn("Stock availability check interrupted. Aborting product get.", e);
             Thread.currentThread().interrupt();
+            throw new RuntimeException("Stock availability check was interrupted", e);
         } catch (Exception e) {
             // 예상치 못한 예외가 발생한 경우
             log.error("Unexpected error while checking stock availability", e);
@@ -99,7 +100,7 @@ public class GetProductService implements GetProductUseCase {
     }
     
     private GetProductResponse.ProductOptionResponse buildOptionResponse(ProductOption option, CompletableFuture<Availability> future) {
-        Availability availability = (future != null) ? future.getNow(new Availability(false, 0)) : new Availability(false, 0);
+        Availability availability = future.getNow(new Availability(false, 0));
         
         List<GetProductResponse.SkuMappingResponse> skuMappingResponses = option.getSkuMapping().mappings().entrySet().stream()
             .map(GetProductResponse.SkuMappingResponse::from)
