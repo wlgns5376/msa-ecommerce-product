@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Optional;
 
@@ -37,20 +38,17 @@ class GetProductUseCaseTest {
     @BeforeEach
     void setUp() {
         productId = new ProductId("550e8400-e29b-41d4-a716-446655440000");
-        product = Product.create(
+        product = Product.restore(
+            productId,
             new ProductName("테스트 상품"),
             "테스트 상품 설명",
-            ProductType.NORMAL
+            ProductType.NORMAL,
+            ProductStatus.DRAFT,
+            new ArrayList<>(),
+            new ArrayList<>(),
+            false,
+            0L
         );
-        
-        // 리플렉션을 사용하여 ID 설정 (테스트 목적)
-        try {
-            var idField = Product.class.getDeclaredField("id");
-            idField.setAccessible(true);
-            idField.set(product, productId);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 
     @Test

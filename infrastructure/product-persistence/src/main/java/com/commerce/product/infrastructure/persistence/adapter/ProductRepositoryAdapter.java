@@ -124,13 +124,10 @@ public class ProductRepositoryAdapter implements ProductRepository {
     
     @Override
     @Transactional(readOnly = true)
-    public List<Product> searchByName(String keyword, int offset, int limit) {
-        int page = offset / limit;
-        Pageable pageable = PageRequest.of(page, limit);
+    public Page<Product> searchByName(String keyword, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
         Page<ProductJpaEntity> entityPage = productJpaRepository.searchByName(keyword, pageable);
-        return entityPage.getContent().stream()
-                .map(ProductJpaEntity::toDomainModel)
-                .collect(Collectors.toList());
+        return entityPage.map(ProductJpaEntity::toDomainModel);
     }
     
     @Override
@@ -139,26 +136,13 @@ public class ProductRepositoryAdapter implements ProductRepository {
         return productJpaRepository.count();
     }
     
-    @Override
-    @Transactional(readOnly = true)
-    public long countByName(String keyword) {
-        return productJpaRepository.countByName(keyword);
-    }
     
     @Override
     @Transactional(readOnly = true)
-    public List<Product> searchActiveByName(String keyword, int offset, int limit) {
-        int page = offset / limit;
-        Pageable pageable = PageRequest.of(page, limit);
+    public Page<Product> searchActiveByName(String keyword, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
         Page<ProductJpaEntity> entityPage = productJpaRepository.searchActiveByName(keyword, pageable);
-        return entityPage.getContent().stream()
-                .map(ProductJpaEntity::toDomainModel)
-                .collect(Collectors.toList());
+        return entityPage.map(ProductJpaEntity::toDomainModel);
     }
     
-    @Override
-    @Transactional(readOnly = true)
-    public long countActiveByName(String keyword) {
-        return productJpaRepository.countActiveByName(keyword);
-    }
 }

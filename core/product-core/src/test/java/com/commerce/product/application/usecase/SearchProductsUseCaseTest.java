@@ -9,6 +9,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -64,10 +67,9 @@ class SearchProductsUseCaseTest {
             .build();
 
         List<Product> products = Arrays.asList(product1, product2);
-        when(productRepository.searchByName(keyword, page * size, size))
-            .thenReturn(products);
-        when(productRepository.countByName(keyword))
-            .thenReturn(2L);
+        Page<Product> productPage = new PageImpl<>(products, PageRequest.of(page, size), 2);
+        when(productRepository.searchByName(keyword, page, size))
+            .thenReturn(productPage);
 
         // When
         SearchProductsResponse response = searchProductsService.searchProducts(query);
@@ -81,7 +83,7 @@ class SearchProductsUseCaseTest {
         assertThat(response.getSize()).isEqualTo(size);
         assertThat(response.getTotalElements()).isEqualTo(2);
 
-        verify(productRepository, times(1)).searchByName(keyword, page * size, size);
+        verify(productRepository, times(1)).searchByName(keyword, page, size);
     }
 
     @Test
@@ -97,10 +99,9 @@ class SearchProductsUseCaseTest {
             .size(size)
             .build();
 
-        when(productRepository.searchByName(keyword, page * size, size))
-            .thenReturn(Collections.emptyList());
-        when(productRepository.countByName(keyword))
-            .thenReturn(0L);
+        Page<Product> emptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(page, size), 0);
+        when(productRepository.searchByName(keyword, page, size))
+            .thenReturn(emptyPage);
 
         // When
         SearchProductsResponse response = searchProductsService.searchProducts(query);
@@ -125,8 +126,9 @@ class SearchProductsUseCaseTest {
             .build();
 
         List<Product> products = Arrays.asList(product1);
-        when(productRepository.searchByName(keyword, page * size, size))
-            .thenReturn(products);
+        Page<Product> productPage = new PageImpl<>(products, PageRequest.of(page, size), 10);
+        when(productRepository.searchByName(keyword, page, size))
+            .thenReturn(productPage);
 
         // When
         SearchProductsResponse response = searchProductsService.searchProducts(query);
@@ -136,7 +138,7 @@ class SearchProductsUseCaseTest {
         assertThat(response.getPage()).isEqualTo(page);
         assertThat(response.getSize()).isEqualTo(size);
 
-        verify(productRepository, times(1)).searchByName(keyword, 5, 5);
+        verify(productRepository, times(1)).searchByName(keyword, page, size);
     }
 
     @Test
@@ -249,10 +251,9 @@ class SearchProductsUseCaseTest {
         product1.activate();
         
         List<Product> activeProducts = Arrays.asList(product1);
+        Page<Product> activePage = new PageImpl<>(activeProducts, PageRequest.of(0, 10), 1);
         when(productRepository.searchActiveByName(keyword, 0, 10))
-            .thenReturn(activeProducts);
-        when(productRepository.countActiveByName(keyword))
-            .thenReturn(1L);
+            .thenReturn(activePage);
 
         // When
         SearchProductsResponse response = searchProductsService.searchProducts(query);
@@ -265,6 +266,5 @@ class SearchProductsUseCaseTest {
         assertThat(response.getTotalElements()).isEqualTo(1);
         
         verify(productRepository, times(1)).searchActiveByName(keyword, 0, 10);
-        verify(productRepository, times(1)).countActiveByName(keyword);
     }
 }

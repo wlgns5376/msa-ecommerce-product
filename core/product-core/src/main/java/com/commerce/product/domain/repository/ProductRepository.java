@@ -4,6 +4,7 @@ import com.commerce.product.domain.model.CategoryId;
 import com.commerce.product.domain.model.Product;
 import com.commerce.product.domain.model.ProductId;
 import com.commerce.product.domain.model.ProductOption;
+import org.springframework.data.domain.Page;
 
 import java.util.List;
 import java.util.Optional;
@@ -46,22 +47,12 @@ public interface ProductRepository extends Repository<Product, ProductId> {
     /**
      * 상품명으로 검색합니다.
      */
-    List<Product> searchByName(String keyword, int offset, int limit);
-    
-    /**
-     * 상품명으로 검색된 전체 개수를 반환합니다.
-     */
-    long countByName(String keyword);
+    Page<Product> searchByName(String keyword, int page, int size);
     
     /**
      * 활성 상태에서 상품명으로 검색합니다.
      */
-    List<Product> searchActiveByName(String keyword, int offset, int limit);
-    
-    /**
-     * 활성 상태에서 상품명으로 검색된 전체 개수를 반환합니다.
-     */
-    long countActiveByName(String keyword);
+    Page<Product> searchActiveByName(String keyword, int page, int size);
     
     /**
      * 상품을 삭제합니다.

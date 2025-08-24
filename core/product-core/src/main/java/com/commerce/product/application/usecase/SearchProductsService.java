@@ -3,10 +3,9 @@ package com.commerce.product.application.usecase;
 import com.commerce.product.domain.model.Product;
 import com.commerce.product.domain.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -20,20 +19,19 @@ public class SearchProductsService implements SearchProductsUseCase {
         query.validate();
         
         String keyword = query.getKeyword().trim();
-        int offset = query.getPage() * query.getSize();
-        int limit = query.getSize();
         
-        List<Product> products;
-        long totalElements;
-        
+        Page<Product> productPage;
         if (query.isOnlyActive()) {
-            products = productRepository.searchActiveByName(keyword, offset, limit);
-            totalElements = productRepository.countActiveByName(keyword);
+            productPage = productRepository.searchActiveByName(keyword, query.getPage(), query.getSize());
         } else {
-            products = productRepository.searchByName(keyword, offset, limit);
-            totalElements = productRepository.countByName(keyword);
+            productPage = productRepository.searchByName(keyword, query.getPage(), query.getSize());
         }
         
-        return SearchProductsResponse.of(products, query.getPage(), query.getSize(), totalElements);
+        return SearchProductsResponse.of(
+            productPage.getContent(), 
+            productPage.getNumber(), 
+            productPage.getSize(), 
+            productPage.getTotalElements()
+        );
     }
 }
