@@ -19,13 +19,8 @@ public class SearchProductsService implements SearchProductsUseCase {
         query.validate();
         
         String keyword = query.getKeyword().trim();
-        
-        Page<Product> productPage;
-        if (query.isOnlyActive()) {
-            productPage = productRepository.searchActiveByName(keyword, query.getPage(), query.getSize());
-        } else {
-            productPage = productRepository.searchByName(keyword, query.getPage(), query.getSize());
-        }
+        String status = query.isOnlyActive() ? com.commerce.product.domain.model.ProductStatus.ACTIVE.name() : null;
+        Page<Product> productPage = productRepository.search(keyword, query.getPage(), query.getSize(), status);
         
         return SearchProductsResponse.of(
             productPage.getContent(), 

@@ -40,22 +40,12 @@ public interface ProductJpaRepository extends JpaRepository<ProductJpaEntity, St
     @Query(value = "SELECT DISTINCT p FROM ProductJpaEntity p " +
            "LEFT JOIN FETCH p.options " +
            "WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "AND (:status IS NULL OR p.status = :status) " +
            "AND p.deletedAt IS NULL",
            countQuery = "SELECT COUNT(DISTINCT p) FROM ProductJpaEntity p " +
            "WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "AND (:status IS NULL OR p.status = :status) " +
            "AND p.deletedAt IS NULL")
-    Page<ProductJpaEntity> searchByName(@Param("keyword") String keyword, Pageable pageable);
-    
-    
-    @Query(value = "SELECT DISTINCT p FROM ProductJpaEntity p " +
-           "LEFT JOIN FETCH p.options " +
-           "WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-           "AND p.status = 'ACTIVE' " +
-           "AND p.deletedAt IS NULL",
-           countQuery = "SELECT COUNT(DISTINCT p) FROM ProductJpaEntity p " +
-           "WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-           "AND p.status = 'ACTIVE' " +
-           "AND p.deletedAt IS NULL")
-    Page<ProductJpaEntity> searchActiveByName(@Param("keyword") String keyword, Pageable pageable);
+    Page<ProductJpaEntity> search(@Param("keyword") String keyword, @Param("status") String status, Pageable pageable);
     
 }

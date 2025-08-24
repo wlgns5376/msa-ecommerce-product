@@ -124,9 +124,9 @@ public class ProductRepositoryAdapter implements ProductRepository {
     
     @Override
     @Transactional(readOnly = true)
-    public Page<Product> searchByName(String keyword, int page, int size) {
+    public Page<Product> search(String keyword, int page, int size, String status) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ProductJpaEntity> entityPage = productJpaRepository.searchByName(keyword, pageable);
+        Page<ProductJpaEntity> entityPage = productJpaRepository.search(keyword, status, pageable);
         return entityPage.map(ProductJpaEntity::toDomainModel);
     }
     
@@ -134,15 +134,6 @@ public class ProductRepositoryAdapter implements ProductRepository {
     @Transactional(readOnly = true)
     public long count() {
         return productJpaRepository.count();
-    }
-    
-    
-    @Override
-    @Transactional(readOnly = true)
-    public Page<Product> searchActiveByName(String keyword, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<ProductJpaEntity> entityPage = productJpaRepository.searchActiveByName(keyword, pageable);
-        return entityPage.map(ProductJpaEntity::toDomainModel);
     }
     
 }

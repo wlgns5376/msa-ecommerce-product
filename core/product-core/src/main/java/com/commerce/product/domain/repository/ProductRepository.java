@@ -45,14 +45,15 @@ public interface ProductRepository extends Repository<Product, ProductId> {
     List<Product> findActiveProducts(int offset, int limit);
     
     /**
-     * 상품명으로 검색합니다.
+     * 상품을 검색합니다.
+     * 
+     * @param keyword 검색 키워드
+     * @param page 페이지 번호
+     * @param size 페이지 크기
+     * @param status 상품 상태 (null이면 모든 상태 검색)
+     * @return 검색된 상품 페이지
      */
-    Page<Product> searchByName(String keyword, int page, int size);
-    
-    /**
-     * 활성 상태에서 상품명으로 검색합니다.
-     */
-    Page<Product> searchActiveByName(String keyword, int page, int size);
+    Page<Product> search(String keyword, int page, int size, String status);
     
     /**
      * 상품을 삭제합니다.
