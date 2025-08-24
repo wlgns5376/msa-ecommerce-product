@@ -1,5 +1,6 @@
 package com.commerce.product.infrastructure.persistence.repository;
 
+import com.commerce.product.domain.model.ProductStatus;
 import com.commerce.product.infrastructure.persistence.entity.ProductJpaEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -46,6 +47,6 @@ public interface ProductJpaRepository extends JpaRepository<ProductJpaEntity, St
            "WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "AND (:status IS NULL OR p.status = :status) " +
            "AND p.deletedAt IS NULL")
-    Page<ProductJpaEntity> search(@Param("keyword") String keyword, @Param("status") String status, Pageable pageable);
+    Page<ProductJpaEntity> search(@Param("keyword") String keyword, @Param("status") ProductStatus status, Pageable pageable);
     
 }

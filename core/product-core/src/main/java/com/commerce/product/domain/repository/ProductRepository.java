@@ -4,6 +4,7 @@ import com.commerce.product.domain.model.CategoryId;
 import com.commerce.product.domain.model.Product;
 import com.commerce.product.domain.model.ProductId;
 import com.commerce.product.domain.model.ProductOption;
+import com.commerce.product.domain.model.ProductStatus;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
@@ -53,7 +54,7 @@ public interface ProductRepository extends Repository<Product, ProductId> {
      * @param status 상품 상태 (null이면 모든 상태 검색)
      * @return 검색된 상품 페이지
      */
-    Page<Product> search(String keyword, int page, int size, String status);
+    Page<Product> search(String keyword, int page, int size, ProductStatus status);
     
     /**
      * 상품을 삭제합니다.

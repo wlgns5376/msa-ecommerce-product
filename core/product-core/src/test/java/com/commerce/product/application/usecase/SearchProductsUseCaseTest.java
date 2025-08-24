@@ -68,7 +68,7 @@ class SearchProductsUseCaseTest {
 
         List<Product> products = Arrays.asList(product1, product2);
         Page<Product> productPage = new PageImpl<>(products, PageRequest.of(page, size), 2);
-        when(productRepository.search(keyword, page, size, null))
+        when(productRepository.search(keyword, page, size, (ProductStatus) null))
             .thenReturn(productPage);
 
         // When
@@ -83,7 +83,7 @@ class SearchProductsUseCaseTest {
         assertThat(response.getSize()).isEqualTo(size);
         assertThat(response.getTotalElements()).isEqualTo(2);
 
-        verify(productRepository, times(1)).search(keyword, page, size, null);
+        verify(productRepository, times(1)).search(keyword, page, size, (ProductStatus) null);
     }
 
     @Test
@@ -100,7 +100,7 @@ class SearchProductsUseCaseTest {
             .build();
 
         Page<Product> emptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(page, size), 0);
-        when(productRepository.search(keyword, page, size, null))
+        when(productRepository.search(keyword, page, size, (ProductStatus) null))
             .thenReturn(emptyPage);
 
         // When
@@ -127,7 +127,7 @@ class SearchProductsUseCaseTest {
 
         List<Product> products = Arrays.asList(product1);
         Page<Product> productPage = new PageImpl<>(products, PageRequest.of(page, size), 10);
-        when(productRepository.search(keyword, page, size, null))
+        when(productRepository.search(keyword, page, size, (ProductStatus) null))
             .thenReturn(productPage);
 
         // When
@@ -138,7 +138,7 @@ class SearchProductsUseCaseTest {
         assertThat(response.getPage()).isEqualTo(page);
         assertThat(response.getSize()).isEqualTo(size);
 
-        verify(productRepository, times(1)).search(keyword, page, size, null);
+        verify(productRepository, times(1)).search(keyword, page, size, (ProductStatus) null);
     }
 
     @Test
@@ -252,7 +252,7 @@ class SearchProductsUseCaseTest {
         
         List<Product> activeProducts = Arrays.asList(product1);
         Page<Product> activePage = new PageImpl<>(activeProducts, PageRequest.of(0, 10), 1);
-        when(productRepository.search(keyword, 0, 10, "ACTIVE"))
+        when(productRepository.search(keyword, 0, 10, ProductStatus.ACTIVE))
             .thenReturn(activePage);
 
         // When
@@ -265,6 +265,6 @@ class SearchProductsUseCaseTest {
         assertThat(response.getProducts().get(0).getStatus()).isEqualTo("ACTIVE");
         assertThat(response.getTotalElements()).isEqualTo(1);
         
-        verify(productRepository, times(1)).search(keyword, 0, 10, "ACTIVE");
+        verify(productRepository, times(1)).search(keyword, 0, 10, ProductStatus.ACTIVE);
     }
 }

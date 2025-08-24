@@ -4,6 +4,7 @@ import com.commerce.product.domain.model.CategoryId;
 import com.commerce.product.domain.model.Product;
 import com.commerce.product.domain.model.ProductId;
 import com.commerce.product.domain.model.ProductOption;
+import com.commerce.product.domain.model.ProductStatus;
 import com.commerce.product.domain.repository.ProductRepository;
 import com.commerce.product.infrastructure.persistence.entity.ProductJpaEntity;
 import com.commerce.product.infrastructure.persistence.repository.ProductJpaRepository;
@@ -124,7 +125,7 @@ public class ProductRepositoryAdapter implements ProductRepository {
     
     @Override
     @Transactional(readOnly = true)
-    public Page<Product> search(String keyword, int page, int size, String status) {
+    public Page<Product> search(String keyword, int page, int size, ProductStatus status) {
         Pageable pageable = PageRequest.of(page, size);
         Page<ProductJpaEntity> entityPage = productJpaRepository.search(keyword, status, pageable);
         return entityPage.map(ProductJpaEntity::toDomainModel);

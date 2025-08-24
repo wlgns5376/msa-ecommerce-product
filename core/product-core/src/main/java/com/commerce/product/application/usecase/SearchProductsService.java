@@ -1,6 +1,7 @@
 package com.commerce.product.application.usecase;
 
 import com.commerce.product.domain.model.Product;
+import com.commerce.product.domain.model.ProductStatus;
 import com.commerce.product.domain.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,7 +20,7 @@ public class SearchProductsService implements SearchProductsUseCase {
         query.validate();
         
         String keyword = query.getKeyword().trim();
-        String status = query.isOnlyActive() ? com.commerce.product.domain.model.ProductStatus.ACTIVE.name() : null;
+        ProductStatus status = query.isOnlyActive() ? ProductStatus.ACTIVE : null;
         Page<Product> productPage = productRepository.search(keyword, query.getPage(), query.getSize(), status);
         
         return SearchProductsResponse.of(
