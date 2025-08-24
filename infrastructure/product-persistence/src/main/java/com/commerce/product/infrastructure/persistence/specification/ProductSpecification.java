@@ -8,7 +8,9 @@ import org.springframework.data.jpa.domain.Specification;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ProductSpecification {
+public final class ProductSpecification {
+    
+    private ProductSpecification() { }
     
     public static Specification<ProductJpaEntity> withKeywordAndStatus(String keyword, ProductStatus status) {
         return (root, query, criteriaBuilder) -> {

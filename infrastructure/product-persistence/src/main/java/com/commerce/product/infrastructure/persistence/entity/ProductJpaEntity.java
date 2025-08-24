@@ -7,6 +7,7 @@ import lombok.*;
 import org.hibernate.annotations.Where;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -92,7 +93,7 @@ public class ProductJpaEntity extends BaseJpaEntity {
     
     public Product toDomainModelWithoutOptions() {
         // 옵션을 로딩하지 않음
-        return restoreProduct(new ArrayList<>());
+        return restoreProduct(Collections.emptyList());
     }
     
     private Product restoreProduct(List<ProductOption> productOptions) {

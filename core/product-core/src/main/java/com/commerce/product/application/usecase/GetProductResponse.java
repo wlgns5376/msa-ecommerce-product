@@ -48,7 +48,7 @@ public class GetProductResponse {
         
         public static OptionDetail from(ProductOption option) {
             List<SkuMappingDetail> mappingDetails = option.getSkuMapping().mappings().entrySet().stream()
-                .map(entry -> new SkuMappingDetail(entry.getKey(), entry.getValue()))
+                .map(entry -> SkuMappingDetail.of(entry.getKey(), entry.getValue()))
                 .collect(Collectors.toList());
                 
             return OptionDetail.builder()
@@ -66,5 +66,9 @@ public class GetProductResponse {
     public static class SkuMappingDetail {
         private final String skuId;
         private final int quantity;
+
+        public static SkuMappingDetail of(String skuId, int quantity) {
+            return new SkuMappingDetail(skuId, quantity);
+        }
     }
 }

@@ -16,7 +16,7 @@ public class PagedResult<T> {
     private final int totalPages;
 
     public PagedResult(List<T> content, int page, int size, long totalElements) {
-        this.content = content;
+        this.content = List.copyOf(content);
         this.page = page;
         this.size = size;
         this.totalElements = totalElements;
