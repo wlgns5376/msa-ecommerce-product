@@ -6,6 +6,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -141,42 +144,20 @@ class SearchProductsUseCaseTest {
         verify(productRepository, times(1)).search(keyword, page, size, (ProductStatus) null);
     }
 
-    @Test
+    @ParameterizedTest
     @DisplayName("키워드가 null이거나 빈 문자열일 때 예외가 발생한다")
-    void searchProductsWithInvalidKeyword() {
-        // Given - null keyword
-        SearchProductsQuery queryWithNull = SearchProductsQuery.builder()
-            .keyword(null)
+    @NullAndEmptySource
+    @ValueSource(strings = {" ", "   "})
+    void searchProductsWithInvalidKeyword(String invalidKeyword) {
+        // Given
+        SearchProductsQuery query = SearchProductsQuery.builder()
+            .keyword(invalidKeyword)
             .page(0)
             .size(10)
             .build();
 
         // When & Then
-        assertThatThrownBy(() -> searchProductsService.searchProducts(queryWithNull))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("검색 키워드는 필수입니다");
-
-        // Given - empty keyword
-        SearchProductsQuery queryWithEmpty = SearchProductsQuery.builder()
-            .keyword("")
-            .page(0)
-            .size(10)
-            .build();
-
-        // When & Then
-        assertThatThrownBy(() -> searchProductsService.searchProducts(queryWithEmpty))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("검색 키워드는 필수입니다");
-
-        // Given - blank keyword
-        SearchProductsQuery queryWithBlank = SearchProductsQuery.builder()
-            .keyword("   ")
-            .page(0)
-            .size(10)
-            .build();
-
-        // When & Then
-        assertThatThrownBy(() -> searchProductsService.searchProducts(queryWithBlank))
+        assertThatThrownBy(() -> searchProductsService.searchProducts(query))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("검색 키워드는 필수입니다");
     }
@@ -210,7 +191,8 @@ class SearchProductsUseCaseTest {
         // When & Then
         assertThatThrownBy(() -> searchProductsService.searchProducts(query))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("페이지 크기는 1에서 100 사이여야 합니다");
+            .hasMessage(String.format("페이지 크기는 %d에서 %d 사이여야 합니다", 
+                SearchProductsQuery.MIN_PAGE_SIZE, SearchProductsQuery.MAX_PAGE_SIZE));
     }
 
     @Test
@@ -220,13 +202,14 @@ class SearchProductsUseCaseTest {
         SearchProductsQuery query = SearchProductsQuery.builder()
             .keyword("테스트")
             .page(0)
-            .size(101)
+            .size(SearchProductsQuery.MAX_PAGE_SIZE + 1)
             .build();
 
         // When & Then
         assertThatThrownBy(() -> searchProductsService.searchProducts(query))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("페이지 크기는 1에서 100 사이여야 합니다");
+            .hasMessage(String.format("페이지 크기는 %d에서 %d 사이여야 합니다", 
+                SearchProductsQuery.MIN_PAGE_SIZE, SearchProductsQuery.MAX_PAGE_SIZE));
     }
 
     @Test

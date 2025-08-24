@@ -38,6 +38,20 @@ public interface ProductJpaRepository extends JpaRepository<ProductJpaEntity, St
            "AND p.deletedAt IS NULL")
     Page<ProductJpaEntity> findActiveProducts(Pageable pageable);
     
+    /**
+     * 상품 검색 쿼리
+     * 
+     * 성능 최적화를 위한 권장사항:
+     * 1. 함수 기반 인덱스 생성 (PostgreSQL 예시):
+     *    CREATE INDEX idx_product_name_lower ON product (LOWER(name));
+     * 
+     * 2. 대소문자 미구분 Collation 사용 (MySQL 예시):
+     *    ALTER TABLE product MODIFY name VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+     *    이 경우 LOWER() 함수 제거 가능
+     * 
+     * 현재는 호환성을 위해 LOWER() 함수를 유지하되, 
+     * 프로덕션 환경에서는 위 최적화 방안 중 하나를 적용하는 것을 권장합니다.
+     */
     @Query(value = "SELECT p FROM ProductJpaEntity p " +
            "WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "AND (:status IS NULL OR p.status = :status) " +
