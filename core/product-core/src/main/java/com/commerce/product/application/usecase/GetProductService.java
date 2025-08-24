@@ -51,8 +51,11 @@ public class GetProductService implements GetProductUseCase {
         
         try {
             allFutures.get(stockAvailabilityTimeoutSeconds, TimeUnit.SECONDS);
-        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+        } catch (ExecutionException | TimeoutException e) {
             log.error("Failed to check stock availability for all options", e);
+        } catch (InterruptedException e) {
+            log.error("Stock availability check interrupted", e);
+            Thread.currentThread().interrupt();
         }
         
         // 결과를 기반으로 응답 생성
@@ -71,7 +74,7 @@ public class GetProductService implements GetProductUseCase {
     }
     
     private CompletableFuture<?> getAvailabilityFuture(ProductOption option, ProductType productType) {
-        if (productType == ProductType.BUNDLE && option.isBundle()) {
+        if (option.isBundle()) {
             return stockAvailabilityService.checkBundleAvailability(option.getSkuMapping());
         } else {
             return stockAvailabilityService.checkProductOptionAvailability(option.getId());
@@ -93,9 +96,12 @@ public class GetProductService implements GetProductUseCase {
                     availableQuantity = availabilityResult.availableQuantity();
                 }
             }
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (ExecutionException e) {
             log.error("Failed to get stock availability result for option: {}", option.getId(), e);
             // 재고 확인 실패 시 기본값 유지 (재고 없음)
+        } catch (InterruptedException e) {
+            log.error("Interrupted while getting stock availability result for option: {}", option.getId(), e);
+            Thread.currentThread().interrupt();
         }
         
         List<GetProductResponse.SkuMappingResponse> skuMappingResponses = option.getSkuMapping().mappings().entrySet().stream()
