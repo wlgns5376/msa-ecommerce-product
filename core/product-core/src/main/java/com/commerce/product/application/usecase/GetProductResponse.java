@@ -35,5 +35,12 @@ public class GetProductResponse {
     public static class SkuMappingResponse {
         String skuId;
         int quantity;
+        
+        public static SkuMappingResponse from(java.util.Map.Entry<String, Integer> entry) {
+            return SkuMappingResponse.builder()
+                    .skuId(entry.getKey())
+                    .quantity(entry.getValue())
+                    .build();
+        }
     }
 }

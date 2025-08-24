@@ -46,10 +46,10 @@ public class GetProductService implements GetProductUseCase {
             .orElseThrow(() -> new ProductNotFoundException("Product not found: " + request.getProductId()));
         
         // 모든 옵션에 대한 CompletableFuture 수집
-        Map<ProductOption, CompletableFuture<Availability>> futures = product.getOptions().stream()
+        Map<String, CompletableFuture<Availability>> futures = product.getOptions().stream()
             .collect(Collectors.toMap(
-                option -> option,
-                option -> getAvailabilityFuture(option)
+                ProductOption::getId,
+                this::getAvailabilityFuture
             ));
         
         // 모든 Future가 완료될 때까지 대기
@@ -73,7 +73,7 @@ public class GetProductService implements GetProductUseCase {
         
         // 결과를 기반으로 응답 생성
         List<GetProductResponse.ProductOptionResponse> optionResponses = product.getOptions().stream()
-            .map(option -> buildOptionResponse(option, futures.get(option)))
+            .map(option -> buildOptionResponse(option, futures.get(option.getId())))
             .collect(Collectors.toList());
         
         return GetProductResponse.builder()
@@ -112,10 +112,7 @@ public class GetProductService implements GetProductUseCase {
         }
         
         List<GetProductResponse.SkuMappingResponse> skuMappingResponses = option.getSkuMapping().mappings().entrySet().stream()
-            .map(entry -> GetProductResponse.SkuMappingResponse.builder()
-                .skuId(entry.getKey())
-                .quantity(entry.getValue())
-                .build())
+            .map(GetProductResponse.SkuMappingResponse::from)
             .collect(Collectors.toList());
         
         return GetProductResponse.ProductOptionResponse.builder()

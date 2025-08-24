@@ -89,16 +89,8 @@ public class ProductTestBuilder {
     }
 
     public Product build() {
-        // 먼저 Product를 생성
-        Product product = Product.create(name, description, type);
-        
         // restore 메소드를 사용하여 원하는 상태로 복원
-        product = Product.restore(id, name, description, type, status, options, categoryIds, outOfStock, version);
-        
-        // 상태에 따른 도메인 이벤트 수동 추가 (필요한 경우)
-        // 테스트 목적으로 이벤트가 필요하다면 별도로 처리
-        
-        return product;
+        return Product.restore(id, name, description, type, status, options, categoryIds, outOfStock, version);
     }
 
     // 자주 사용되는 상태의 Product를 생성하는 헬퍼 메소드들
