@@ -38,12 +38,11 @@ public interface ProductJpaRepository extends JpaRepository<ProductJpaEntity, St
            "AND p.deletedAt IS NULL")
     Page<ProductJpaEntity> findActiveProducts(Pageable pageable);
     
-    @Query(value = "SELECT DISTINCT p FROM ProductJpaEntity p " +
-           "LEFT JOIN FETCH p.options " +
+    @Query(value = "SELECT p FROM ProductJpaEntity p " +
            "WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "AND (:status IS NULL OR p.status = :status) " +
            "AND p.deletedAt IS NULL",
-           countQuery = "SELECT COUNT(DISTINCT p) FROM ProductJpaEntity p " +
+           countQuery = "SELECT COUNT(p) FROM ProductJpaEntity p " +
            "WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "AND (:status IS NULL OR p.status = :status) " +
            "AND p.deletedAt IS NULL")
