@@ -61,8 +61,11 @@ public class GetProductService implements GetProductUseCase {
         
         try {
             allFutures.get(stockAvailabilityTimeoutSeconds, TimeUnit.SECONDS);
-        } catch (ExecutionException | TimeoutException e) {
-            log.error("Failed to check stock availability for all options", e);
+        } catch (TimeoutException e) {
+            log.error("Timed out while checking stock availability for all options", e);
+        } catch (ExecutionException e) {
+            // This is not expected to happen because we use .exceptionally() to handle individual failures.
+            log.error("Unexpected execution error while checking stock availability", e);
         } catch (InterruptedException e) {
             log.error("Stock availability check interrupted", e);
             Thread.currentThread().interrupt();
@@ -126,11 +129,11 @@ public class GetProductService implements GetProductUseCase {
     }
     
     private Availability toAvailability(Object result) {
-        if (result instanceof BundleAvailabilityResult bundleResult) {
-            return new Availability(bundleResult.isAvailable(), bundleResult.availableSets());
+        if (result instanceof BundleAvailabilityResult r) {
+            return new Availability(r.isAvailable(), r.availableSets());
         }
-        if (result instanceof AvailabilityResult availabilityResult) {
-            return new Availability(availabilityResult.isAvailable(), availabilityResult.availableQuantity());
+        if (result instanceof AvailabilityResult r) {
+            return new Availability(r.isAvailable(), r.availableQuantity());
         }
         return new Availability(false, 0);
     }
