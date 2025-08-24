@@ -180,9 +180,7 @@ class GetProductUseCaseTest {
             ProductStatus.ACTIVE
         );
         
-        Map<String, Integer> bundleMappings = new HashMap<>();
-        bundleMappings.put("SKU001", 2);
-        bundleMappings.put("SKU002", 1);
+        Map<String, Integer> bundleMappings = Map.of("SKU001", 2, "SKU002", 1);
         
         SkuMapping bundleSkuMapping = SkuMapping.bundle(bundleMappings);
         
@@ -205,7 +203,7 @@ class GetProductUseCaseTest {
     }
     
     private BundleAvailabilityResult createBundleAvailableResult() {
-        List<BundleAvailabilityResult.SkuAvailabilityDetail> details = Arrays.asList(
+        List<BundleAvailabilityResult.SkuAvailabilityDetail> details = List.of(
             new BundleAvailabilityResult.SkuAvailabilityDetail("SKU001", 2, 30, 15),
             new BundleAvailabilityResult.SkuAvailabilityDetail("SKU002", 1, 20, 20)
         );

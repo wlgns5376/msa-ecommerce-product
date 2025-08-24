@@ -5,6 +5,7 @@ import com.commerce.product.domain.model.ProductType;
 import lombok.Builder;
 import lombok.Value;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Value
@@ -22,7 +23,7 @@ public class GetProductResponse {
     public static class ProductOptionResponse {
         String optionId;
         String name;
-        long price;
+        BigDecimal price;
         String currency;
         List<SkuMappingResponse> skuMappings;
         boolean isAvailable;
