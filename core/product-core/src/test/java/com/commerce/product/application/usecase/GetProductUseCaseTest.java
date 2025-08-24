@@ -6,6 +6,7 @@ import com.commerce.product.domain.repository.ProductRepository;
 import com.commerce.product.domain.service.StockAvailabilityService;
 import com.commerce.product.domain.service.result.AvailabilityResult;
 import com.commerce.product.domain.service.result.BundleAvailabilityResult;
+import com.commerce.product.test.helper.ProductTestBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -226,35 +227,18 @@ class GetProductUseCaseTest {
     }
     
     private Product createNormalProduct(ProductId productId) {
-        Product product = Product.create(
-            productId,
-            ProductName.of("테스트 상품"),
-            "테스트 상품 설명",
-            ProductType.NORMAL,
-            ProductStatus.ACTIVE
-        );
-        
-        ProductOption option = ProductOption.single(
-            "기본 옵션",
-            Money.of(10000),
-            "SKU001"
-        );
-        
-        product.addOption(option);
-        return product;
+        return ProductTestBuilder.builder()
+            .withId(productId)
+            .withName("테스트 상품")
+            .withDescription("테스트 상품 설명")
+            .withType(ProductType.NORMAL)
+            .withStatus(ProductStatus.ACTIVE)
+            .withOption(ProductOption.single("기본 옵션", Money.of(10000), "SKU001"))
+            .build();
     }
     
     private Product createBundleProduct(ProductId productId) {
-        Product product = Product.create(
-            productId,
-            ProductName.of("묶음 상품"),
-            "묶음 상품 설명",
-            ProductType.BUNDLE,
-            ProductStatus.ACTIVE
-        );
-        
         Map<String, Integer> bundleMappings = Map.of("SKU001", 2, "SKU002", 1);
-        
         SkuMapping bundleSkuMapping = SkuMapping.bundle(bundleMappings);
         
         ProductOption bundleOption = ProductOption.bundle(
@@ -263,8 +247,14 @@ class GetProductUseCaseTest {
             bundleSkuMapping
         );
         
-        product.addOption(bundleOption);
-        return product;
+        return ProductTestBuilder.builder()
+            .withId(productId)
+            .withName("묶음 상품")
+            .withDescription("묶음 상품 설명")
+            .withType(ProductType.BUNDLE)
+            .withStatus(ProductStatus.ACTIVE)
+            .withOption(bundleOption)
+            .build();
     }
     
     private AvailabilityResult createAvailableResult() {
@@ -285,14 +275,6 @@ class GetProductUseCaseTest {
     }
     
     private Product createProductWithMultipleOptions(ProductId productId) {
-        Product product = Product.create(
-            productId,
-            ProductName.of("다중 옵션 상품"),
-            "여러 옵션이 있는 상품",
-            ProductType.NORMAL,
-            ProductStatus.ACTIVE
-        );
-        
         // 옵션 1
         ProductOption option1 = ProductOption.restore(
             "option1",
@@ -317,10 +299,15 @@ class GetProductUseCaseTest {
             SkuMapping.single("SKU003")
         );
         
-        product.addOption(option1);
-        product.addOption(option2);
-        product.addOption(option3);
+        List<ProductOption> options = List.of(option1, option2, option3);
         
-        return product;
+        return ProductTestBuilder.builder()
+            .withId(productId)
+            .withName("다중 옵션 상품")
+            .withDescription("여러 옵션이 있는 상품")
+            .withType(ProductType.NORMAL)
+            .withStatus(ProductStatus.ACTIVE)
+            .withOptions(options)
+            .build();
     }
 }

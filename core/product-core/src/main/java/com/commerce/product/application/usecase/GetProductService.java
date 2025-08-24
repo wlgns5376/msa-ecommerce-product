@@ -46,7 +46,7 @@ public class GetProductService implements GetProductUseCase {
             .orElseThrow(() -> new ProductNotFoundException("Product not found: " + request.getProductId()));
         
         // 모든 옵션에 대한 CompletableFuture 수집
-        Map<ProductOption, CompletableFuture<?>> futures = product.getOptions().stream()
+        Map<ProductOption, CompletableFuture<Availability>> futures = product.getOptions().stream()
             .collect(Collectors.toMap(
                 option -> option,
                 option -> getAvailabilityFuture(option)
@@ -86,21 +86,22 @@ public class GetProductService implements GetProductUseCase {
             .build();
     }
     
-    private CompletableFuture<?> getAvailabilityFuture(ProductOption option) {
+    private CompletableFuture<Availability> getAvailabilityFuture(ProductOption option) {
         if (option.isBundle()) {
-            return stockAvailabilityService.checkBundleAvailability(option.getSkuMapping());
+            return stockAvailabilityService.checkBundleAvailability(option.getSkuMapping())
+                .thenApply(r -> new Availability(r.isAvailable(), r.availableSets()));
         } else {
-            return stockAvailabilityService.checkProductOptionAvailability(option.getId());
+            return stockAvailabilityService.checkProductOptionAvailability(option.getId())
+                .thenApply(r -> new Availability(r.isAvailable(), r.availableQuantity()));
         }
     }
     
-    private GetProductResponse.ProductOptionResponse buildOptionResponse(ProductOption option, CompletableFuture<?> future) {
+    private GetProductResponse.ProductOptionResponse buildOptionResponse(ProductOption option, CompletableFuture<Availability> future) {
         Availability availability = new Availability(false, 0);
         
         try {
             if (future != null && future.isDone()) {
-                Object result = future.get();
-                availability = toAvailability(result);
+                availability = future.get();
             }
         } catch (ExecutionException e) {
             log.error("Failed to get stock availability result for option: {}", option.getId(), e);
@@ -128,13 +129,4 @@ public class GetProductService implements GetProductUseCase {
             .build();
     }
     
-    private Availability toAvailability(Object result) {
-        if (result instanceof BundleAvailabilityResult r) {
-            return new Availability(r.isAvailable(), r.availableSets());
-        }
-        if (result instanceof AvailabilityResult r) {
-            return new Availability(r.isAvailable(), r.availableQuantity());
-        }
-        return new Availability(false, 0);
-    }
 }

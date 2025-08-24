@@ -8,6 +8,7 @@ import com.commerce.product.domain.exception.ProductConflictException;
 import com.commerce.product.application.service.UpdateProductService;
 import com.commerce.product.domain.model.*;
 import com.commerce.product.domain.repository.ProductRepository;
+import com.commerce.product.test.helper.ProductTestBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -108,12 +109,12 @@ class UpdateProductUseCaseTest {
     @DisplayName("삭제된 상품을 수정하려고 하면 예외가 발생한다")
     void givenDeletedProduct_whenUpdateProduct_thenThrowsException() {
         // Given
-        Product deletedProduct = Product.create(
-            new ProductName("Deleted Product"),
-            "Deleted description",
-            ProductType.NORMAL
-        );
-        deletedProduct.delete();
+        Product deletedProduct = ProductTestBuilder.builder()
+            .withName("Deleted Product")
+            .withDescription("Deleted description")
+            .withType(ProductType.NORMAL)
+            .withStatus(ProductStatus.DELETED)
+            .build();
         deletedProduct.clearDomainEvents();
         ProductId productId = deletedProduct.getId();
 
@@ -128,7 +129,7 @@ class UpdateProductUseCaseTest {
         // When & Then
         assertThatThrownBy(() -> updateProductUseCase.updateProduct(request))
             .isInstanceOf(InvalidProductException.class)
-            .hasMessage("Cannot update deleted product");
+            .hasMessage("삭제된 상품은 수정할 수 없습니다");
 
         verify(productRepository, never()).save(any(Product.class));
     }
