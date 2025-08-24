@@ -8,6 +8,7 @@ import com.commerce.product.domain.model.ProductStatus;
 import com.commerce.product.domain.repository.ProductRepository;
 import com.commerce.product.infrastructure.persistence.entity.ProductJpaEntity;
 import com.commerce.product.infrastructure.persistence.repository.ProductJpaRepository;
+import com.commerce.product.infrastructure.persistence.specification.ProductSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -127,8 +128,11 @@ public class ProductRepositoryAdapter implements ProductRepository {
     @Transactional(readOnly = true)
     public Page<Product> search(String keyword, int page, int size, ProductStatus status) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ProductJpaEntity> entityPage = productJpaRepository.search(keyword, status, pageable);
-        return entityPage.map(ProductJpaEntity::toDomainModel);
+        Page<ProductJpaEntity> entityPage = productJpaRepository.findAll(
+                ProductSpecification.withKeywordAndStatus(keyword, status), 
+                pageable
+        );
+        return entityPage.map(ProductJpaEntity::toDomainModelWithoutOptions);
     }
     
     @Override
