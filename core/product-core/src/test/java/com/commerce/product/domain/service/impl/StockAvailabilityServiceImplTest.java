@@ -24,6 +24,8 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -51,6 +53,8 @@ class StockAvailabilityServiceImplTest {
     @Mock
     private BundleReservationSagaOrchestrator bundleReservationSagaOrchestrator;
     
+    private Executor testExecutor;
+    
     private StockAvailabilityService stockAvailabilityService;
     
     private ProductOption singleOption;
@@ -58,7 +62,8 @@ class StockAvailabilityServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        stockAvailabilityService = new StockAvailabilityServiceImpl(inventoryRepository, productRepository, lockRepository, sagaRepository, eventPublisher, bundleReservationSagaOrchestrator);
+        testExecutor = Executors.newFixedThreadPool(2);
+        stockAvailabilityService = new StockAvailabilityServiceImpl(inventoryRepository, productRepository, lockRepository, sagaRepository, eventPublisher, bundleReservationSagaOrchestrator, testExecutor);
         
         singleOption = ProductOption.single(
                 "Single Option",

@@ -7,6 +7,7 @@ import lombok.Value;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @Value
 @Builder
@@ -36,7 +37,7 @@ public class GetProductResponse {
         String skuId;
         int quantity;
         
-        public static SkuMappingResponse from(java.util.Map.Entry<String, Integer> entry) {
+        public static SkuMappingResponse from(Map.Entry<String, Integer> entry) {
             return SkuMappingResponse.builder()
                     .skuId(entry.getKey())
                     .quantity(entry.getValue())

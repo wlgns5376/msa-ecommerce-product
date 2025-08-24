@@ -20,6 +20,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -32,6 +33,7 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
     private final SagaRepository sagaRepository;
     private final DomainEventPublisher eventPublisher;
     private final BundleReservationSagaOrchestrator bundleReservationSagaOrchestrator;
+    private final Executor ioTaskExecutor;
     private static final Duration DEFAULT_LEASE_DURATION = Duration.ofSeconds(30);
     private static final Duration DEFAULT_WAIT_TIMEOUT = Duration.ofSeconds(5);
     
@@ -288,7 +290,7 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
             ProductOption option = productRepository.findOptionById(optionId)
                     .orElseThrow(() -> new IllegalArgumentException("Option not found: " + optionId));
             return option;
-        }).thenCompose(option -> {
+        }, ioTaskExecutor).thenCompose(option -> {
             if (!option.isBundle()) {
                 // 단일 SKU 옵션
                 String skuId = option.getSingleSkuId();
@@ -316,7 +318,7 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
                 ? AvailabilityResult.available(availableQuantity)
                 : AvailabilityResult.unavailable();
             return result;
-        });
+        }, ioTaskExecutor);
     }
     
     @Override
@@ -359,7 +361,7 @@ public class StockAvailabilityServiceImpl implements StockAvailabilityService {
             } finally {
                 lockRepository.releaseLock(lock);
             }
-        });
+        }, ioTaskExecutor);
     }
     
     @Override

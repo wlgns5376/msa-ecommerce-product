@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -194,7 +195,7 @@ class GetProductUseCaseTest {
             // 세 번째 옵션은 성공 (지연됨)
             given(stockAvailabilityService.checkSingleSkuAvailability("SKU003"))
                 .willReturn(CompletableFuture.supplyAsync(() -> new AvailabilityResult(true, 30),
-                    CompletableFuture.delayedExecutor(100, java.util.concurrent.TimeUnit.MILLISECONDS)));
+                    CompletableFuture.delayedExecutor(100, TimeUnit.MILLISECONDS)));
             
             // When
             GetProductResponse response = getProductUseCase.execute(new GetProductRequest(productId.value()));
