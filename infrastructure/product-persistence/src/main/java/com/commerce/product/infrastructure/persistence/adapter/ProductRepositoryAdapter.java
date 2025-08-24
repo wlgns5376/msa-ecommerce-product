@@ -1,6 +1,7 @@
 package com.commerce.product.infrastructure.persistence.adapter;
 
 import com.commerce.product.domain.model.CategoryId;
+import com.commerce.product.domain.model.PagedResult;
 import com.commerce.product.domain.model.Product;
 import com.commerce.product.domain.model.ProductId;
 import com.commerce.product.domain.model.ProductOption;
@@ -126,13 +127,23 @@ public class ProductRepositoryAdapter implements ProductRepository {
     
     @Override
     @Transactional(readOnly = true)
-    public Page<Product> search(String keyword, int page, int size, ProductStatus status) {
+    public PagedResult<Product> search(String keyword, int page, int size, ProductStatus status) {
         Pageable pageable = PageRequest.of(page, size);
         Page<ProductJpaEntity> entityPage = productJpaRepository.findAll(
                 ProductSpecification.withKeywordAndStatus(keyword, status), 
                 pageable
         );
-        return entityPage.map(ProductJpaEntity::toDomainModelWithoutOptions);
+        
+        List<Product> products = entityPage.getContent().stream()
+                .map(ProductJpaEntity::toDomainModelWithoutOptions)
+                .collect(Collectors.toList());
+        
+        return new PagedResult<>(
+                products,
+                entityPage.getNumber(),
+                entityPage.getSize(),
+                entityPage.getTotalElements()
+        );
     }
     
     @Override

@@ -12,9 +12,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -70,7 +67,7 @@ class SearchProductsUseCaseTest {
             .build();
 
         List<Product> products = Arrays.asList(product1, product2);
-        Page<Product> productPage = new PageImpl<>(products, PageRequest.of(page, size), 2);
+        PagedResult<Product> productPage = new PagedResult<>(products, page, size, 2);
         when(productRepository.search(keyword, page, size, (ProductStatus) null))
             .thenReturn(productPage);
 
@@ -102,7 +99,7 @@ class SearchProductsUseCaseTest {
             .size(size)
             .build();
 
-        Page<Product> emptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(page, size), 0);
+        PagedResult<Product> emptyPage = new PagedResult<>(Collections.emptyList(), page, size, 0);
         when(productRepository.search(keyword, page, size, (ProductStatus) null))
             .thenReturn(emptyPage);
 
@@ -129,7 +126,7 @@ class SearchProductsUseCaseTest {
             .build();
 
         List<Product> products = Arrays.asList(product1);
-        Page<Product> productPage = new PageImpl<>(products, PageRequest.of(page, size), 10);
+        PagedResult<Product> productPage = new PagedResult<>(products, page, size, 10);
         when(productRepository.search(keyword, page, size, (ProductStatus) null))
             .thenReturn(productPage);
 
@@ -234,7 +231,7 @@ class SearchProductsUseCaseTest {
         product1.activate();
         
         List<Product> activeProducts = Arrays.asList(product1);
-        Page<Product> activePage = new PageImpl<>(activeProducts, PageRequest.of(0, 10), 1);
+        PagedResult<Product> activePage = new PagedResult<>(activeProducts, 0, 10, 1);
         when(productRepository.search(keyword, 0, 10, ProductStatus.ACTIVE))
             .thenReturn(activePage);
 
