@@ -1,9 +1,11 @@
 package com.commerce.product.domain.repository;
 
 import com.commerce.product.domain.model.CategoryId;
+import com.commerce.product.domain.model.PagedResult;
 import com.commerce.product.domain.model.Product;
 import com.commerce.product.domain.model.ProductId;
 import com.commerce.product.domain.model.ProductOption;
+import com.commerce.product.domain.model.ProductStatus;
 
 import java.util.List;
 import java.util.Optional;
@@ -44,9 +46,15 @@ public interface ProductRepository extends Repository<Product, ProductId> {
     List<Product> findActiveProducts(int offset, int limit);
     
     /**
-     * 상품명으로 검색합니다.
+     * 상품을 검색합니다.
+     * 
+     * @param keyword 검색 키워드
+     * @param page 페이지 번호
+     * @param size 페이지 크기
+     * @param status 상품 상태 (null이면 모든 상태 검색)
+     * @return 검색된 상품 페이지
      */
-    List<Product> searchByName(String keyword, int offset, int limit);
+    PagedResult<Product> search(String keyword, int page, int size, ProductStatus status);
     
     /**
      * 상품을 삭제합니다.

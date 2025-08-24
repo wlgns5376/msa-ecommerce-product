@@ -1,12 +1,15 @@
 package com.commerce.product.infrastructure.persistence.adapter;
 
 import com.commerce.product.domain.model.CategoryId;
+import com.commerce.product.domain.model.PagedResult;
 import com.commerce.product.domain.model.Product;
 import com.commerce.product.domain.model.ProductId;
 import com.commerce.product.domain.model.ProductOption;
+import com.commerce.product.domain.model.ProductStatus;
 import com.commerce.product.domain.repository.ProductRepository;
 import com.commerce.product.infrastructure.persistence.entity.ProductJpaEntity;
 import com.commerce.product.infrastructure.persistence.repository.ProductJpaRepository;
+import com.commerce.product.infrastructure.persistence.specification.ProductSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -124,13 +127,23 @@ public class ProductRepositoryAdapter implements ProductRepository {
     
     @Override
     @Transactional(readOnly = true)
-    public List<Product> searchByName(String keyword, int offset, int limit) {
-        int page = offset / limit;
-        Pageable pageable = PageRequest.of(page, limit);
-        Page<ProductJpaEntity> entityPage = productJpaRepository.searchByName(keyword, pageable);
-        return entityPage.getContent().stream()
-                .map(ProductJpaEntity::toDomainModel)
+    public PagedResult<Product> search(String keyword, int page, int size, ProductStatus status) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ProductJpaEntity> entityPage = productJpaRepository.findAll(
+                ProductSpecification.withKeywordAndStatus(keyword, status), 
+                pageable
+        );
+        
+        List<Product> products = entityPage.getContent().stream()
+                .map(ProductJpaEntity::toDomainModelWithoutOptions)
                 .collect(Collectors.toList());
+        
+        return new PagedResult<>(
+                products,
+                entityPage.getNumber(),
+                entityPage.getSize(),
+                entityPage.getTotalElements()
+        );
     }
     
     @Override
@@ -138,4 +151,5 @@ public class ProductRepositoryAdapter implements ProductRepository {
     public long count() {
         return productJpaRepository.count();
     }
+    
 }

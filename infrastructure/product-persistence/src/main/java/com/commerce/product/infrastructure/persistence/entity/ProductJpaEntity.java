@@ -7,6 +7,7 @@ import lombok.*;
 import org.hibernate.annotations.Where;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -87,13 +88,22 @@ public class ProductJpaEntity extends BaseJpaEntity {
                 .map(ProductOptionJpaEntity::toDomainModel)
                 .collect(Collectors.toList());
         
+        return restoreProduct(productOptions);
+    }
+    
+    public Product toDomainModelWithoutOptions() {
+        // 옵션을 로딩하지 않음
+        return restoreProduct(Collections.emptyList());
+    }
+    
+    private Product restoreProduct(List<ProductOption> productOptions) {
         // 카테고리 복원
         List<CategoryId> categoryIds = categories.stream()
                 .map(ProductCategoryJpaEntity::toDomainModel)
                 .collect(Collectors.toList());
         
         // restore 메서드를 사용하여 version 포함해서 복원
-        Product product = Product.restore(
+        return Product.restore(
                 new ProductId(id),
                 new ProductName(name),
                 description,
@@ -104,8 +114,6 @@ public class ProductJpaEntity extends BaseJpaEntity {
                 outOfStock,
                 version
         );
-        
-        return product;
     }
     
     public Long getVersion() {
