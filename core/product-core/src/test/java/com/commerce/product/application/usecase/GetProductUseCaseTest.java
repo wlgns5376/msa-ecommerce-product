@@ -193,14 +193,8 @@ class GetProductUseCaseTest {
             
             // 세 번째 옵션은 성공 (지연됨)
             given(stockAvailabilityService.checkProductOptionAvailability("option3"))
-                .willReturn(CompletableFuture.supplyAsync(() -> {
-                    try {
-                        Thread.sleep(100); // 지연 시뮬레이션
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                    return new AvailabilityResult(true, 30);
-                }));
+                .willReturn(CompletableFuture.supplyAsync(() -> new AvailabilityResult(true, 30),
+                    CompletableFuture.delayedExecutor(100, java.util.concurrent.TimeUnit.MILLISECONDS)));
             
             // When
             GetProductResponse response = getProductUseCase.execute(new GetProductRequest(productId.value()));

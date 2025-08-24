@@ -109,6 +109,8 @@ public class GetProductService implements GetProductUseCase {
         } catch (InterruptedException e) {
             log.error("Interrupted while getting stock availability result for option: {}", option.getId(), e);
             Thread.currentThread().interrupt();
+        } catch (java.util.concurrent.CancellationException e) {
+            log.warn("Stock availability check for option {} was cancelled.", option.getId());
         }
         
         List<GetProductResponse.SkuMappingResponse> skuMappingResponses = option.getSkuMapping().mappings().entrySet().stream()
