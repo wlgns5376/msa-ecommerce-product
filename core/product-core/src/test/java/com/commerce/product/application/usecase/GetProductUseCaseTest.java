@@ -221,8 +221,8 @@ class GetProductUseCaseTest {
         }
         
         @Test
-        @DisplayName("재고 조회 중 인터럽트가 발생하면 RuntimeException을 던진다")
-        void should_throw_runtime_exception_when_interrupted() {
+        @DisplayName("재고 조회 중 인터럽트가 발생해도 상품 정보는 반환한다")
+        void should_return_product_info_when_interrupted() {
             // Given
             ProductId productId = ProductId.of("550e8400-e29b-41d4-a716-446655440001");
             Product product = createNormalProduct(productId);
@@ -244,14 +244,19 @@ class GetProductUseCaseTest {
                 }
             });
             
-            // When & Then
-            assertThatThrownBy(() -> getProductUseCase.execute(new GetProductRequest(productId.value())))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessage("Stock availability check was interrupted")
-                .hasCauseInstanceOf(InterruptedException.class);
-            
-            // 인터럽트 상태 초기화
-            Thread.interrupted();
+            try {
+                // When
+                GetProductResponse response = getProductUseCase.execute(new GetProductRequest(productId.value()));
+                
+                // Then
+                assertThat(response).isNotNull();
+                assertThat(response.getProductId()).isEqualTo(productId.value());
+                assertThat(response.getOptions().get(0).getAvailableQuantity()).isEqualTo(0);
+                assertThat(response.getOptions().get(0).isAvailable()).isFalse();
+            } finally {
+                // 인터럽트 상태 초기화
+                Thread.interrupted();
+            }
         }
     }
     

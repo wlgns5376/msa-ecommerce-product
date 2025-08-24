@@ -64,9 +64,8 @@ public class GetProductService implements GetProductUseCase {
         } catch (TimeoutException e) {
             log.error("Timed out while checking stock availability for all options", e);
         } catch (InterruptedException e) {
-            log.warn("Stock availability check interrupted. Aborting product get.", e);
+            log.warn("Stock availability check interrupted. Proceeding with default availability.", e);
             Thread.currentThread().interrupt();
-            throw new RuntimeException("Stock availability check was interrupted", e);
         } catch (Exception e) {
             // 예상치 못한 예외가 발생한 경우
             log.error("Unexpected error while checking stock availability", e);
