@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -49,26 +48,27 @@ public class GetProductService implements GetProductUseCase {
         Map<String, CompletableFuture<Availability>> futures = product.getOptions().stream()
             .collect(Collectors.toMap(
                 ProductOption::getId,
-                this::getAvailabilityFuture
+                option -> getAvailabilityFuture(option).exceptionally(ex -> {
+                    log.error("Failed to get stock availability for option: {}", option.getId(), ex);
+                    return new Availability(false, 0); // 예외 발생 시 기본값 반환
+                })
             ));
         
         // 모든 Future가 완료될 때까지 대기
         CompletableFuture<Void> allFutures = CompletableFuture.allOf(
-            futures.values().stream()
-                .map(f -> f.exceptionally(ex -> null)) // 개별 future 실패 시 allOf가 즉시 실패하는 것을 방지합니다.
-                .toArray(CompletableFuture[]::new)
+            futures.values().toArray(CompletableFuture[]::new)
         );
         
         try {
             allFutures.get(stockAvailabilityTimeoutSeconds, TimeUnit.SECONDS);
         } catch (TimeoutException e) {
             log.error("Timed out while checking stock availability for all options", e);
-        } catch (ExecutionException e) {
-            // This is not expected to happen because we use .exceptionally() to handle individual failures.
-            log.error("Unexpected execution error while checking stock availability", e);
         } catch (InterruptedException e) {
             log.error("Stock availability check interrupted", e);
             Thread.currentThread().interrupt();
+        } catch (Exception e) {
+            // 예상치 못한 예외가 발생한 경우
+            log.error("Unexpected error while checking stock availability", e);
         }
         
         // 결과를 기반으로 응답 생성
@@ -97,21 +97,7 @@ public class GetProductService implements GetProductUseCase {
     }
     
     private GetProductResponse.ProductOptionResponse buildOptionResponse(ProductOption option, CompletableFuture<Availability> future) {
-        Availability availability = new Availability(false, 0);
-        
-        try {
-            if (future != null && future.isDone()) {
-                availability = future.get();
-            }
-        } catch (ExecutionException e) {
-            log.error("Failed to get stock availability result for option: {}", option.getId(), e);
-            // 재고 확인 실패 시 기본값 유지 (재고 없음)
-        } catch (InterruptedException e) {
-            log.error("Interrupted while getting stock availability result for option: {}", option.getId(), e);
-            Thread.currentThread().interrupt();
-        } catch (java.util.concurrent.CancellationException e) {
-            log.warn("Stock availability check for option {} was cancelled.", option.getId());
-        }
+        Availability availability = (future != null) ? future.getNow(new Availability(false, 0)) : new Availability(false, 0);
         
         List<GetProductResponse.SkuMappingResponse> skuMappingResponses = option.getSkuMapping().mappings().entrySet().stream()
             .map(GetProductResponse.SkuMappingResponse::from)
