@@ -138,4 +138,27 @@ public class ProductRepositoryAdapter implements ProductRepository {
     public long count() {
         return productJpaRepository.count();
     }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public long countByName(String keyword) {
+        return productJpaRepository.countByName(keyword);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<Product> searchActiveByName(String keyword, int offset, int limit) {
+        int page = offset / limit;
+        Pageable pageable = PageRequest.of(page, limit);
+        Page<ProductJpaEntity> entityPage = productJpaRepository.searchActiveByName(keyword, pageable);
+        return entityPage.getContent().stream()
+                .map(ProductJpaEntity::toDomainModel)
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public long countActiveByName(String keyword) {
+        return productJpaRepository.countActiveByName(keyword);
+    }
 }

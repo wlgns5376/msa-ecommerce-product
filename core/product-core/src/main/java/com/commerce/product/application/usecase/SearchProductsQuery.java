@@ -21,12 +21,8 @@ public class SearchProductsQuery {
             throw new IllegalArgumentException("페이지 번호는 0 이상이어야 합니다");
         }
         
-        if (size < 1) {
-            throw new IllegalArgumentException("페이지 크기는 1 이상이어야 합니다");
-        }
-        
-        if (size > 100) {
-            throw new IllegalArgumentException("페이지 크기는 100 이하여야 합니다");
+        if (size < 1 || size > 100) {
+            throw new IllegalArgumentException("페이지 크기는 1에서 100 사이여야 합니다");
         }
     }
 }

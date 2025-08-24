@@ -17,7 +17,7 @@ public class SearchProductsResponse {
     private final int size;
     private final long totalElements;
     
-    public static SearchProductsResponse of(List<Product> products, int page, int size) {
+    public static SearchProductsResponse of(List<Product> products, int page, int size, long totalElements) {
         List<ProductSearchResult> results = products.stream()
             .map(ProductSearchResult::from)
             .collect(Collectors.toList());
@@ -26,7 +26,7 @@ public class SearchProductsResponse {
             .products(results)
             .page(page)
             .size(size)
-            .totalElements(results.size())
+            .totalElements(totalElements)
             .build();
     }
     

@@ -1,10 +1,6 @@
 package com.commerce.product.application.usecase;
 
-import com.commerce.product.domain.model.Product;
-import com.commerce.product.domain.model.ProductId;
-import com.commerce.product.domain.model.ProductName;
-import com.commerce.product.domain.model.ProductType;
-import com.commerce.product.domain.model.ProductStatus;
+import com.commerce.product.domain.model.*;
 import com.commerce.product.domain.repository.ProductRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -70,6 +66,8 @@ class SearchProductsUseCaseTest {
         List<Product> products = Arrays.asList(product1, product2);
         when(productRepository.searchByName(keyword, page * size, size))
             .thenReturn(products);
+        when(productRepository.countByName(keyword))
+            .thenReturn(2L);
 
         // When
         SearchProductsResponse response = searchProductsService.searchProducts(query);
@@ -101,6 +99,8 @@ class SearchProductsUseCaseTest {
 
         when(productRepository.searchByName(keyword, page * size, size))
             .thenReturn(Collections.emptyList());
+        when(productRepository.countByName(keyword))
+            .thenReturn(0L);
 
         // When
         SearchProductsResponse response = searchProductsService.searchProducts(query);
@@ -208,7 +208,7 @@ class SearchProductsUseCaseTest {
         // When & Then
         assertThatThrownBy(() -> searchProductsService.searchProducts(query))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("페이지 크기는 1 이상이어야 합니다");
+            .hasMessage("페이지 크기는 1에서 100 사이여야 합니다");
     }
 
     @Test
@@ -224,7 +224,7 @@ class SearchProductsUseCaseTest {
         // When & Then
         assertThatThrownBy(() -> searchProductsService.searchProducts(query))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("페이지 크기는 100 이하여야 합니다");
+            .hasMessage("페이지 크기는 1에서 100 사이여야 합니다");
     }
 
     @Test
@@ -239,17 +239,32 @@ class SearchProductsUseCaseTest {
             .onlyActive(true)
             .build();
 
+        // product1에 옵션을 추가하고 활성 상태로 설정
+        ProductOption option = ProductOption.single(
+            "기본 옵션",
+            new Money(java.math.BigDecimal.valueOf(10000), Currency.KRW),
+            "test-sku-id"
+        );
+        product1.addOption(option);
+        product1.activate();
+        
         List<Product> activeProducts = Arrays.asList(product1);
-        when(productRepository.searchByName(keyword, 0, 10))
-            .thenReturn(Arrays.asList(product1, product2));
+        when(productRepository.searchActiveByName(keyword, 0, 10))
+            .thenReturn(activeProducts);
+        when(productRepository.countActiveByName(keyword))
+            .thenReturn(1L);
 
         // When
         SearchProductsResponse response = searchProductsService.searchProducts(query);
 
         // Then
-        // 실제 구현에서는 service 레이어에서 필터링하거나
-        // repository 메서드를 확장하여 상태 필터링을 지원해야 함
         assertThat(response).isNotNull();
-        verify(productRepository, times(1)).searchByName(keyword, 0, 10);
+        assertThat(response.getProducts()).hasSize(1);
+        assertThat(response.getProducts().get(0).getName()).isEqualTo("테스트 상품1");
+        assertThat(response.getProducts().get(0).getStatus()).isEqualTo("ACTIVE");
+        assertThat(response.getTotalElements()).isEqualTo(1);
+        
+        verify(productRepository, times(1)).searchActiveByName(keyword, 0, 10);
+        verify(productRepository, times(1)).countActiveByName(keyword);
     }
 }

@@ -49,6 +49,21 @@ public interface ProductRepository extends Repository<Product, ProductId> {
     List<Product> searchByName(String keyword, int offset, int limit);
     
     /**
+     * 상품명으로 검색된 전체 개수를 반환합니다.
+     */
+    long countByName(String keyword);
+    
+    /**
+     * 활성 상태에서 상품명으로 검색합니다.
+     */
+    List<Product> searchActiveByName(String keyword, int offset, int limit);
+    
+    /**
+     * 활성 상태에서 상품명으로 검색된 전체 개수를 반환합니다.
+     */
+    long countActiveByName(String keyword);
+    
+    /**
      * 상품을 삭제합니다.
      */
     void delete(Product product);

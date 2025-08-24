@@ -93,7 +93,7 @@ class GetProductUseCaseTest {
         assertThat(response.getOptions()).hasSize(1);
         assertThat(response.getOptions().get(0).getId()).isNotNull();
         assertThat(response.getOptions().get(0).getName()).isEqualTo("기본 옵션");
-        assertThat(response.getOptions().get(0).getPrice()).isEqualTo(10000);
+        assertThat(response.getOptions().get(0).getPrice()).isEqualTo(BigDecimal.valueOf(10000));
         assertThat(response.getOptions().get(0).getCurrency()).isEqualTo("KRW");
     }
 

@@ -6,7 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.util.ArrayList;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -42,7 +42,7 @@ public class GetProductResponse {
     public static class OptionDetail {
         private final String id;
         private final String name;
-        private final long price;
+        private final BigDecimal price;
         private final String currency;
         private final List<SkuMappingDetail> skuMappings;
         
@@ -54,7 +54,7 @@ public class GetProductResponse {
             return OptionDetail.builder()
                 .id(option.getId())
                 .name(option.getName())
-                .price(option.getPrice().amount().longValue())
+                .price(option.getPrice().amount())
                 .currency(option.getPrice().currency().name())
                 .skuMappings(mappingDetails)
                 .build();
