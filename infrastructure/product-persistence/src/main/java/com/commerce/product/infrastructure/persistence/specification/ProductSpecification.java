@@ -18,10 +18,10 @@ public class ProductSpecification {
             predicates.add(criteriaBuilder.isNull(root.get("deletedAt")));
             
             // 키워드 검색 조건
-            if (keyword != null && !keyword.trim().isEmpty()) {
+            if (keyword != null && !keyword.isBlank()) {
                 predicates.add(criteriaBuilder.like(
                     criteriaBuilder.lower(root.get("name")),
-                    "%" + keyword.toLowerCase() + "%"
+                    "%" + keyword.trim().toLowerCase() + "%"
                 ));
             }
             

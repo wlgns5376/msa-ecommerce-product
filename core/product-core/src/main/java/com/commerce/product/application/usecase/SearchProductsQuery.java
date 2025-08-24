@@ -16,7 +16,7 @@ public class SearchProductsQuery {
     private final boolean onlyActive = false;
     
     public void validate() {
-        if (keyword == null || keyword.trim().isEmpty()) {
+        if (keyword == null || keyword.isBlank()) {
             throw new IllegalArgumentException("검색 키워드는 필수입니다");
         }
         
