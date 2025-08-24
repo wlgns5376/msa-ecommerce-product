@@ -38,6 +38,7 @@ class GetProductUseCaseTest {
     @BeforeEach
     void setUp() {
         getProductUseCase = new GetProductService(productRepository, stockAvailabilityService);
+        org.springframework.test.util.ReflectionTestUtils.setField(getProductUseCase, "stockAvailabilityTimeoutSeconds", 1L);
     }
     
     @Nested
@@ -144,6 +145,28 @@ class GetProductUseCaseTest {
             // When
             GetProductResponse response = getProductUseCase.execute(new GetProductRequest(productId.value()));
             
+            // Then
+            assertThat(response).isNotNull();
+            assertThat(response.getProductId()).isEqualTo(productId.value());
+            assertThat(response.getOptions().get(0).getAvailableQuantity()).isEqualTo(0);
+            assertThat(response.getOptions().get(0).isAvailable()).isFalse();
+        }
+        
+        @Test
+        @DisplayName("재고 조회 타임아웃 시에도 상품 정보는 반환한다")
+        void should_return_product_info_when_stock_check_times_out() {
+            // Given
+            ProductId productId = ProductId.of("550e8400-e29b-41d4-a716-446655440001");
+            Product product = createNormalProduct(productId);
+            given(productRepository.findById(productId)).willReturn(Optional.of(product));
+
+            // 재고 조회 타임아웃 Mock (완료되지 않는 Future)
+            given(stockAvailabilityService.checkProductOptionAvailability(any()))
+                .willReturn(new CompletableFuture<>());
+
+            // When
+            GetProductResponse response = getProductUseCase.execute(new GetProductRequest(productId.value()));
+
             // Then
             assertThat(response).isNotNull();
             assertThat(response.getProductId()).isEqualTo(productId.value());

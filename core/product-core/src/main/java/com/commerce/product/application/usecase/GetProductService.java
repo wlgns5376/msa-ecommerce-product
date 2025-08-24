@@ -10,7 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -86,12 +85,10 @@ public class GetProductService implements GetProductUseCase {
         try {
             if (future != null && future.isDone()) {
                 Object result = future.get();
-                if (result instanceof BundleAvailabilityResult) {
-                    BundleAvailabilityResult bundleResult = (BundleAvailabilityResult) result;
+                if (result instanceof BundleAvailabilityResult bundleResult) {
                     isAvailable = bundleResult.isAvailable();
                     availableQuantity = bundleResult.availableSets();
-                } else if (result instanceof AvailabilityResult) {
-                    AvailabilityResult availabilityResult = (AvailabilityResult) result;
+                } else if (result instanceof AvailabilityResult availabilityResult) {
                     isAvailable = availabilityResult.isAvailable();
                     availableQuantity = availabilityResult.availableQuantity();
                 }
