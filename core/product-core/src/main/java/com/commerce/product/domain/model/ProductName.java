@@ -9,6 +9,10 @@ public record ProductName(String value) implements ValueObject {
     public ProductName {
         validate(value);
     }
+    
+    public static ProductName of(String value) {
+        return new ProductName(value);
+    }
 
     private static void validate(String value) {
         if (value == null || value.trim().isEmpty()) {

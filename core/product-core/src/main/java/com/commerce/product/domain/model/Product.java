@@ -57,6 +57,7 @@ public class Product extends AggregateRoot<ProductId> {
         
         return product;
     }
+    
 
     private static void validateCreation(ProductName name, ProductType type) {
         if (name == null) {

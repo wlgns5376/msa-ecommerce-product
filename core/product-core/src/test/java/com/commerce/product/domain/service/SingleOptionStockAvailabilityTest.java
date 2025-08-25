@@ -18,6 +18,9 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -47,9 +50,12 @@ class SingleOptionStockAvailabilityTest {
     
     private StockAvailabilityService stockAvailabilityService;
     
+    private Executor testExecutor;
+    
     @BeforeEach
     void setUp() {
-        stockAvailabilityService = new StockAvailabilityServiceImpl(inventoryRepository, productRepository, lockRepository, sagaRepository, eventPublisher, bundleReservationSagaOrchestrator);
+        testExecutor = Executors.newSingleThreadExecutor();
+        stockAvailabilityService = new StockAvailabilityServiceImpl(inventoryRepository, productRepository, lockRepository, sagaRepository, eventPublisher, bundleReservationSagaOrchestrator, testExecutor);
     }
     
     @Nested

@@ -33,6 +33,12 @@ public interface StockAvailabilityService {
     CompletableFuture<AvailabilityResult> checkProductOptionAvailability(String optionId);
     
     /**
+     * 단일 SKU의 재고 가용성을 확인합니다.
+     * N+1 문제를 방지하기 위해 SKU ID를 직접 받아 처리합니다.
+     */
+    CompletableFuture<AvailabilityResult> checkSingleSkuAvailability(String skuId);
+    
+    /**
      * 묶음 옵션의 재고 가용성을 확인합니다.
      * 분산 락을 사용하여 원자성을 보장합니다.
      */

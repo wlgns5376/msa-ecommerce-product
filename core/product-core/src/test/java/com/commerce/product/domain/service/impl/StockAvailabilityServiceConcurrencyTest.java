@@ -56,9 +56,12 @@ class StockAvailabilityServiceConcurrencyTest {
     private final Map<String, AtomicInteger> stockMap = new ConcurrentHashMap<>();
     private final Map<String, DistributedLock> activeLocks = new ConcurrentHashMap<>();
     
+    private Executor testExecutor;
+    
     @BeforeEach
     void setUp() {
-        stockAvailabilityService = new StockAvailabilityServiceImpl(inventoryRepository, productRepository, lockRepository, sagaRepository, eventPublisher, bundleReservationSagaOrchestrator);
+        testExecutor = Executors.newFixedThreadPool(10);
+        stockAvailabilityService = new StockAvailabilityServiceImpl(inventoryRepository, productRepository, lockRepository, sagaRepository, eventPublisher, bundleReservationSagaOrchestrator, testExecutor);
         
         // 초기 재고 설정
         stockMap.put("SKU001", new AtomicInteger(100));
