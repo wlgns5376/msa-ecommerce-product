@@ -119,6 +119,11 @@ class SearchProductsUseCaseTest {
             assertThat(response.getProducts()).hasSize(2);
             assertThat(response.getProducts())
                 .allMatch(p -> p.getMinPrice() >= 10000 && p.getMaxPrice() <= 50000);
+            verify(productRepository).searchProducts(
+                argThat(criteria -> 
+                    criteria.getMinPrice() != null && criteria.getMinPrice().equals(10000) &&
+                    criteria.getMaxPrice() != null && criteria.getMaxPrice().equals(50000)),
+                any(Pageable.class));
         }
         
         @Test
@@ -206,6 +211,13 @@ class SearchProductsUseCaseTest {
             assertThat(response.getProducts())
                 .extracting(SearchProductsResponse.SearchProductItem::getName)
                 .containsExactly("A상품", "B상품", "C상품");
+            verify(productRepository).searchProducts(
+                any(ProductSearchCriteria.class),
+                argThat(pageable -> {
+                    Sort.Order order = pageable.getSort().getOrderFor("name");
+                    return order != null && order.getDirection() == Sort.Direction.ASC;
+                })
+            );
         }
         
         @Test

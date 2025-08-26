@@ -69,9 +69,8 @@ public class SearchProductsService implements SearchProductsUseCase {
     }
     
     private Sort createSort(String sortBy, String sortDirection) {
-        Sort.Direction direction = "ASC".equalsIgnoreCase(sortDirection) 
-            ? Sort.Direction.ASC 
-            : Sort.Direction.DESC;
+        Sort.Direction direction = Sort.Direction.fromOptionalString(sortDirection)
+            .orElse(Sort.Direction.DESC);
         return Sort.by(direction, sortBy);
     }
     
@@ -105,7 +104,7 @@ public class SearchProductsService implements SearchProductsUseCase {
         
         return options.stream()
             .map(option -> option.getPrice().amount())
-            .map(bigDecimal -> bigDecimal.intValueExact())
+            .map(BigDecimal::intValue)  // 소수점 이하는 버리고 Integer 범위를 초과하면 truncate됨
             .min(Integer::compareTo)
             .orElse(null);
     }
@@ -117,7 +116,7 @@ public class SearchProductsService implements SearchProductsUseCase {
         
         return options.stream()
             .map(option -> option.getPrice().amount())
-            .map(bigDecimal -> bigDecimal.intValueExact())
+            .map(BigDecimal::intValue)  // 소수점 이하는 버리고 Integer 범위를 초과하면 truncate됨
             .max(Integer::compareTo)
             .orElse(null);
     }
