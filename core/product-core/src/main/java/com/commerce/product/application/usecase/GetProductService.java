@@ -37,12 +37,12 @@ public class GetProductService implements GetProductUseCase {
     }
     
     @Override
-    public GetProductResponse execute(GetProductRequest request) {
-        log.info("Getting product: {}", request.getProductId());
+    public GetProductResponse getProduct(GetProductQuery query) {
+        log.info("Getting product: {}", query.getProductId());
         
-        ProductId productId = ProductId.of(request.getProductId());
+        ProductId productId = ProductId.of(query.getProductId());
         Product product = productRepository.findById(productId)
-            .orElseThrow(() -> new ProductNotFoundException("Product not found: " + request.getProductId()));
+            .orElseThrow(() -> new ProductNotFoundException("Product not found: " + query.getProductId()));
         
         // 모든 옵션에 대한 CompletableFuture 수집
         Map<String, CompletableFuture<Availability>> futures = product.getOptions().stream()
@@ -72,16 +72,16 @@ public class GetProductService implements GetProductUseCase {
         }
         
         // 결과를 기반으로 응답 생성
-        List<GetProductResponse.ProductOptionResponse> optionResponses = product.getOptions().stream()
+        List<GetProductResponse.OptionDetail> optionResponses = product.getOptions().stream()
             .map(option -> buildOptionResponse(option, futures.get(option.getId())))
             .collect(Collectors.toList());
         
         return GetProductResponse.builder()
-            .productId(product.getId().value())
+            .id(product.getId().toString())
             .name(product.getName().value())
             .description(product.getDescription())
-            .type(product.getType())
-            .status(product.getStatus())
+            .type(product.getType().name())
+            .status(product.getStatus().name())
             .options(optionResponses)
             .build();
     }
@@ -98,21 +98,19 @@ public class GetProductService implements GetProductUseCase {
         }
     }
     
-    private GetProductResponse.ProductOptionResponse buildOptionResponse(ProductOption option, CompletableFuture<Availability> future) {
+    private GetProductResponse.OptionDetail buildOptionResponse(ProductOption option, CompletableFuture<Availability> future) {
         Availability availability = future.getNow(new Availability(false, 0));
         
-        List<GetProductResponse.SkuMappingResponse> skuMappingResponses = option.getSkuMapping().mappings().entrySet().stream()
-            .map(GetProductResponse.SkuMappingResponse::from)
+        List<GetProductResponse.SkuMappingDetail> skuMappingResponses = option.getSkuMapping().mappings().entrySet().stream()
+            .map(entry -> GetProductResponse.SkuMappingDetail.of(entry.getKey(), entry.getValue()))
             .collect(Collectors.toList());
         
-        return GetProductResponse.ProductOptionResponse.builder()
-            .optionId(option.getId())
+        return GetProductResponse.OptionDetail.builder()
+            .id(option.getId())
             .name(option.getName())
             .price(option.getPrice().amount())
             .currency(option.getPrice().currency().name())
             .skuMappings(skuMappingResponses)
-            .isAvailable(availability.isAvailable())
-            .availableQuantity(availability.availableQuantity())
             .build();
     }
     

@@ -1,0 +1,68 @@
+package com.commerce.product.domain.repository;
+
+import com.commerce.product.domain.model.CategoryId;
+import com.commerce.product.domain.model.PagedResult;
+import com.commerce.product.domain.model.Product;
+import com.commerce.product.domain.model.ProductId;
+import com.commerce.product.domain.model.ProductOption;
+import com.commerce.product.domain.model.ProductStatus;
+
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * Product Aggregate의 리포지토리 인터페이스
+ */
+public interface ProductRepository extends Repository<Product, ProductId> {
+    
+    /**
+     * 상품을 저장합니다.
+     */
+    Product save(Product product);
+    
+    /**
+     * ID로 상품을 조회합니다.
+     */
+    Optional<Product> findById(ProductId id);
+    
+    /**
+     * ID로 상품 기본 정보만 조회합니다. (연관 엔티티 제외)
+     */
+    Optional<Product> findByIdWithoutAssociations(ProductId id);
+    
+    /**
+     * 카테고리별 상품을 조회합니다.
+     */
+    List<Product> findByCategory(CategoryId categoryId, int offset, int limit);
+    
+    /**
+     * 상품 옵션 ID로 옵션을 조회합니다.
+     */
+    Optional<ProductOption> findOptionById(String optionId);
+    
+    /**
+     * 활성 상태의 상품을 조회합니다.
+     */
+    List<Product> findActiveProducts(int offset, int limit);
+    
+    /**
+     * 상품을 검색합니다.
+     * 
+     * @param keyword 검색 키워드
+     * @param page 페이지 번호
+     * @param size 페이지 크기
+     * @param status 상품 상태 (null이면 모든 상태 검색)
+     * @return 검색된 상품 페이지
+     */
+    PagedResult<Product> search(String keyword, int page, int size, ProductStatus status);
+    
+    /**
+     * 상품을 삭제합니다.
+     */
+    void delete(Product product);
+    
+    /**
+     * 모든 상품의 개수를 반환합니다.
+     */
+    long count();
+}

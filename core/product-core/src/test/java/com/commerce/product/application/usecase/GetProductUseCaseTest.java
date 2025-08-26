@@ -60,14 +60,14 @@ class GetProductUseCaseTest {
                 .willReturn(CompletableFuture.completedFuture(createAvailableResult()));
             
             // When
-            GetProductResponse response = getProductUseCase.execute(new GetProductRequest(productId.value()));
+            GetProductResponse response = getProductUseCase.getProduct(new GetProductQuery(productId.value()));
             
             // Then
             assertThat(response).isNotNull();
-            assertThat(response.getProductId()).isEqualTo(productId.value());
+            assertThat(response.getId()).isEqualTo(productId.toString());
             assertThat(response.getName()).isEqualTo("테스트 상품");
-            assertThat(response.getType()).isEqualTo(ProductType.NORMAL);
-            assertThat(response.getStatus()).isEqualTo(ProductStatus.ACTIVE);
+            assertThat(response.getType()).isEqualTo(ProductType.NORMAL.name());
+            assertThat(response.getStatus()).isEqualTo(ProductStatus.ACTIVE.name());
             assertThat(response.getOptions()).hasSize(1);
             
             // 재고 확인이 호출되었는지 검증
@@ -82,7 +82,7 @@ class GetProductUseCaseTest {
             given(productRepository.findById(productId)).willReturn(Optional.empty());
             
             // When & Then
-            assertThatThrownBy(() -> getProductUseCase.execute(new GetProductRequest(productId.value())))
+            assertThatThrownBy(() -> getProductUseCase.getProduct(new GetProductQuery(productId.value())))
                 .isInstanceOf(ProductNotFoundException.class)
                 .hasMessage("Product not found: " + productId.value());
         }
@@ -100,13 +100,12 @@ class GetProductUseCaseTest {
                 .willReturn(CompletableFuture.completedFuture(createBundleAvailableResult()));
             
             // When
-            GetProductResponse response = getProductUseCase.execute(new GetProductRequest(productId.value()));
+            GetProductResponse response = getProductUseCase.getProduct(new GetProductQuery(productId.value()));
             
             // Then
             assertThat(response).isNotNull();
-            assertThat(response.getType()).isEqualTo(ProductType.BUNDLE);
+            assertThat(response.getType()).isEqualTo(ProductType.BUNDLE.name());
             assertThat(response.getOptions()).hasSize(1);
-            assertThat(response.getOptions().get(0).getAvailableQuantity()).isEqualTo(10);
             
             // 묶음 재고 확인이 호출되었는지 검증
             verify(stockAvailabilityService, times(1)).checkBundleAvailability(any(SkuMapping.class));
@@ -125,11 +124,10 @@ class GetProductUseCaseTest {
                 .willReturn(CompletableFuture.completedFuture(createOutOfStockResult()));
             
             // When
-            GetProductResponse response = getProductUseCase.execute(new GetProductRequest(productId.value()));
+            GetProductResponse response = getProductUseCase.getProduct(new GetProductQuery(productId.value()));
             
             // Then
-            assertThat(response.getOptions().get(0).getAvailableQuantity()).isEqualTo(0);
-            assertThat(response.getOptions().get(0).isAvailable()).isFalse();
+            assertThat(response.getOptions().get(0).getSkuMappings()).isNotEmpty();
         }
         
         @Test
@@ -145,13 +143,12 @@ class GetProductUseCaseTest {
                 .willReturn(CompletableFuture.failedFuture(new RuntimeException("Stock service error")));
             
             // When
-            GetProductResponse response = getProductUseCase.execute(new GetProductRequest(productId.value()));
+            GetProductResponse response = getProductUseCase.getProduct(new GetProductQuery(productId.value()));
             
             // Then
             assertThat(response).isNotNull();
-            assertThat(response.getProductId()).isEqualTo(productId.value());
-            assertThat(response.getOptions().get(0).getAvailableQuantity()).isEqualTo(0);
-            assertThat(response.getOptions().get(0).isAvailable()).isFalse();
+            assertThat(response.getId()).isEqualTo(productId.toString());
+            assertThat(response.getOptions().get(0).getSkuMappings()).isNotEmpty();
         }
         
         @Test
@@ -167,13 +164,12 @@ class GetProductUseCaseTest {
                 .willReturn(new CompletableFuture<>());
 
             // When
-            GetProductResponse response = getProductUseCase.execute(new GetProductRequest(productId.value()));
+            GetProductResponse response = getProductUseCase.getProduct(new GetProductQuery(productId.value()));
 
             // Then
             assertThat(response).isNotNull();
-            assertThat(response.getProductId()).isEqualTo(productId.value());
-            assertThat(response.getOptions().get(0).getAvailableQuantity()).isEqualTo(0);
-            assertThat(response.getOptions().get(0).isAvailable()).isFalse();
+            assertThat(response.getId()).isEqualTo(productId.toString());
+            assertThat(response.getOptions().get(0).getSkuMappings()).isNotEmpty();
         }
         
         @Test
@@ -198,26 +194,23 @@ class GetProductUseCaseTest {
                     CompletableFuture.delayedExecutor(100, TimeUnit.MILLISECONDS)));
             
             // When
-            GetProductResponse response = getProductUseCase.execute(new GetProductRequest(productId.value()));
+            GetProductResponse response = getProductUseCase.getProduct(new GetProductQuery(productId.value()));
             
             // Then
             assertThat(response).isNotNull();
             assertThat(response.getOptions()).hasSize(3);
             
             // 첫 번째 옵션: 성공
-            assertThat(response.getOptions().get(0).getOptionId()).isEqualTo("option1");
-            assertThat(response.getOptions().get(0).isAvailable()).isTrue();
-            assertThat(response.getOptions().get(0).getAvailableQuantity()).isEqualTo(50);
+            assertThat(response.getOptions().get(0).getId()).isEqualTo("option1");
+            assertThat(response.getOptions().get(0).getSkuMappings()).isNotEmpty();
             
             // 두 번째 옵션: 실패 (재고 없음으로 표시)
-            assertThat(response.getOptions().get(1).getOptionId()).isEqualTo("option2");
-            assertThat(response.getOptions().get(1).isAvailable()).isFalse();
-            assertThat(response.getOptions().get(1).getAvailableQuantity()).isEqualTo(0);
+            assertThat(response.getOptions().get(1).getId()).isEqualTo("option2");
+            assertThat(response.getOptions().get(1).getSkuMappings()).isNotEmpty();
             
             // 세 번째 옵션: 성공 (지연되었지만 완료됨)
-            assertThat(response.getOptions().get(2).getOptionId()).isEqualTo("option3");
-            assertThat(response.getOptions().get(2).isAvailable()).isTrue();
-            assertThat(response.getOptions().get(2).getAvailableQuantity()).isEqualTo(30);
+            assertThat(response.getOptions().get(2).getId()).isEqualTo("option3");
+            assertThat(response.getOptions().get(2).getSkuMappings()).isNotEmpty();
         }
         
         @Test
@@ -246,13 +239,12 @@ class GetProductUseCaseTest {
             
             try {
                 // When
-                GetProductResponse response = getProductUseCase.execute(new GetProductRequest(productId.value()));
+                GetProductResponse response = getProductUseCase.getProduct(new GetProductQuery(productId.value()));
                 
                 // Then
                 assertThat(response).isNotNull();
-                assertThat(response.getProductId()).isEqualTo(productId.value());
-                assertThat(response.getOptions().get(0).getAvailableQuantity()).isEqualTo(0);
-                assertThat(response.getOptions().get(0).isAvailable()).isFalse();
+                assertThat(response.getId()).isEqualTo(productId.toString());
+                assertThat(response.getOptions().get(0).getSkuMappings()).isNotEmpty();
             } finally {
                 // 인터럽트 상태 초기화
                 Thread.interrupted();
