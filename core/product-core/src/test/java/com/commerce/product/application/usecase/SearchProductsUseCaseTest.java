@@ -348,6 +348,68 @@ class SearchProductsUseCaseTest {
             assertThat(item.getMinPrice()).isNull();
             assertThat(item.getMaxPrice()).isNull();
         }
+        
+        @Test
+        @DisplayName("허용되지 않은 정렬 필드를 요청하면 기본값(createdAt)으로 정렬한다")
+        void should_use_default_sort_when_invalid_sort_field() {
+            // Given
+            SearchProductsRequest request = SearchProductsRequest.builder()
+                .page(0)
+                .size(10)
+                .sortBy("invalidField")  // 허용되지 않은 정렬 필드
+                .sortDirection("DESC")
+                .build();
+            
+            List<Product> products = createProductsInCategory();
+            Page<Product> productPage = new PageImpl<>(products, PageRequest.of(0, 10), 3);
+            
+            given(productRepository.searchProducts(any(ProductSearchCriteria.class), any(Pageable.class)))
+                .willReturn(productPage);
+            
+            // When
+            SearchProductsResponse response = searchProductsUseCase.execute(request);
+            
+            // Then
+            assertThat(response.getProducts()).hasSize(3);
+            verify(productRepository).searchProducts(
+                any(ProductSearchCriteria.class),
+                argThat(pageable -> {
+                    Sort.Order order = pageable.getSort().getOrderFor("createdAt");
+                    return order != null && order.getDirection() == Sort.Direction.DESC;
+                })
+            );
+        }
+        
+        @Test
+        @DisplayName("허용된 정렬 필드(name, price)로 요청하면 해당 필드로 정렬한다")
+        void should_sort_by_allowed_fields() {
+            // Given - price로 정렬
+            SearchProductsRequest request = SearchProductsRequest.builder()
+                .page(0)
+                .size(10)
+                .sortBy("price")
+                .sortDirection("ASC")
+                .build();
+            
+            List<Product> products = createProductsInCategory();
+            Page<Product> productPage = new PageImpl<>(products, PageRequest.of(0, 10), 3);
+            
+            given(productRepository.searchProducts(any(ProductSearchCriteria.class), any(Pageable.class)))
+                .willReturn(productPage);
+            
+            // When
+            SearchProductsResponse response = searchProductsUseCase.execute(request);
+            
+            // Then
+            assertThat(response.getProducts()).hasSize(3);
+            verify(productRepository).searchProducts(
+                any(ProductSearchCriteria.class),
+                argThat(pageable -> {
+                    Sort.Order order = pageable.getSort().getOrderFor("price");
+                    return order != null && order.getDirection() == Sort.Direction.ASC;
+                })
+            );
+        }
     }
     
     // Helper methods for creating test data

@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
 public class SearchProductsService implements SearchProductsUseCase {
     
     private final ProductRepository productRepository;
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("createdAt", "name", "price");
     
     public SearchProductsService(ProductRepository productRepository) {
         this.productRepository = productRepository;
@@ -69,6 +71,11 @@ public class SearchProductsService implements SearchProductsUseCase {
     }
     
     private Sort createSort(String sortBy, String sortDirection) {
+        // 허용되지 않은 정렬 필드인 경우 기본값으로 설정
+        if (!ALLOWED_SORT_FIELDS.contains(sortBy)) {
+            sortBy = "createdAt";
+        }
+        
         Sort.Direction direction = Sort.Direction.fromOptionalString(sortDirection)
             .orElse(Sort.Direction.DESC);
         return Sort.by(direction, sortBy);
@@ -104,7 +111,7 @@ public class SearchProductsService implements SearchProductsUseCase {
         
         return options.stream()
             .map(option -> option.getPrice().amount())
-            .map(BigDecimal::intValue)  // 소수점 이하는 버리고 Integer 범위를 초과하면 truncate됨
+            .map(BigDecimal::intValueExact)  // 소수점 이하가 있거나 Integer 범위를 초과하면 예외 발생
             .min(Integer::compareTo)
             .orElse(null);
     }
@@ -116,7 +123,7 @@ public class SearchProductsService implements SearchProductsUseCase {
         
         return options.stream()
             .map(option -> option.getPrice().amount())
-            .map(BigDecimal::intValue)  // 소수점 이하는 버리고 Integer 범위를 초과하면 truncate됨
+            .map(BigDecimal::intValueExact)  // 소수점 이하가 있거나 Integer 범위를 초과하면 예외 발생
             .max(Integer::compareTo)
             .orElse(null);
     }

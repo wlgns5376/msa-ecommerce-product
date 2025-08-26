@@ -70,15 +70,21 @@ public class SearchProductsRequest {
     }
     
     public static class Builder {
+        private static final Set<ProductStatus> DEFAULT_STATUSES = Set.of(ProductStatus.ACTIVE);
+        private static final int DEFAULT_PAGE = 0;
+        private static final int DEFAULT_SIZE = 20;
+        private static final String DEFAULT_SORT_BY = "createdAt";
+        private static final String DEFAULT_SORT_DIRECTION = "DESC";
+        
         private String categoryId;
         private String keyword;
         private Integer minPrice;
         private Integer maxPrice;
-        private Set<ProductStatus> statuses = Set.of(ProductStatus.ACTIVE);
-        private int page = 0;
-        private int size = 20;
-        private String sortBy = "createdAt";
-        private String sortDirection = "DESC";
+        private Set<ProductStatus> statuses = DEFAULT_STATUSES;
+        private int page = DEFAULT_PAGE;
+        private int size = DEFAULT_SIZE;
+        private String sortBy = DEFAULT_SORT_BY;
+        private String sortDirection = DEFAULT_SORT_DIRECTION;
         
         public Builder categoryId(String categoryId) {
             this.categoryId = categoryId;
