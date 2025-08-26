@@ -4,6 +4,8 @@ import com.commerce.product.domain.model.CategoryId;
 import com.commerce.product.domain.model.Product;
 import com.commerce.product.domain.model.ProductId;
 import com.commerce.product.domain.model.ProductOption;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -57,4 +59,9 @@ public interface ProductRepository extends Repository<Product, ProductId> {
      * 모든 상품의 개수를 반환합니다.
      */
     long count();
+    
+    /**
+     * 조건에 맞는 상품을 페이지네이션하여 검색합니다.
+     */
+    Page<Product> searchProducts(ProductSearchCriteria criteria, Pageable pageable);
 }
