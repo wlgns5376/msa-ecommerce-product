@@ -3,7 +3,6 @@ package com.commerce.product.application.usecase;
 import com.commerce.product.domain.model.*;
 import com.commerce.product.domain.repository.ProductRepository;
 import com.commerce.product.domain.repository.ProductSearchCriteria;
-import com.commerce.product.domain.service.StockAvailabilityService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -11,6 +10,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -22,12 +22,9 @@ import java.util.stream.Collectors;
 public class SearchProductsService implements SearchProductsUseCase {
     
     private final ProductRepository productRepository;
-    private final StockAvailabilityService stockAvailabilityService;
     
-    public SearchProductsService(ProductRepository productRepository, 
-                                StockAvailabilityService stockAvailabilityService) {
+    public SearchProductsService(ProductRepository productRepository) {
         this.productRepository = productRepository;
-        this.stockAvailabilityService = stockAvailabilityService;
     }
     
     @Override
@@ -103,25 +100,25 @@ public class SearchProductsService implements SearchProductsUseCase {
     
     private Integer calculateMinPrice(List<ProductOption> options) {
         if (options.isEmpty()) {
-            return 0;
+            return null;
         }
         
         return options.stream()
             .map(option -> option.getPrice().amount())
-            .map(bigDecimal -> bigDecimal.intValue())
+            .map(bigDecimal -> bigDecimal.intValueExact())
             .min(Integer::compareTo)
-            .orElse(0);
+            .orElse(null);
     }
     
     private Integer calculateMaxPrice(List<ProductOption> options) {
         if (options.isEmpty()) {
-            return 0;
+            return null;
         }
         
         return options.stream()
             .map(option -> option.getPrice().amount())
-            .map(bigDecimal -> bigDecimal.intValue())
+            .map(bigDecimal -> bigDecimal.intValueExact())
             .max(Integer::compareTo)
-            .orElse(0);
+            .orElse(null);
     }
 }

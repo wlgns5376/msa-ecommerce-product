@@ -3,7 +3,6 @@ package com.commerce.product.application.usecase;
 import com.commerce.product.domain.model.*;
 import com.commerce.product.domain.repository.ProductRepository;
 import com.commerce.product.domain.repository.ProductSearchCriteria;
-import com.commerce.product.domain.service.StockAvailabilityService;
 import com.commerce.product.test.helper.ProductTestBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -29,14 +28,11 @@ class SearchProductsUseCaseTest {
     @Mock
     private ProductRepository productRepository;
     
-    @Mock
-    private StockAvailabilityService stockAvailabilityService;
-    
     private SearchProductsUseCase searchProductsUseCase;
     
     @BeforeEach
     void setUp() {
-        searchProductsUseCase = new SearchProductsService(productRepository, stockAvailabilityService);
+        searchProductsUseCase = new SearchProductsService(productRepository);
     }
     
     @Nested
@@ -247,7 +243,7 @@ class SearchProductsUseCaseTest {
                 .keyword("존재하지않는상품")
                 .build();
             
-            Page<Product> emptyPage = Page.empty();
+            Page<Product> emptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 20), 0);
             
             given(productRepository.searchProducts(any(ProductSearchCriteria.class), any(Pageable.class)))
                 .willReturn(emptyPage);
@@ -281,8 +277,6 @@ class SearchProductsUseCaseTest {
             
             // Then
             assertThat(response.getProducts()).hasSize(3);
-            // 재고 조회는 하지 않음
-            verify(stockAvailabilityService, never()).checkSingleSkuAvailability(anyString());
         }
         
         @Test
@@ -309,6 +303,38 @@ class SearchProductsUseCaseTest {
             SearchProductsResponse.SearchProductItem item = response.getProducts().get(0);
             assertThat(item.getMinPrice()).isEqualTo(10000);  // 최저가 옵션
             assertThat(item.getMaxPrice()).isEqualTo(30000);  // 최고가 옵션
+        }
+        
+        @Test
+        @DisplayName("옵션이 없는 상품의 경우 최소/최대 가격이 null을 반환한다")
+        void should_return_null_prices_when_no_options() {
+            // Given
+            SearchProductsRequest request = SearchProductsRequest.builder()
+                .page(0)
+                .size(10)
+                .build();
+            
+            Product productWithoutOptions = ProductTestBuilder.builder()
+                .withId(ProductId.generate())
+                .withName("옵션 없는 상품")
+                .withType(ProductType.NORMAL)
+                .withStatus(ProductStatus.ACTIVE)
+                .withOptions(List.of())  // 빈 옵션 리스트
+                .build();
+            Page<Product> productPage = new PageImpl<>(List.of(productWithoutOptions), 
+                PageRequest.of(0, 10), 1);
+            
+            given(productRepository.searchProducts(any(ProductSearchCriteria.class), any(Pageable.class)))
+                .willReturn(productPage);
+            
+            // When
+            SearchProductsResponse response = searchProductsUseCase.execute(request);
+            
+            // Then
+            assertThat(response.getProducts()).hasSize(1);
+            SearchProductsResponse.SearchProductItem item = response.getProducts().get(0);
+            assertThat(item.getMinPrice()).isNull();
+            assertThat(item.getMaxPrice()).isNull();
         }
     }
     

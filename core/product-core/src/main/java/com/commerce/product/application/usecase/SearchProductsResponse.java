@@ -155,6 +155,9 @@ public class SearchProductsResponse {
         private final boolean hasNext;
         
         public PageInfo(int currentPage, int pageSize, long totalElements) {
+            if (pageSize <= 0) {
+                throw new IllegalArgumentException("Page size must be greater than zero.");
+            }
             this.currentPage = currentPage;
             this.pageSize = pageSize;
             this.totalElements = totalElements;
