@@ -57,7 +57,7 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
         
         idsQueryBuilder.append("AND (:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) ")
                 .append("AND ((:minPrice IS NULL AND :maxPrice IS NULL) OR EXISTS (SELECT 1 FROM p.options opt WHERE (:minPrice IS NULL OR opt.price >= :minPrice) AND (:maxPrice IS NULL OR opt.price <= :maxPrice))) ")
-                .append("AND (COALESCE(:statuses, null) IS NULL OR p.status IN :statuses)");
+                .append("AND p.status IN :statuses");
         
         // price 정렬인 경우 GROUP BY 추가
         if (isPriceSort) {
@@ -89,7 +89,7 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
             List<Object[]> results = (List<Object[]>) idsTypedQuery.getResultList();
             productIds = results.stream()
                 .map(row -> (String) row[0])
-                .collect(java.util.stream.Collectors.toList());
+                .collect(Collectors.toList());
         } else {
             @SuppressWarnings("unchecked")
             List<String> results = (List<String>) idsTypedQuery.getResultList();
@@ -112,16 +112,16 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
         List<ProductJpaEntity> fetchedProducts = fetchTypedQuery.getResultList();
         
         // ID 순서에 따라 정렬 유지
-        java.util.Map<String, ProductJpaEntity> productMap = fetchedProducts.stream()
-            .collect(java.util.stream.Collectors.toMap(
+        Map<String, ProductJpaEntity> productMap = fetchedProducts.stream()
+            .collect(Collectors.toMap(
                 ProductJpaEntity::getId,
                 product -> product
             ));
         
         List<ProductJpaEntity> products = productIds.stream()
             .map(productMap::get)
-            .filter(java.util.Objects::nonNull)
-            .collect(java.util.stream.Collectors.toList());
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
         
         // Count total elements
         StringBuilder countQueryBuilder = new StringBuilder("SELECT COUNT(DISTINCT p) FROM ProductJpaEntity p ");
@@ -139,7 +139,7 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
         
         countQueryBuilder.append("AND (:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) ")
                 .append("AND ((:minPrice IS NULL AND :maxPrice IS NULL) OR EXISTS (SELECT 1 FROM p.options opt WHERE (:minPrice IS NULL OR opt.price >= :minPrice) AND (:maxPrice IS NULL OR opt.price <= :maxPrice))) ")
-                .append("AND (COALESCE(:statuses, null) IS NULL OR p.status IN :statuses)");
+                .append("AND p.status IN :statuses");
         
         String countQuery = countQueryBuilder.toString();
         
