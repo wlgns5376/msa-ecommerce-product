@@ -530,7 +530,7 @@ class SearchProductsUseCaseTest {
     
     private ProductSearchResult createSimpleProductSearchResult(String id, String name, List<String> categoryIds) {
         return ProductSearchResultTestBuilder.aProductSearchResult()
-            .withId(UUID.randomUUID().toString())  // UUID 형식 사용
+            .withId(id)
             .withName(name)
             .withType(ProductType.NORMAL)
             .withStatus(ProductStatus.ACTIVE)

@@ -138,9 +138,6 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
             Pageable pageable) {
         
         // Step 1: Get product search results with pagination
-        boolean isPriceSort = pageable.getSort().stream()
-            .anyMatch(order -> "price".equals(order.getProperty()));
-        
         StringBuilder queryBuilder = new StringBuilder();
         queryBuilder.append("SELECT new com.commerce.product.infrastructure.persistence.repository.ProductJpaRepositoryCustomImpl$ProductProjection(")
                 .append("p.id, p.name, p.description, p.type, p.status, ")
@@ -234,6 +231,12 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
             parameters.put("categoryId", categoryId);
         }
         
+        // Note: LOWER() 함수 사용은 인덱스를 활용하지 못해 대규모 데이터셋에서 성능 저하 가능
+        // 성능 최적화 방안:
+        // 1. PostgreSQL: ILIKE 연산자 사용 (예: p.name ILIKE CONCAT('%', :keyword, '%'))
+        // 2. MySQL: 대소문자 구분 없는 컬레이션 사용 (예: utf8mb4_unicode_ci)
+        // 3. 함수 기반 인덱스 생성 (예: CREATE INDEX idx_product_name_lower ON product(LOWER(name)))
+        // 4. 전문 검색 엔진 사용 고려 (Elasticsearch, Solr 등)
         whereBuilder.append("AND (:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) ");
         
         if (minPrice != null || maxPrice != null) {
