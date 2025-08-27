@@ -89,17 +89,18 @@ public class SearchProductsService implements SearchProductsUseCase {
     }
     
     private SearchProductsResponse.SearchProductItem convertToSearchItem(Product product) {
-        // 옵션에서 최소/최대 가격 계산
-        Optional<BigDecimal> minPriceOpt = product.getOptions().stream()
-                .map(option -> option.getPrice().amount())
-                .min(Comparator.naturalOrder());
-        
-        Optional<BigDecimal> maxPriceOpt = product.getOptions().stream()
-                .map(option -> option.getPrice().amount())
-                .max(Comparator.naturalOrder());
-
-        BigDecimal minPrice = minPriceOpt.orElse(null);
-        BigDecimal maxPrice = maxPriceOpt.orElse(null);
+        // 옵션에서 최소/최대 가격 계산 - 한 번의 순회로 최적화
+        BigDecimal minPrice = null;
+        BigDecimal maxPrice = null;
+        for (ProductOption option : product.getOptions()) {
+            BigDecimal price = option.getPrice().amount();
+            if (minPrice == null || price.compareTo(minPrice) < 0) {
+                minPrice = price;
+            }
+            if (maxPrice == null || price.compareTo(maxPrice) > 0) {
+                maxPrice = price;
+            }
+        }
         
         // 카테고리 ID 목록 추출
         List<String> categoryIds = product.getCategoryIds().stream()

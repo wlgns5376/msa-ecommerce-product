@@ -421,13 +421,13 @@ class SearchProductsUseCaseTest {
         }
         
         @Test
-        @DisplayName("허용된 정렬 필드(name, price)로 요청하면 해당 필드로 정렬한다")
+        @DisplayName("허용된 정렬 필드(name)로 요청하면 해당 필드로 정렬한다")
         void should_sort_by_allowed_fields() {
-            // Given - price로 정렬
+            // Given - name으로 정렬
             SearchProductsRequest request = SearchProductsRequest.builder()
                 .page(0)
                 .size(10)
-                .sortBy("price")
+                .sortBy("name")
                 .sortDirection("ASC")
                 .build();
             
@@ -445,7 +445,7 @@ class SearchProductsUseCaseTest {
             verify(productRepository).searchProducts(
                 any(ProductSearchCriteria.class),
                 argThat(pageable -> {
-                    Sort.Order order = pageable.getSort().getOrderFor("price");
+                    Sort.Order order = pageable.getSort().getOrderFor("name");
                     return order != null && order.getDirection() == Sort.Direction.ASC;
                 })
             );
