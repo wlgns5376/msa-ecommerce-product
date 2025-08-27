@@ -3,6 +3,7 @@ package com.commerce.product.application.usecase;
 import com.commerce.product.domain.model.*;
 import com.commerce.product.domain.repository.ProductRepository;
 import com.commerce.product.domain.repository.ProductSearchCriteria;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -19,6 +20,7 @@ import java.util.stream.Stream;
 /**
  * 상품 검색 유스케이스 구현
  */
+@Slf4j
 @Service
 @Transactional(readOnly = true)
 public class SearchProductsService implements SearchProductsUseCase {
@@ -116,6 +118,7 @@ public class SearchProductsService implements SearchProductsUseCase {
                     return price.intValueExact();
                 } catch (ArithmeticException e) {
                     // 가격이 정수 범위를 벗어나거나 소수점을 포함하는 경우 집계에서 제외
+                    log.warn("Price could not be converted to Integer and will be ignored. Price: {}, Error: {}", price, e.getMessage());
                     return null;
                 }
             })

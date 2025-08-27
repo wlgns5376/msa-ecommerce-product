@@ -50,20 +50,18 @@ public interface ProductJpaRepository extends JpaRepository<ProductJpaEntity, St
     
     @Query(value = "SELECT DISTINCT p FROM ProductJpaEntity p " +
            "LEFT JOIN FETCH p.options o " +
-           "LEFT JOIN FETCH p.categories c " +
+           "LEFT JOIN p.categories c " +
            "WHERE p.deletedAt IS NULL " +
            "AND (:categoryId IS NULL OR c.categoryId = :categoryId) " +
            "AND (:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
-           "AND (:minPrice IS NULL OR EXISTS (SELECT 1 FROM p.options opt WHERE opt.price >= :minPrice)) " +
-           "AND (:maxPrice IS NULL OR EXISTS (SELECT 1 FROM p.options opt WHERE opt.price <= :maxPrice)) " +
+           "AND ((:minPrice IS NULL AND :maxPrice IS NULL) OR EXISTS (SELECT 1 FROM p.options opt WHERE (:minPrice IS NULL OR opt.price >= :minPrice) AND (:maxPrice IS NULL OR opt.price <= :maxPrice))) " +
            "AND (COALESCE(:statuses, null) IS NULL OR p.status IN :statuses)",
            countQuery = "SELECT COUNT(DISTINCT p) FROM ProductJpaEntity p " +
            "LEFT JOIN p.categories c " +
            "WHERE p.deletedAt IS NULL " +
            "AND (:categoryId IS NULL OR c.categoryId = :categoryId) " +
            "AND (:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
-           "AND (:minPrice IS NULL OR EXISTS (SELECT 1 FROM p.options opt WHERE opt.price >= :minPrice)) " +
-           "AND (:maxPrice IS NULL OR EXISTS (SELECT 1 FROM p.options opt WHERE opt.price <= :maxPrice)) " +
+           "AND ((:minPrice IS NULL AND :maxPrice IS NULL) OR EXISTS (SELECT 1 FROM p.options opt WHERE (:minPrice IS NULL OR opt.price >= :minPrice) AND (:maxPrice IS NULL OR opt.price <= :maxPrice))) " +
            "AND (COALESCE(:statuses, null) IS NULL OR p.status IN :statuses)")
     Page<ProductJpaEntity> searchProducts(
         @Param("categoryId") String categoryId,

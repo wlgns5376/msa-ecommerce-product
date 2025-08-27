@@ -4,6 +4,7 @@ import com.commerce.product.domain.model.*;
 import com.commerce.product.infrastructure.persistence.common.BaseJpaEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.Where;
 
 import java.util.ArrayList;
@@ -46,6 +47,7 @@ public class ProductJpaEntity extends BaseJpaEntity {
     private List<ProductOptionJpaEntity> options = new ArrayList<>();
     
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @BatchSize(size = 10)
     @Builder.Default
     private List<ProductCategoryJpaEntity> categories = new ArrayList<>();
     
