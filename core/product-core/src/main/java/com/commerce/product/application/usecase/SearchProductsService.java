@@ -89,8 +89,12 @@ public class SearchProductsService implements SearchProductsUseCase {
     
     private SearchProductsResponse.SearchProductItem convertToSearchItem(Product product) {
         // 옵션에서 최소/최대 가격 계산
-        Integer minPrice = calculateMinPrice(product.getOptions());
-        Integer maxPrice = calculateMaxPrice(product.getOptions());
+        java.util.IntSummaryStatistics stats = getIntegerPriceStream(product.getOptions())
+                .mapToInt(Integer::intValue)
+                .summaryStatistics();
+
+        Integer minPrice = stats.getCount() > 0 ? stats.getMin() : null;
+        Integer maxPrice = stats.getCount() > 0 ? stats.getMax() : null;
         
         // 카테고리 ID 목록 추출
         List<String> categoryIds = product.getCategoryIds().stream()
@@ -123,19 +127,5 @@ public class SearchProductsService implements SearchProductsUseCase {
                 }
             })
             .filter(Objects::nonNull);
-    }
-    
-    private Integer calculateMinPrice(List<ProductOption> options) {
-        if (options.isEmpty()) {
-            return null;
-        }
-        return getIntegerPriceStream(options).min(Integer::compareTo).orElse(null);
-    }
-    
-    private Integer calculateMaxPrice(List<ProductOption> options) {
-        if (options.isEmpty()) {
-            return null;
-        }
-        return getIntegerPriceStream(options).max(Integer::compareTo).orElse(null);
     }
 }
