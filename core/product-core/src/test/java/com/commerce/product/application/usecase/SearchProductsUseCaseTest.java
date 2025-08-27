@@ -65,6 +65,11 @@ class SearchProductsUseCaseTest {
                 .extracting(SearchProductsResponse.SearchProductItem::getName)
                 .allMatch(name -> name.contains(keyword));
             assertThat(response.getPageInfo().getTotalElements()).isEqualTo(2);
+            
+            verify(productRepository).searchProducts(
+                argThat(criteria -> keyword.equals(criteria.getKeyword())),
+                any(Pageable.class)
+            );
         }
         
         @Test

@@ -5,6 +5,7 @@ import com.commerce.product.domain.model.Product;
 import com.commerce.product.domain.model.ProductId;
 import com.commerce.product.domain.model.ProductOption;
 import com.commerce.product.domain.repository.ProductRepository;
+import com.commerce.product.domain.repository.ProductSearchCriteria;
 import com.commerce.product.infrastructure.persistence.entity.ProductJpaEntity;
 import com.commerce.product.infrastructure.persistence.repository.ProductJpaRepository;
 import lombok.RequiredArgsConstructor;
@@ -137,5 +138,20 @@ public class ProductRepositoryAdapter implements ProductRepository {
     @Transactional(readOnly = true)
     public long count() {
         return productJpaRepository.count();
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Product> searchProducts(ProductSearchCriteria criteria, Pageable pageable) {
+        Page<ProductJpaEntity> entityPage = productJpaRepository.searchProducts(
+            criteria.getCategoryId(),
+            criteria.getKeyword(),
+            criteria.getMinPrice(),
+            criteria.getMaxPrice(),
+            criteria.getStatuses(),
+            pageable
+        );
+        
+        return entityPage.map(ProductJpaEntity::toDomainModel);
     }
 }

@@ -1,5 +1,6 @@
 package com.commerce.product.infrastructure.persistence.repository;
 
+import com.commerce.product.domain.model.ProductStatus;
 import com.commerce.product.infrastructure.persistence.entity.ProductJpaEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface ProductJpaRepository extends JpaRepository<ProductJpaEntity, String> {
@@ -45,4 +47,30 @@ public interface ProductJpaRepository extends JpaRepository<ProductJpaEntity, St
            "WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "AND p.deletedAt IS NULL")
     Page<ProductJpaEntity> searchByName(@Param("keyword") String keyword, Pageable pageable);
+    
+    @Query(value = "SELECT DISTINCT p FROM ProductJpaEntity p " +
+           "LEFT JOIN FETCH p.options o " +
+           "LEFT JOIN p.categories c " +
+           "WHERE p.deletedAt IS NULL " +
+           "AND (:categoryId IS NULL OR c.categoryId = :categoryId) " +
+           "AND (:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "AND (:minPrice IS NULL OR EXISTS (SELECT 1 FROM p.options opt WHERE opt.price >= :minPrice)) " +
+           "AND (:maxPrice IS NULL OR EXISTS (SELECT 1 FROM p.options opt WHERE opt.price <= :maxPrice)) " +
+           "AND (COALESCE(:statuses, null) IS NULL OR p.status IN :statuses)",
+           countQuery = "SELECT COUNT(DISTINCT p) FROM ProductJpaEntity p " +
+           "LEFT JOIN p.categories c " +
+           "WHERE p.deletedAt IS NULL " +
+           "AND (:categoryId IS NULL OR c.categoryId = :categoryId) " +
+           "AND (:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "AND (:minPrice IS NULL OR EXISTS (SELECT 1 FROM p.options opt WHERE opt.price >= :minPrice)) " +
+           "AND (:maxPrice IS NULL OR EXISTS (SELECT 1 FROM p.options opt WHERE opt.price <= :maxPrice)) " +
+           "AND (COALESCE(:statuses, null) IS NULL OR p.status IN :statuses)")
+    Page<ProductJpaEntity> searchProducts(
+        @Param("categoryId") String categoryId,
+        @Param("keyword") String keyword,
+        @Param("minPrice") Integer minPrice,
+        @Param("maxPrice") Integer maxPrice,
+        @Param("statuses") Set<ProductStatus> statuses,
+        Pageable pageable
+    );
 }

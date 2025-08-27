@@ -7,6 +7,8 @@ import java.util.Set;
  * 상품 검색 요청
  */
 public class SearchProductsRequest {
+    
+    private static final Set<ProductStatus> DEFAULT_STATUSES = Set.of(ProductStatus.ACTIVE);
     private final String categoryId;
     private final String keyword;
     private final Integer minPrice;
@@ -132,6 +134,18 @@ public class SearchProductsRequest {
         }
         
         public SearchProductsRequest build() {
+            if (page < 0) {
+                throw new IllegalArgumentException("페이지 번호는 0보다 작을 수 없습니다.");
+            }
+            if (size < 1) {
+                throw new IllegalArgumentException("페이지 크기는 1보다 작을 수 없습니다.");
+            }
+            if (minPrice != null && maxPrice != null && minPrice > maxPrice) {
+                throw new IllegalArgumentException("최소 가격은 최대 가격보다 클 수 없습니다.");
+            }
+            if (statuses == null) {
+                this.statuses = DEFAULT_STATUSES;
+            }
             return new SearchProductsRequest(this);
         }
     }

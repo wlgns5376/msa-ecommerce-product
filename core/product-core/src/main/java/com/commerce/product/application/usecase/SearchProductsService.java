@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -38,6 +39,9 @@ public class SearchProductsService implements SearchProductsUseCase {
         Pageable pageable = createPageable(request);
         
         // 상품 검색
+        // TODO: 성능 개선 - 현재는 Product 엔티티를 조회한 후 각 옵션에 대해 가격을 계산하고 있음.
+        // 대량의 상품 조회 시 N+1 문제가 발생할 수 있으므로, 추후 Repository에서 
+        // 가격 정보를 포함한 DTO를 직접 조회하는 방식으로 개선 필요
         Page<Product> productPage = productRepository.searchProducts(criteria, pageable);
         
         // 응답 변환
@@ -111,7 +115,15 @@ public class SearchProductsService implements SearchProductsUseCase {
         
         return options.stream()
             .map(option -> option.getPrice().amount())
-            .map(BigDecimal::intValueExact)  // 소수점 이하가 있거나 Integer 범위를 초과하면 예외 발생
+            .map(price -> {
+                try {
+                    return price.intValueExact();
+                } catch (ArithmeticException e) {
+                    // 가격이 정수 범위를 벗어나거나 소수점을 포함하는 경우 집계에서 제외
+                    return null;
+                }
+            })
+            .filter(Objects::nonNull)
             .min(Integer::compareTo)
             .orElse(null);
     }
@@ -123,7 +135,15 @@ public class SearchProductsService implements SearchProductsUseCase {
         
         return options.stream()
             .map(option -> option.getPrice().amount())
-            .map(BigDecimal::intValueExact)  // 소수점 이하가 있거나 Integer 범위를 초과하면 예외 발생
+            .map(price -> {
+                try {
+                    return price.intValueExact();
+                } catch (ArithmeticException e) {
+                    // 가격이 정수 범위를 벗어나거나 소수점을 포함하는 경우 집계에서 제외
+                    return null;
+                }
+            })
+            .filter(Objects::nonNull)
             .max(Integer::compareTo)
             .orElse(null);
     }
