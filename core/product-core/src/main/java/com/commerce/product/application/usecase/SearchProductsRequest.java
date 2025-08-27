@@ -1,6 +1,7 @@
 package com.commerce.product.application.usecase;
 
 import com.commerce.product.domain.model.ProductStatus;
+import java.math.BigDecimal;
 import java.util.Set;
 
 /**
@@ -10,8 +11,8 @@ public class SearchProductsRequest {
     
     private final String categoryId;
     private final String keyword;
-    private final Integer minPrice;
-    private final Integer maxPrice;
+    private final BigDecimal minPrice;
+    private final BigDecimal maxPrice;
     private final Set<ProductStatus> statuses;
     private final int page;
     private final int size;
@@ -38,11 +39,11 @@ public class SearchProductsRequest {
         return keyword;
     }
     
-    public Integer getMinPrice() {
+    public BigDecimal getMinPrice() {
         return minPrice;
     }
     
-    public Integer getMaxPrice() {
+    public BigDecimal getMaxPrice() {
         return maxPrice;
     }
     
@@ -79,8 +80,8 @@ public class SearchProductsRequest {
         
         private String categoryId;
         private String keyword;
-        private Integer minPrice;
-        private Integer maxPrice;
+        private BigDecimal minPrice;
+        private BigDecimal maxPrice;
         private Set<ProductStatus> statuses = DEFAULT_STATUSES;
         private int page = DEFAULT_PAGE;
         private int size = DEFAULT_SIZE;
@@ -97,12 +98,12 @@ public class SearchProductsRequest {
             return this;
         }
         
-        public Builder minPrice(Integer minPrice) {
+        public Builder minPrice(BigDecimal minPrice) {
             this.minPrice = minPrice;
             return this;
         }
         
-        public Builder maxPrice(Integer maxPrice) {
+        public Builder maxPrice(BigDecimal maxPrice) {
             this.maxPrice = maxPrice;
             return this;
         }
@@ -139,10 +140,10 @@ public class SearchProductsRequest {
             if (size < 1) {
                 throw new IllegalArgumentException("페이지 크기는 1보다 작을 수 없습니다.");
             }
-            if (minPrice != null && maxPrice != null && minPrice > maxPrice) {
+            if (minPrice != null && maxPrice != null && minPrice.compareTo(maxPrice) > 0) {
                 throw new IllegalArgumentException("최소 가격은 최대 가격보다 클 수 없습니다.");
             }
-            if (statuses == null) {
+            if (statuses == null || statuses.isEmpty()) {
                 this.statuses = DEFAULT_STATUSES;
             }
             return new SearchProductsRequest(this);

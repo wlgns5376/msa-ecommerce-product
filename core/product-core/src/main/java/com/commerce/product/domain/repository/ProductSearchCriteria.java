@@ -1,6 +1,7 @@
 package com.commerce.product.domain.repository;
 
 import com.commerce.product.domain.model.ProductStatus;
+import java.math.BigDecimal;
 import java.util.Set;
 
 /**
@@ -9,8 +10,8 @@ import java.util.Set;
 public class ProductSearchCriteria {
     private final String categoryId;
     private final String keyword;
-    private final Integer minPrice;
-    private final Integer maxPrice;
+    private final BigDecimal minPrice;
+    private final BigDecimal maxPrice;
     private final Set<ProductStatus> statuses;
     
     private ProductSearchCriteria(Builder builder) {
@@ -29,11 +30,11 @@ public class ProductSearchCriteria {
         return keyword;
     }
     
-    public Integer getMinPrice() {
+    public BigDecimal getMinPrice() {
         return minPrice;
     }
     
-    public Integer getMaxPrice() {
+    public BigDecimal getMaxPrice() {
         return maxPrice;
     }
     
@@ -48,8 +49,8 @@ public class ProductSearchCriteria {
     public static class Builder {
         private String categoryId;
         private String keyword;
-        private Integer minPrice;
-        private Integer maxPrice;
+        private BigDecimal minPrice;
+        private BigDecimal maxPrice;
         private Set<ProductStatus> statuses;
         
         public Builder categoryId(String categoryId) {
@@ -62,12 +63,12 @@ public class ProductSearchCriteria {
             return this;
         }
         
-        public Builder minPrice(Integer minPrice) {
+        public Builder minPrice(BigDecimal minPrice) {
             this.minPrice = minPrice;
             return this;
         }
         
-        public Builder maxPrice(Integer maxPrice) {
+        public Builder maxPrice(BigDecimal maxPrice) {
             this.maxPrice = maxPrice;
             return this;
         }

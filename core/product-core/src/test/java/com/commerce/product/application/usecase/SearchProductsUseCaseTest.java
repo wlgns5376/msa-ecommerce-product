@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.*;
 
+import java.math.BigDecimal;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -100,12 +101,12 @@ class SearchProductsUseCaseTest {
         }
         
         @Test
-        @DisplayName("가격 범위로 검색하면 범위 내 상품 목록을 반환한다")
+        @DisplayName("가격 범위로 검색하면 옵션 가격이 범위 내인 상품 목록을 반환한다")
         void should_return_products_within_price_range() {
             // Given
             SearchProductsRequest request = SearchProductsRequest.builder()
-                .minPrice(10000)
-                .maxPrice(50000)
+                .minPrice(new BigDecimal("10000"))
+                .maxPrice(new BigDecimal("50000"))
                 .page(0)
                 .size(10)
                 .build();
@@ -121,12 +122,12 @@ class SearchProductsUseCaseTest {
             
             // Then
             assertThat(response.getProducts()).hasSize(2);
-            assertThat(response.getProducts())
-                .allMatch(p -> p.getMinPrice() >= 10000 && p.getMaxPrice() <= 50000);
+            // 참고: 실제 필터링은 repository에서 수행되므로, 
+            // 여기서는 repository가 올바른 criteria를 받았는지만 검증
             verify(productRepository).searchProducts(
                 argThat(criteria -> 
-                    criteria.getMinPrice() != null && criteria.getMinPrice().equals(10000) &&
-                    criteria.getMaxPrice() != null && criteria.getMaxPrice().equals(50000)),
+                    criteria.getMinPrice() != null && criteria.getMinPrice().equals(new BigDecimal("10000")) &&
+                    criteria.getMaxPrice() != null && criteria.getMaxPrice().equals(new BigDecimal("50000"))),
                 any(Pageable.class));
         }
         
@@ -165,8 +166,8 @@ class SearchProductsUseCaseTest {
             SearchProductsRequest request = SearchProductsRequest.builder()
                 .categoryId("category-001")
                 .keyword("프리미엄")
-                .minPrice(30000)
-                .maxPrice(100000)
+                .minPrice(new BigDecimal("30000"))
+                .maxPrice(new BigDecimal("100000"))
                 .statuses(Set.of(ProductStatus.ACTIVE))
                 .page(0)
                 .size(10)
@@ -186,7 +187,7 @@ class SearchProductsUseCaseTest {
             // Then
             assertThat(response.getProducts()).hasSize(1);
             assertThat(response.getProducts().get(0).getName()).contains("프리미엄");
-            assertThat(response.getProducts().get(0).getMinPrice()).isGreaterThanOrEqualTo(30000);
+            assertThat(response.getProducts().get(0).getMinPrice()).isGreaterThanOrEqualTo(new BigDecimal("30000"));
         }
         
         @Test
@@ -317,8 +318,43 @@ class SearchProductsUseCaseTest {
             // Then
             assertThat(response.getProducts()).hasSize(1);
             SearchProductsResponse.SearchProductItem item = response.getProducts().get(0);
-            assertThat(item.getMinPrice()).isEqualTo(10000);  // 최저가 옵션
-            assertThat(item.getMaxPrice()).isEqualTo(30000);  // 최고가 옵션
+            assertThat(item.getMinPrice()).isEqualTo(new BigDecimal("10000"));  // 최저가 옵션
+            assertThat(item.getMaxPrice()).isEqualTo(new BigDecimal("30000"));  // 최고가 옵션
+        }
+        
+        @Test
+        @DisplayName("가격 범위로 검색 시 옵션 중 하나라도 범위에 포함되면 상품을 반환한다")
+        void should_return_product_when_any_option_price_in_range() {
+            // Given
+            SearchProductsRequest request = SearchProductsRequest.builder()
+                .minPrice(new BigDecimal("15000"))
+                .maxPrice(new BigDecimal("25000"))
+                .page(0)
+                .size(10)
+                .build();
+            
+            // 상품의 옵션이 10000, 20000, 30000원인 경우
+            // 20000원 옵션이 검색 범위에 포함되므로 이 상품이 반환되어야 함
+            Product productWithMultipleOptions = createProductWithPriceRange();
+            Page<Product> productPage = new PageImpl<>(List.of(productWithMultipleOptions), 
+                PageRequest.of(0, 10), 1);
+            
+            given(productRepository.searchProducts(any(ProductSearchCriteria.class), any(Pageable.class)))
+                .willReturn(productPage);
+            
+            // When
+            SearchProductsResponse response = searchProductsUseCase.execute(request);
+            
+            // Then
+            assertThat(response.getProducts()).hasSize(1);
+            SearchProductsResponse.SearchProductItem item = response.getProducts().get(0);
+            
+            // 응답의 minPrice/maxPrice는 상품의 전체 옵션 중 최소/최대값
+            assertThat(item.getMinPrice()).isEqualTo(new BigDecimal("10000"));
+            assertThat(item.getMaxPrice()).isEqualTo(new BigDecimal("30000"));
+            
+            // 상품이 검색된 이유: 20000원 옵션이 15000-25000 범위에 포함됨
+            // 이는 repository의 searchProducts 쿼리가 올바르게 작동한다고 가정
         }
         
         @Test

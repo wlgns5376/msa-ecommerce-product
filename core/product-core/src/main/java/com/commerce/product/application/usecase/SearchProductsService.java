@@ -11,11 +11,12 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * 상품 검색 유스케이스 구현
@@ -89,12 +90,16 @@ public class SearchProductsService implements SearchProductsUseCase {
     
     private SearchProductsResponse.SearchProductItem convertToSearchItem(Product product) {
         // 옵션에서 최소/최대 가격 계산
-        java.util.IntSummaryStatistics stats = getIntegerPriceStream(product.getOptions())
-                .mapToInt(Integer::intValue)
-                .summaryStatistics();
+        Optional<BigDecimal> minPriceOpt = product.getOptions().stream()
+                .map(option -> option.getPrice().amount())
+                .min(Comparator.naturalOrder());
+        
+        Optional<BigDecimal> maxPriceOpt = product.getOptions().stream()
+                .map(option -> option.getPrice().amount())
+                .max(Comparator.naturalOrder());
 
-        Integer minPrice = stats.getCount() > 0 ? stats.getMin() : null;
-        Integer maxPrice = stats.getCount() > 0 ? stats.getMax() : null;
+        BigDecimal minPrice = minPriceOpt.orElse(null);
+        BigDecimal maxPrice = maxPriceOpt.orElse(null);
         
         // 카테고리 ID 목록 추출
         List<String> categoryIds = product.getCategoryIds().stream()
@@ -112,20 +117,5 @@ public class SearchProductsService implements SearchProductsUseCase {
             .isAvailable(!product.getOptions().isEmpty())  // 옵션이 있으면 구매 가능
             .categoryIds(categoryIds)
             .build();
-    }
-    
-    private Stream<Integer> getIntegerPriceStream(List<ProductOption> options) {
-        return options.stream()
-            .map(option -> option.getPrice().amount())
-            .map(price -> {
-                try {
-                    return price.intValueExact();
-                } catch (ArithmeticException e) {
-                    // 가격이 정수 범위를 벗어나거나 소수점을 포함하는 경우 집계에서 제외
-                    log.warn("Price could not be converted to Integer and will be ignored. Price: {}, Error: {}", price, e.getMessage());
-                    return null;
-                }
-            })
-            .filter(Objects::nonNull);
     }
 }

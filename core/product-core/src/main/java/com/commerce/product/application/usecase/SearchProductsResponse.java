@@ -1,5 +1,6 @@
 package com.commerce.product.application.usecase;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -28,8 +29,8 @@ public class SearchProductsResponse {
         private final String description;
         private final String productType;
         private final String status;
-        private final Integer minPrice;
-        private final Integer maxPrice;
+        private final BigDecimal minPrice;
+        private final BigDecimal maxPrice;
         private final boolean isAvailable;
         private final List<String> categoryIds;
         
@@ -65,11 +66,11 @@ public class SearchProductsResponse {
             return status;
         }
         
-        public Integer getMinPrice() {
+        public BigDecimal getMinPrice() {
             return minPrice;
         }
         
-        public Integer getMaxPrice() {
+        public BigDecimal getMaxPrice() {
             return maxPrice;
         }
         
@@ -91,8 +92,8 @@ public class SearchProductsResponse {
             private String description;
             private String productType;
             private String status;
-            private Integer minPrice;
-            private Integer maxPrice;
+            private BigDecimal minPrice;
+            private BigDecimal maxPrice;
             private boolean isAvailable;
             private List<String> categoryIds;
             
@@ -121,12 +122,12 @@ public class SearchProductsResponse {
                 return this;
             }
             
-            public Builder minPrice(Integer minPrice) {
+            public Builder minPrice(BigDecimal minPrice) {
                 this.minPrice = minPrice;
                 return this;
             }
             
-            public Builder maxPrice(Integer maxPrice) {
+            public Builder maxPrice(BigDecimal maxPrice) {
                 this.maxPrice = maxPrice;
                 return this;
             }
