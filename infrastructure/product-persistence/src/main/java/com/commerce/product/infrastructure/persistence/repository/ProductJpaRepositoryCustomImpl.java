@@ -29,8 +29,8 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
         String id,
         String name,
         String description,
-        String type,
-        String status,
+        ProductType type,
+        ProductStatus status,
         BigDecimal minPrice,
         BigDecimal maxPrice,
         LocalDateTime createdAt
@@ -199,8 +199,8 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
                     .id(projection.id())
                     .name(projection.name())
                     .description(projection.description())
-                    .type(ProductType.valueOf(projection.type()))
-                    .status(ProductStatus.valueOf(projection.status()))
+                    .type(projection.type())
+                    .status(projection.status())
                     .minPrice(projection.minPrice())
                     .maxPrice(projection.maxPrice())
                     .categoryIds(categoriesByProductId.getOrDefault(projection.id(), List.of()))
@@ -234,9 +234,13 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
             parameters.put("categoryId", categoryId);
         }
         
-        whereBuilder.append("AND (:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) ")
-                .append("AND ((:minPrice IS NULL AND :maxPrice IS NULL) OR EXISTS (SELECT 1 FROM p.options opt WHERE (:minPrice IS NULL OR opt.price >= :minPrice) AND (:maxPrice IS NULL OR opt.price <= :maxPrice))) ")
-                .append("AND p.status IN :statuses");
+        whereBuilder.append("AND (:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) ");
+        
+        if (minPrice != null || maxPrice != null) {
+            whereBuilder.append("AND EXISTS (SELECT 1 FROM p.options opt WHERE (:minPrice IS NULL OR opt.price >= :minPrice) AND (:maxPrice IS NULL OR opt.price <= :maxPrice)) ");
+        }
+        
+        whereBuilder.append("AND p.status IN :statuses ");
         
         parameters.put("keyword", keyword);
         parameters.put("minPrice", minPrice);

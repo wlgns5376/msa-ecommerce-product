@@ -96,7 +96,7 @@ public class SearchProductsService implements SearchProductsUseCase {
             .status(result.status().name())
             .minPrice(result.minPrice())
             .maxPrice(result.maxPrice())
-            .isAvailable(result.minPrice() != null && result.maxPrice() != null)  // 가격이 있으면 구매 가능
+            .isAvailable(result.status() == ProductStatus.ACTIVE && result.minPrice() != null)  // 상태가 ACTIVE이고 가격이 있을 때만 구매 가능
             .categoryIds(categoryIds)
             .build();
     }
