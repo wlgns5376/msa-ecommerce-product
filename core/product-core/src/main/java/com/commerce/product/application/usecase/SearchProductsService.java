@@ -79,7 +79,10 @@ public class SearchProductsService implements SearchProductsUseCase {
         
         Sort.Direction direction = Sort.Direction.fromOptionalString(sortDirection)
             .orElse(Sort.Direction.DESC);
-        return Sort.by(direction, sortBy);
+
+        // NULL 값 정렬 순서를 명시적으로 지정하여 DB 간의 동작 일관성 확보
+        Sort.Order order = new Sort.Order(direction, sortBy).nullsLast();
+        return Sort.by(order);
     }
     
     private SearchProductsResponse.SearchProductItem convertSearchResultToItem(ProductSearchResult result) {

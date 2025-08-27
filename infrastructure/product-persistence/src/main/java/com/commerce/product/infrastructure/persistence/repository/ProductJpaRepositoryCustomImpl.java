@@ -75,25 +75,9 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
         
         String idsQuery = idsQueryBuilder.toString();
         
-        TypedQuery<?> idsTypedQuery = isPriceSort 
-            ? entityManager.createQuery(idsQuery, Object[].class)
-            : entityManager.createQuery(idsQuery, String.class);
-        setQueryParameters(idsTypedQuery, whereResult.parameters());
-        idsTypedQuery.setFirstResult((int) pageable.getOffset());
-        idsTypedQuery.setMaxResults(pageable.getPageSize());
-        
-        List<String> productIds;
-        if (isPriceSort) {
-            @SuppressWarnings("unchecked")
-            List<Object[]> results = (List<Object[]>) idsTypedQuery.getResultList();
-            productIds = results.stream()
-                .map(row -> (String) row[0])
-                .toList();
-        } else {
-            @SuppressWarnings("unchecked")
-            List<String> results = (List<String>) idsTypedQuery.getResultList();
-            productIds = results;
-        }
+        List<String> productIds = isPriceSort 
+            ? executeQueryWithPriceSort(idsQuery, whereResult.parameters(), pageable)
+            : executeQueryWithoutPriceSort(idsQuery, whereResult.parameters(), pageable);
         
         if (productIds.isEmpty()) {
             return new PageImpl<>(List.of(), pageable, 0);
@@ -182,13 +166,11 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
                 .getResultList();
             
             // Group categories by product ID
-            Map<String, List<String>> categoriesByProductId = new HashMap<>();
-            for (Object[] row : categoryResults) {
-                String productId = (String) row[0];
-                String categoryIdValue = (String) row[1];
-                categoriesByProductId.computeIfAbsent(productId, k -> new ArrayList<>())
-                    .add(categoryIdValue);
-            }
+            Map<String, List<String>> categoriesByProductId = categoryResults.stream()
+                .collect(Collectors.groupingBy(
+                    row -> (String) row[0],
+                    Collectors.mapping(row -> (String) row[1], Collectors.toList())
+                ));
             
             // Convert projections to final DTOs with category IDs
             results = projections.stream()
@@ -287,7 +269,22 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
                     String property = "price".equals(order.getProperty())
                             ? "minPrice"
                             : alias + "." + order.getProperty();
-                    return property + " " + order.getDirection().name();
+                    String direction = order.getDirection().name();
+                    
+                    // NullHandling 적용
+                    String nullHandling = "";
+                    if (order.getNullHandling() != null) {
+                        switch (order.getNullHandling()) {
+                            case NULLS_FIRST:
+                                nullHandling = " NULLS FIRST";
+                                break;
+                            case NULLS_LAST:
+                                nullHandling = " NULLS LAST";
+                                break;
+                        }
+                    }
+                    
+                    return property + " " + direction + nullHandling;
                 })
                 .collect(Collectors.joining(", "));
         return "ORDER BY " + clauses;
@@ -303,9 +300,44 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
                     String property = "price".equals(order.getProperty())
                             ? "MIN(opt.price)"
                             : "p." + order.getProperty();
-                    return property + " " + order.getDirection().name();
+                    String direction = order.getDirection().name();
+                    
+                    // NullHandling 적용
+                    String nullHandling = "";
+                    if (order.getNullHandling() != null) {
+                        switch (order.getNullHandling()) {
+                            case NULLS_FIRST:
+                                nullHandling = " NULLS FIRST";
+                                break;
+                            case NULLS_LAST:
+                                nullHandling = " NULLS LAST";
+                                break;
+                        }
+                    }
+                    
+                    return property + " " + direction + nullHandling;
                 })
                 .collect(Collectors.joining(", "));
         return "ORDER BY " + clauses;
+    }
+    
+    private List<String> executeQueryWithPriceSort(String query, Map<String, Object> parameters, Pageable pageable) {
+        TypedQuery<Object[]> typedQuery = entityManager.createQuery(query, Object[].class);
+        setQueryParameters(typedQuery, parameters);
+        typedQuery.setFirstResult((int) pageable.getOffset());
+        typedQuery.setMaxResults(pageable.getPageSize());
+        
+        return typedQuery.getResultList().stream()
+            .map(row -> (String) row[0])
+            .toList();
+    }
+    
+    private List<String> executeQueryWithoutPriceSort(String query, Map<String, Object> parameters, Pageable pageable) {
+        TypedQuery<String> typedQuery = entityManager.createQuery(query, String.class);
+        setQueryParameters(typedQuery, parameters);
+        typedQuery.setFirstResult((int) pageable.getOffset());
+        typedQuery.setMaxResults(pageable.getPageSize());
+        
+        return typedQuery.getResultList();
     }
 }
