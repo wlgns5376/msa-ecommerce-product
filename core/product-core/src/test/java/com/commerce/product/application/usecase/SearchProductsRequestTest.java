@@ -83,8 +83,8 @@ class SearchProductsRequestTest {
     }
     
     @Test
-    @DisplayName("상태 목록이 null이면 기본값으로 설정된다")
-    void should_set_default_statuses_when_null() {
+    @DisplayName("상태 목록을 설정하지 않으면 기본값으로 설정된다")
+    void should_use_default_statuses_when_not_provided() {
         // When
         SearchProductsRequest request = SearchProductsRequest.builder()
             .page(0)
@@ -110,5 +110,19 @@ class SearchProductsRequestTest {
         
         // Then
         assertThat(request.getStatuses()).containsExactlyInAnyOrder(ProductStatus.ACTIVE, ProductStatus.INACTIVE);
+    }
+    
+    @Test
+    @DisplayName("상태 목록을 null로 설정하면 기본값으로 설정된다")
+    void should_use_default_statuses_when_explicitly_set_to_null() {
+        // When
+        SearchProductsRequest request = SearchProductsRequest.builder()
+            .statuses(null)
+            .page(0)
+            .size(20)
+            .build();
+        
+        // Then
+        assertThat(request.getStatuses()).containsExactly(ProductStatus.ACTIVE);
     }
 }

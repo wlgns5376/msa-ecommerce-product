@@ -10,11 +10,11 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 상품 검색 유스케이스 구현
@@ -108,11 +108,7 @@ public class SearchProductsService implements SearchProductsUseCase {
             .build();
     }
     
-    private Integer calculateMinPrice(List<ProductOption> options) {
-        if (options.isEmpty()) {
-            return null;
-        }
-        
+    private Stream<Integer> getIntegerPriceStream(List<ProductOption> options) {
         return options.stream()
             .map(option -> option.getPrice().amount())
             .map(price -> {
@@ -123,28 +119,20 @@ public class SearchProductsService implements SearchProductsUseCase {
                     return null;
                 }
             })
-            .filter(Objects::nonNull)
-            .min(Integer::compareTo)
-            .orElse(null);
+            .filter(Objects::nonNull);
+    }
+    
+    private Integer calculateMinPrice(List<ProductOption> options) {
+        if (options.isEmpty()) {
+            return null;
+        }
+        return getIntegerPriceStream(options).min(Integer::compareTo).orElse(null);
     }
     
     private Integer calculateMaxPrice(List<ProductOption> options) {
         if (options.isEmpty()) {
             return null;
         }
-        
-        return options.stream()
-            .map(option -> option.getPrice().amount())
-            .map(price -> {
-                try {
-                    return price.intValueExact();
-                } catch (ArithmeticException e) {
-                    // 가격이 정수 범위를 벗어나거나 소수점을 포함하는 경우 집계에서 제외
-                    return null;
-                }
-            })
-            .filter(Objects::nonNull)
-            .max(Integer::compareTo)
-            .orElse(null);
+        return getIntegerPriceStream(options).max(Integer::compareTo).orElse(null);
     }
 }

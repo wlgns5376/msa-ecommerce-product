@@ -8,7 +8,6 @@ import java.util.Set;
  */
 public class SearchProductsRequest {
     
-    private static final Set<ProductStatus> DEFAULT_STATUSES = Set.of(ProductStatus.ACTIVE);
     private final String categoryId;
     private final String keyword;
     private final Integer minPrice;

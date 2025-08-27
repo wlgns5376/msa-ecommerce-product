@@ -143,12 +143,18 @@ public class ProductRepositoryAdapter implements ProductRepository {
     @Override
     @Transactional(readOnly = true)
     public Page<Product> searchProducts(ProductSearchCriteria criteria, Pageable pageable) {
+        // 빈 Set인 경우 null로 변환하여 SQL 오류 방지
+        var statuses = criteria.getStatuses();
+        if (statuses != null && statuses.isEmpty()) {
+            statuses = null;
+        }
+        
         Page<ProductJpaEntity> entityPage = productJpaRepository.searchProducts(
             criteria.getCategoryId(),
             criteria.getKeyword(),
             criteria.getMinPrice(),
             criteria.getMaxPrice(),
-            criteria.getStatuses(),
+            statuses,
             pageable
         );
         

@@ -50,7 +50,7 @@ public interface ProductJpaRepository extends JpaRepository<ProductJpaEntity, St
     
     @Query(value = "SELECT DISTINCT p FROM ProductJpaEntity p " +
            "LEFT JOIN FETCH p.options o " +
-           "LEFT JOIN p.categories c " +
+           "LEFT JOIN FETCH p.categories c " +
            "WHERE p.deletedAt IS NULL " +
            "AND (:categoryId IS NULL OR c.categoryId = :categoryId) " +
            "AND (:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
