@@ -23,25 +23,4 @@ public class ProductSearchResultDto {
     private final BigDecimal maxPrice;
     private final List<String> categoryIds;
     private final LocalDateTime createdAt;
-    
-    public ProductSearchResultDto(
-        String id,
-        String name,
-        String description,
-        String type,
-        String status,
-        BigDecimal minPrice,
-        BigDecimal maxPrice,
-        LocalDateTime createdAt
-    ) {
-        this.id = id;
-        this.name = name;
-        this.description = description;
-        this.type = ProductType.valueOf(type);
-        this.status = ProductStatus.valueOf(status);
-        this.minPrice = minPrice;
-        this.maxPrice = maxPrice;
-        this.categoryIds = List.of();
-        this.createdAt = createdAt;
-    }
 }

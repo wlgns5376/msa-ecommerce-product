@@ -1,6 +1,7 @@
 package com.commerce.product.infrastructure.persistence.repository;
 
 import com.commerce.product.domain.model.ProductStatus;
+import com.commerce.product.domain.model.ProductType;
 import com.commerce.product.infrastructure.persistence.dto.ProductSearchResultDto;
 import com.commerce.product.infrastructure.persistence.entity.ProductJpaEntity;
 import jakarta.persistence.EntityManager;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -21,6 +23,18 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
     private EntityManager entityManager;
     
     private record WhereClauseResult(String whereClause, Map<String, Object> parameters) {}
+    
+    // JPQL 프로젝션용 내부 DTO
+    private record ProductProjection(
+        String id,
+        String name,
+        String description,
+        String type,
+        String status,
+        BigDecimal minPrice,
+        BigDecimal maxPrice,
+        LocalDateTime createdAt
+    ) {}
     
     @Override
     public Page<ProductJpaEntity> searchProducts(
@@ -128,7 +142,7 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
             .anyMatch(order -> "price".equals(order.getProperty()));
         
         StringBuilder queryBuilder = new StringBuilder();
-        queryBuilder.append("SELECT new com.commerce.product.infrastructure.persistence.dto.ProductSearchResultDto(")
+        queryBuilder.append("SELECT new com.commerce.product.infrastructure.persistence.repository.ProductJpaRepositoryCustomImpl$ProductProjection(")
                 .append("p.id, p.name, p.description, p.type, p.status, ")
                 .append("MIN(opt.price), MAX(opt.price), p.createdAt) ")
                 .append("FROM ProductJpaEntity p ")
@@ -149,17 +163,18 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
         
         String query = queryBuilder.toString();
         
-        TypedQuery<ProductSearchResultDto> typedQuery = entityManager.createQuery(query, ProductSearchResultDto.class);
+        TypedQuery<ProductProjection> typedQuery = entityManager.createQuery(query, ProductProjection.class);
         setQueryParameters(typedQuery, whereResult.parameters());
         typedQuery.setFirstResult((int) pageable.getOffset());
         typedQuery.setMaxResults(pageable.getPageSize());
         
-        List<ProductSearchResultDto> results = typedQuery.getResultList();
+        List<ProductProjection> projections = typedQuery.getResultList();
         
-        // Fetch category IDs for the results
-        if (!results.isEmpty()) {
-            List<String> productIds = results.stream()
-                .map(ProductSearchResultDto::getId)
+        // Convert projections to DTOs
+        List<ProductSearchResultDto> results;
+        if (!projections.isEmpty()) {
+            List<String> productIds = projections.stream()
+                .map(ProductProjection::id)
                 .collect(Collectors.toList());
             
             String categoryQuery = "SELECT p.id, c.categoryId FROM ProductJpaEntity p " +
@@ -178,20 +193,22 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
                     .add(categoryIdValue);
             }
             
-            // Update results with category IDs
-            results = results.stream()
-                .map(dto -> ProductSearchResultDto.builder()
-                    .id(dto.getId())
-                    .name(dto.getName())
-                    .description(dto.getDescription())
-                    .type(dto.getType())
-                    .status(dto.getStatus())
-                    .minPrice(dto.getMinPrice())
-                    .maxPrice(dto.getMaxPrice())
-                    .categoryIds(categoriesByProductId.getOrDefault(dto.getId(), List.of()))
-                    .createdAt(dto.getCreatedAt())
+            // Convert projections to final DTOs with category IDs
+            results = projections.stream()
+                .map(projection -> ProductSearchResultDto.builder()
+                    .id(projection.id())
+                    .name(projection.name())
+                    .description(projection.description())
+                    .type(ProductType.valueOf(projection.type()))
+                    .status(ProductStatus.valueOf(projection.status()))
+                    .minPrice(projection.minPrice())
+                    .maxPrice(projection.maxPrice())
+                    .categoryIds(categoriesByProductId.getOrDefault(projection.id(), List.of()))
+                    .createdAt(projection.createdAt())
                     .build())
                 .collect(Collectors.toList());
+        } else {
+            results = List.of();
         }
         
         // Count total elements
@@ -210,15 +227,10 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
         StringBuilder whereBuilder = new StringBuilder();
         Map<String, Object> parameters = new HashMap<>();
         
-        // categoryId가 있을 때만 categories 조인
-        if (categoryId != null) {
-            whereBuilder.append("LEFT JOIN p.categories c ");
-        }
-        
         whereBuilder.append("WHERE p.deletedAt IS NULL ");
         
         if (categoryId != null) {
-            whereBuilder.append("AND c.categoryId = :categoryId ");
+            whereBuilder.append("AND EXISTS (SELECT 1 FROM p.categories c WHERE c.categoryId = :categoryId) ");
             parameters.put("categoryId", categoryId);
         }
         

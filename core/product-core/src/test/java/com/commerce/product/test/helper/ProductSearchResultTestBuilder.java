@@ -24,13 +24,7 @@ public class ProductSearchResultTestBuilder {
     }
     
     public ProductSearchResultTestBuilder withId(String id) {
-        try {
-            UUID.fromString(id);
-            this.id = new ProductId(id);
-        } catch (IllegalArgumentException e) {
-            // UUID가 아닌 경우 새로운 UUID 생성
-            this.id = ProductId.generate();
-        }
+        this.id = new ProductId(id);
         return this;
     }
     
