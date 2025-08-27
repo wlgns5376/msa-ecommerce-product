@@ -1,10 +1,9 @@
 package com.commerce.product.infrastructure.persistence.adapter;
 
-import com.commerce.product.domain.model.CategoryId;
-import com.commerce.product.domain.model.Product;
-import com.commerce.product.domain.model.ProductId;
-import com.commerce.product.domain.model.ProductOption;
+import com.commerce.product.domain.model.*;
 import com.commerce.product.domain.repository.ProductRepository;
+import com.commerce.product.domain.repository.ProductSearchCriteria;
+import com.commerce.product.infrastructure.persistence.dto.ProductSearchResultDto;
 import com.commerce.product.infrastructure.persistence.entity.ProductJpaEntity;
 import com.commerce.product.infrastructure.persistence.repository.ProductJpaRepository;
 import lombok.RequiredArgsConstructor;
@@ -137,5 +136,50 @@ public class ProductRepositoryAdapter implements ProductRepository {
     @Transactional(readOnly = true)
     public long count() {
         return productJpaRepository.count();
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Product> searchProducts(ProductSearchCriteria criteria, Pageable pageable) {
+        // 참고: SearchProductsRequest의 build() 메서드에서 statuses가 null이거나 빈 경우를 
+        // 항상 DEFAULT_STATUSES로 설정하므로, criteria.getStatuses()는 절대 빈 Set이 될 수 없음
+        
+        Page<ProductJpaEntity> entityPage = productJpaRepository.searchProducts(
+            criteria.getCategoryId(),
+            criteria.getKeyword(),
+            criteria.getMinPrice(),
+            criteria.getMaxPrice(),
+            criteria.getStatuses(),
+            pageable
+        );
+        
+        return entityPage.map(ProductJpaEntity::toDomainModel);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProductSearchResult> searchProductsOptimized(ProductSearchCriteria criteria, Pageable pageable) {
+        Page<ProductSearchResultDto> dtoPage = productJpaRepository.searchProductsWithDto(
+            criteria.getCategoryId(),
+            criteria.getKeyword(),
+            criteria.getMinPrice(),
+            criteria.getMaxPrice(),
+            criteria.getStatuses(),
+            pageable
+        );
+        
+        return dtoPage.map(dto -> new ProductSearchResult(
+            new ProductId(dto.getId()),
+            new ProductName(dto.getName()),
+            dto.getDescription(),
+            dto.getType(),
+            dto.getStatus(),
+            dto.getMinPrice(),
+            dto.getMaxPrice(),
+            dto.getCategoryIds().stream()
+                .map(CategoryId::new)
+                .toList(),
+            dto.getCreatedAt()
+        ));
     }
 }

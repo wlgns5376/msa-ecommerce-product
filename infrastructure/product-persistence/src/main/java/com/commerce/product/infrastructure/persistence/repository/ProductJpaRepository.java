@@ -1,5 +1,6 @@
 package com.commerce.product.infrastructure.persistence.repository;
 
+import com.commerce.product.domain.model.ProductStatus;
 import com.commerce.product.infrastructure.persistence.entity.ProductJpaEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -10,9 +11,10 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
-public interface ProductJpaRepository extends JpaRepository<ProductJpaEntity, String> {
+public interface ProductJpaRepository extends JpaRepository<ProductJpaEntity, String>, ProductJpaRepositoryCustom {
     
     @Query("SELECT p FROM ProductJpaEntity p LEFT JOIN FETCH p.options LEFT JOIN FETCH p.categories WHERE p.id = :id")
     Optional<ProductJpaEntity> findByIdWithDetails(@Param("id") String id);
@@ -45,4 +47,5 @@ public interface ProductJpaRepository extends JpaRepository<ProductJpaEntity, St
            "WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "AND p.deletedAt IS NULL")
     Page<ProductJpaEntity> searchByName(@Param("keyword") String keyword, Pageable pageable);
+    
 }
