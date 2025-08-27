@@ -88,7 +88,7 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
             List<Object[]> results = (List<Object[]>) idsTypedQuery.getResultList();
             productIds = results.stream()
                 .map(row -> (String) row[0])
-                .collect(Collectors.toList());
+                .toList();
         } else {
             @SuppressWarnings("unchecked")
             List<String> results = (List<String>) idsTypedQuery.getResultList();
@@ -120,7 +120,7 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
         List<ProductJpaEntity> products = productIds.stream()
             .map(productMap::get)
             .filter(Objects::nonNull)
-            .collect(Collectors.toList());
+            .toList();
         
         // Count total elements
         Long total = countTotalElements(categoryId, keyword, minPrice, maxPrice, statuses);
@@ -175,7 +175,7 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
         if (!projections.isEmpty()) {
             List<String> productIds = projections.stream()
                 .map(ProductProjection::id)
-                .collect(Collectors.toList());
+                .toList();
             
             String categoryQuery = "SELECT p.id, c.categoryId FROM ProductJpaEntity p " +
                     "JOIN p.categories c WHERE p.id IN :ids";
@@ -206,7 +206,7 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
                     .categoryIds(categoriesByProductId.getOrDefault(projection.id(), List.of()))
                     .createdAt(projection.createdAt())
                     .build())
-                .collect(Collectors.toList());
+                .toList();
         } else {
             results = List.of();
         }
@@ -279,22 +279,15 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
             return "";
         }
         
-        StringBuilder orderBy = new StringBuilder("ORDER BY ");
-        sort.forEach(order -> {
-            if (orderBy.length() > 9) { // "ORDER BY " has 9 characters
-                orderBy.append(", ");
-            }
-            
-            // price 정렬인 경우 minPrice 별칭 사용
-            if ("price".equals(order.getProperty())) {
-                orderBy.append("minPrice");
-            } else {
-                orderBy.append(alias).append(".").append(order.getProperty());
-            }
-            orderBy.append(" ").append(order.getDirection().name());
-        });
-        
-        return orderBy.toString();
+        String clauses = sort.stream()
+                .map(order -> {
+                    String property = "price".equals(order.getProperty())
+                            ? "minPrice"
+                            : alias + "." + order.getProperty();
+                    return property + " " + order.getDirection().name();
+                })
+                .collect(Collectors.joining(", "));
+        return "ORDER BY " + clauses;
     }
     
     private String buildOrderByClauseForDto(Sort sort) {
@@ -302,21 +295,14 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
             return "";
         }
         
-        StringBuilder orderBy = new StringBuilder("ORDER BY ");
-        sort.forEach(order -> {
-            if (orderBy.length() > 9) { // "ORDER BY " has 9 characters
-                orderBy.append(", ");
-            }
-            
-            // price 정렬인 경우 MIN(opt.price) 사용
-            if ("price".equals(order.getProperty())) {
-                orderBy.append("MIN(opt.price)");
-            } else {
-                orderBy.append("p.").append(order.getProperty());
-            }
-            orderBy.append(" ").append(order.getDirection().name());
-        });
-        
-        return orderBy.toString();
+        String clauses = sort.stream()
+                .map(order -> {
+                    String property = "price".equals(order.getProperty())
+                            ? "MIN(opt.price)"
+                            : "p." + order.getProperty();
+                    return property + " " + order.getDirection().name();
+                })
+                .collect(Collectors.joining(", "));
+        return "ORDER BY " + clauses;
     }
 }

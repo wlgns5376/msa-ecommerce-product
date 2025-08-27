@@ -44,7 +44,7 @@ public class SearchProductsService implements SearchProductsUseCase {
         // 응답 변환
         List<SearchProductsResponse.SearchProductItem> items = searchResultPage.getContent().stream()
             .map(this::convertSearchResultToItem)
-            .collect(Collectors.toList());
+            .toList();
         
         // 페이지 정보 생성
         SearchProductsResponse.PageInfo pageInfo = new SearchProductsResponse.PageInfo(
@@ -86,7 +86,7 @@ public class SearchProductsService implements SearchProductsUseCase {
         // 카테고리 ID 목록 추출
         List<String> categoryIds = result.categoryIds().stream()
             .map(CategoryId::value)
-            .collect(Collectors.toList());
+            .toList();
         
         return SearchProductsResponse.SearchProductItem.builder()
             .productId(result.id().value())

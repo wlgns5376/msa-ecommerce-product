@@ -178,7 +178,7 @@ public class ProductRepositoryAdapter implements ProductRepository {
             dto.getMaxPrice(),
             dto.getCategoryIds().stream()
                 .map(CategoryId::new)
-                .collect(Collectors.toList()),
+                .toList(),
             dto.getCreatedAt()
         ));
     }
