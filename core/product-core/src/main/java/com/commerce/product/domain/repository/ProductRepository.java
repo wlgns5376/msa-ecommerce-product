@@ -1,9 +1,6 @@
 package com.commerce.product.domain.repository;
 
-import com.commerce.product.domain.model.CategoryId;
-import com.commerce.product.domain.model.Product;
-import com.commerce.product.domain.model.ProductId;
-import com.commerce.product.domain.model.ProductOption;
+import com.commerce.product.domain.model.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -64,4 +61,10 @@ public interface ProductRepository extends Repository<Product, ProductId> {
      * 조건에 맞는 상품을 페이지네이션하여 검색합니다.
      */
     Page<Product> searchProducts(ProductSearchCriteria criteria, Pageable pageable);
+    
+    /**
+     * 조건에 맞는 상품을 페이지네이션하여 검색하고 검색 결과 DTO를 반환합니다.
+     * 성능 최적화를 위해 가격 정보가 이미 계산된 결과를 반환합니다.
+     */
+    Page<ProductSearchResult> searchProductsOptimized(ProductSearchCriteria criteria, Pageable pageable);
 }

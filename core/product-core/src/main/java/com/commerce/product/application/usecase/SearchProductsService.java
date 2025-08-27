@@ -41,22 +41,19 @@ public class SearchProductsService implements SearchProductsUseCase {
         // 페이징 정보 생성
         Pageable pageable = createPageable(request);
         
-        // 상품 검색
-        // TODO: 성능 개선 - 현재는 Product 엔티티를 조회한 후 각 옵션에 대해 가격을 계산하고 있음.
-        // 대량의 상품 조회 시 N+1 문제가 발생할 수 있으므로, 추후 Repository에서 
-        // 가격 정보를 포함한 DTO를 직접 조회하는 방식으로 개선 필요
-        Page<Product> productPage = productRepository.searchProducts(criteria, pageable);
+        // 상품 검색 - 최적화된 버전 사용 (가격 정보가 이미 계산된 DTO 반환)
+        Page<ProductSearchResult> searchResultPage = productRepository.searchProductsOptimized(criteria, pageable);
         
         // 응답 변환
-        List<SearchProductsResponse.SearchProductItem> items = productPage.getContent().stream()
-            .map(this::convertToSearchItem)
+        List<SearchProductsResponse.SearchProductItem> items = searchResultPage.getContent().stream()
+            .map(this::convertSearchResultToItem)
             .collect(Collectors.toList());
         
         // 페이지 정보 생성
         SearchProductsResponse.PageInfo pageInfo = new SearchProductsResponse.PageInfo(
-            productPage.getNumber(),
-            productPage.getSize(),
-            productPage.getTotalElements()
+            searchResultPage.getNumber(),
+            searchResultPage.getSize(),
+            searchResultPage.getTotalElements()
         );
         
         return new SearchProductsResponse(items, pageInfo);
@@ -88,34 +85,21 @@ public class SearchProductsService implements SearchProductsUseCase {
         return Sort.by(direction, sortBy);
     }
     
-    private SearchProductsResponse.SearchProductItem convertToSearchItem(Product product) {
-        // 옵션에서 최소/최대 가격 계산 - 한 번의 순회로 최적화
-        BigDecimal minPrice = null;
-        BigDecimal maxPrice = null;
-        for (ProductOption option : product.getOptions()) {
-            BigDecimal price = option.getPrice().amount();
-            if (minPrice == null || price.compareTo(minPrice) < 0) {
-                minPrice = price;
-            }
-            if (maxPrice == null || price.compareTo(maxPrice) > 0) {
-                maxPrice = price;
-            }
-        }
-        
+    private SearchProductsResponse.SearchProductItem convertSearchResultToItem(ProductSearchResult result) {
         // 카테고리 ID 목록 추출
-        List<String> categoryIds = product.getCategoryIds().stream()
+        List<String> categoryIds = result.categoryIds().stream()
             .map(CategoryId::value)
             .collect(Collectors.toList());
         
         return SearchProductsResponse.SearchProductItem.builder()
-            .productId(product.getId().value())
-            .name(product.getName().value())
-            .description(product.getDescription())
-            .productType(product.getType().name())
-            .status(product.getStatus().name())
-            .minPrice(minPrice)
-            .maxPrice(maxPrice)
-            .isAvailable(!product.getOptions().isEmpty())  // 옵션이 있으면 구매 가능
+            .productId(result.id().value())
+            .name(result.name().value())
+            .description(result.description())
+            .productType(result.type().name())
+            .status(result.status().name())
+            .minPrice(result.minPrice())
+            .maxPrice(result.maxPrice())
+            .isAvailable(result.minPrice() != null && result.maxPrice() != null)  // 가격이 있으면 구매 가능
             .categoryIds(categoryIds)
             .build();
     }

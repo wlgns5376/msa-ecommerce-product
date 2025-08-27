@@ -4,6 +4,7 @@ import com.commerce.product.domain.model.*;
 import com.commerce.product.domain.repository.ProductRepository;
 import com.commerce.product.domain.repository.ProductSearchCriteria;
 import com.commerce.product.test.helper.ProductTestBuilder;
+import com.commerce.product.test.helper.ProductSearchResultTestBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -14,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -50,11 +52,11 @@ class SearchProductsUseCaseTest {
                 .size(10)
                 .build();
             
-            List<Product> products = createProductsWithKeyword(keyword);
-            Page<Product> productPage = new PageImpl<>(products, PageRequest.of(0, 10), 2);
+            List<ProductSearchResult> searchResults = createProductSearchResultsWithKeyword(keyword);
+            Page<ProductSearchResult> resultPage = new PageImpl<>(searchResults, PageRequest.of(0, 10), 2);
             
-            given(productRepository.searchProducts(any(ProductSearchCriteria.class), any(Pageable.class)))
-                .willReturn(productPage);
+            given(productRepository.searchProductsOptimized(any(ProductSearchCriteria.class), any(Pageable.class)))
+                .willReturn(resultPage);
             
             // When
             SearchProductsResponse response = searchProductsUseCase.execute(request);
@@ -66,7 +68,7 @@ class SearchProductsUseCaseTest {
                 .allMatch(name -> name.contains(keyword));
             assertThat(response.getPageInfo().getTotalElements()).isEqualTo(2);
             
-            verify(productRepository).searchProducts(
+            verify(productRepository).searchProductsOptimized(
                 argThat(criteria -> keyword.equals(criteria.getKeyword())),
                 any(Pageable.class)
             );
@@ -83,18 +85,18 @@ class SearchProductsUseCaseTest {
                 .size(20)
                 .build();
             
-            List<Product> products = createProductsInCategory();
-            Page<Product> productPage = new PageImpl<>(products, PageRequest.of(0, 20), 3);
+            List<ProductSearchResult> searchResults = createProductSearchResultsInCategory(categoryId);
+            Page<ProductSearchResult> resultPage = new PageImpl<>(searchResults, PageRequest.of(0, 20), 3);
             
-            given(productRepository.searchProducts(any(ProductSearchCriteria.class), any(Pageable.class)))
-                .willReturn(productPage);
+            given(productRepository.searchProductsOptimized(any(ProductSearchCriteria.class), any(Pageable.class)))
+                .willReturn(resultPage);
             
             // When
             SearchProductsResponse response = searchProductsUseCase.execute(request);
             
             // Then
             assertThat(response.getProducts()).hasSize(3);
-            verify(productRepository).searchProducts(
+            verify(productRepository).searchProductsOptimized(
                 argThat(criteria -> categoryId.equals(criteria.getCategoryId())),
                 any(Pageable.class)
             );
@@ -111,11 +113,11 @@ class SearchProductsUseCaseTest {
                 .size(10)
                 .build();
             
-            List<Product> products = createProductsInPriceRange();
-            Page<Product> productPage = new PageImpl<>(products, PageRequest.of(0, 10), 2);
+            List<ProductSearchResult> searchResults = createProductSearchResultsInPriceRange();
+            Page<ProductSearchResult> resultPage = new PageImpl<>(searchResults, PageRequest.of(0, 10), 2);
             
-            given(productRepository.searchProducts(any(ProductSearchCriteria.class), any(Pageable.class)))
-                .willReturn(productPage);
+            given(productRepository.searchProductsOptimized(any(ProductSearchCriteria.class), any(Pageable.class)))
+                .willReturn(resultPage);
             
             // When
             SearchProductsResponse response = searchProductsUseCase.execute(request);
@@ -124,7 +126,7 @@ class SearchProductsUseCaseTest {
             assertThat(response.getProducts()).hasSize(2);
             // 참고: 실제 필터링은 repository에서 수행되므로, 
             // 여기서는 repository가 올바른 criteria를 받았는지만 검증
-            verify(productRepository).searchProducts(
+            verify(productRepository).searchProductsOptimized(
                 argThat(criteria -> 
                     criteria.getMinPrice() != null && criteria.getMinPrice().equals(new BigDecimal("10000")) &&
                     criteria.getMaxPrice() != null && criteria.getMaxPrice().equals(new BigDecimal("50000"))),
@@ -142,18 +144,18 @@ class SearchProductsUseCaseTest {
                 .size(10)
                 .build();
             
-            List<Product> products = createProductsWithStatus(ProductStatus.ACTIVE);
-            Page<Product> productPage = new PageImpl<>(products, PageRequest.of(0, 10), 2);
+            List<ProductSearchResult> searchResults = createProductSearchResultsWithStatus(ProductStatus.ACTIVE);
+            Page<ProductSearchResult> resultPage = new PageImpl<>(searchResults, PageRequest.of(0, 10), 2);
             
-            given(productRepository.searchProducts(any(ProductSearchCriteria.class), any(Pageable.class)))
-                .willReturn(productPage);
+            given(productRepository.searchProductsOptimized(any(ProductSearchCriteria.class), any(Pageable.class)))
+                .willReturn(resultPage);
             
             // When
             SearchProductsResponse response = searchProductsUseCase.execute(request);
             
             // Then
             assertThat(response.getProducts()).hasSize(2);
-            verify(productRepository).searchProducts(
+            verify(productRepository).searchProductsOptimized(
                 argThat(criteria -> criteria.getStatuses().containsAll(statuses)),
                 any(Pageable.class)
             );
@@ -175,11 +177,11 @@ class SearchProductsUseCaseTest {
                 .sortDirection("ASC")
                 .build();
             
-            List<Product> products = createPremiumProducts();
-            Page<Product> productPage = new PageImpl<>(products, PageRequest.of(0, 10), 1);
+            List<ProductSearchResult> searchResults = createPremiumProductSearchResults();
+            Page<ProductSearchResult> resultPage = new PageImpl<>(searchResults, PageRequest.of(0, 10), 1);
             
-            given(productRepository.searchProducts(any(ProductSearchCriteria.class), any(Pageable.class)))
-                .willReturn(productPage);
+            given(productRepository.searchProductsOptimized(any(ProductSearchCriteria.class), any(Pageable.class)))
+                .willReturn(resultPage);
             
             // When
             SearchProductsResponse response = searchProductsUseCase.execute(request);
@@ -201,12 +203,12 @@ class SearchProductsUseCaseTest {
                 .sortDirection("ASC")
                 .build();
             
-            List<Product> products = createSortedProducts();
-            Page<Product> productPage = new PageImpl<>(products, PageRequest.of(0, 10, 
+            List<ProductSearchResult> searchResults = createSortedProductSearchResults();
+            Page<ProductSearchResult> resultPage = new PageImpl<>(searchResults, PageRequest.of(0, 10, 
                 Sort.by(Sort.Direction.ASC, "name")), 3);
             
-            given(productRepository.searchProducts(any(ProductSearchCriteria.class), any(Pageable.class)))
-                .willReturn(productPage);
+            given(productRepository.searchProductsOptimized(any(ProductSearchCriteria.class), any(Pageable.class)))
+                .willReturn(resultPage);
             
             // When
             SearchProductsResponse response = searchProductsUseCase.execute(request);
@@ -216,7 +218,7 @@ class SearchProductsUseCaseTest {
             assertThat(response.getProducts())
                 .extracting(SearchProductsResponse.SearchProductItem::getName)
                 .containsExactly("A상품", "B상품", "C상품");
-            verify(productRepository).searchProducts(
+            verify(productRepository).searchProductsOptimized(
                 any(ProductSearchCriteria.class),
                 argThat(pageable -> {
                     Sort.Order order = pageable.getSort().getOrderFor("name");
@@ -234,11 +236,11 @@ class SearchProductsUseCaseTest {
                 .size(2)  // 페이지당 2개
                 .build();
             
-            List<Product> products = createProductsForPagination();
-            Page<Product> productPage = new PageImpl<>(products, PageRequest.of(1, 2), 5);
+            List<ProductSearchResult> searchResults = createProductSearchResultsForPagination();
+            Page<ProductSearchResult> resultPage = new PageImpl<>(searchResults, PageRequest.of(1, 2), 5);
             
-            given(productRepository.searchProducts(any(ProductSearchCriteria.class), any(Pageable.class)))
-                .willReturn(productPage);
+            given(productRepository.searchProductsOptimized(any(ProductSearchCriteria.class), any(Pageable.class)))
+                .willReturn(resultPage);
             
             // When
             SearchProductsResponse response = searchProductsUseCase.execute(request);
@@ -260,9 +262,9 @@ class SearchProductsUseCaseTest {
                 .keyword("존재하지않는상품")
                 .build();
             
-            Page<Product> emptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 20), 0);
+            Page<ProductSearchResult> emptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 20), 0);
             
-            given(productRepository.searchProducts(any(ProductSearchCriteria.class), any(Pageable.class)))
+            given(productRepository.searchProductsOptimized(any(ProductSearchCriteria.class), any(Pageable.class)))
                 .willReturn(emptyPage);
             
             // When
@@ -283,11 +285,11 @@ class SearchProductsUseCaseTest {
                 .size(10)
                 .build();
             
-            List<Product> products = createProductsWithMixedStock();
-            Page<Product> productPage = new PageImpl<>(products, PageRequest.of(0, 10), 3);
+            List<ProductSearchResult> searchResults = createProductSearchResultsWithMixedStock();
+            Page<ProductSearchResult> resultPage = new PageImpl<>(searchResults, PageRequest.of(0, 10), 3);
             
-            given(productRepository.searchProducts(any(ProductSearchCriteria.class), any(Pageable.class)))
-                .willReturn(productPage);
+            given(productRepository.searchProductsOptimized(any(ProductSearchCriteria.class), any(Pageable.class)))
+                .willReturn(resultPage);
             
             // When
             SearchProductsResponse response = searchProductsUseCase.execute(request);
@@ -305,12 +307,12 @@ class SearchProductsUseCaseTest {
                 .size(10)
                 .build();
             
-            Product productWithMultipleOptions = createProductWithPriceRange();
-            Page<Product> productPage = new PageImpl<>(List.of(productWithMultipleOptions), 
+            ProductSearchResult productWithMultipleOptions = createProductSearchResultWithPriceRange();
+            Page<ProductSearchResult> resultPage = new PageImpl<>(List.of(productWithMultipleOptions), 
                 PageRequest.of(0, 10), 1);
             
-            given(productRepository.searchProducts(any(ProductSearchCriteria.class), any(Pageable.class)))
-                .willReturn(productPage);
+            given(productRepository.searchProductsOptimized(any(ProductSearchCriteria.class), any(Pageable.class)))
+                .willReturn(resultPage);
             
             // When
             SearchProductsResponse response = searchProductsUseCase.execute(request);
@@ -335,12 +337,12 @@ class SearchProductsUseCaseTest {
             
             // 상품의 옵션이 10000, 20000, 30000원인 경우
             // 20000원 옵션이 검색 범위에 포함되므로 이 상품이 반환되어야 함
-            Product productWithMultipleOptions = createProductWithPriceRange();
-            Page<Product> productPage = new PageImpl<>(List.of(productWithMultipleOptions), 
+            ProductSearchResult productWithMultipleOptions = createProductSearchResultWithPriceRange();
+            Page<ProductSearchResult> resultPage = new PageImpl<>(List.of(productWithMultipleOptions), 
                 PageRequest.of(0, 10), 1);
             
-            given(productRepository.searchProducts(any(ProductSearchCriteria.class), any(Pageable.class)))
-                .willReturn(productPage);
+            given(productRepository.searchProductsOptimized(any(ProductSearchCriteria.class), any(Pageable.class)))
+                .willReturn(resultPage);
             
             // When
             SearchProductsResponse response = searchProductsUseCase.execute(request);
@@ -366,18 +368,19 @@ class SearchProductsUseCaseTest {
                 .size(10)
                 .build();
             
-            Product productWithoutOptions = ProductTestBuilder.builder()
-                .withId(ProductId.generate())
+            ProductSearchResult productWithoutOptions = ProductSearchResultTestBuilder.aProductSearchResult()
+                .withId(UUID.randomUUID().toString())
                 .withName("옵션 없는 상품")
                 .withType(ProductType.NORMAL)
                 .withStatus(ProductStatus.ACTIVE)
-                .withOptions(List.of())  // 빈 옵션 리스트
+                .withMinPrice(null)  // 옵션이 없으므로 null
+                .withMaxPrice(null)  // 옵션이 없으므로 null
                 .build();
-            Page<Product> productPage = new PageImpl<>(List.of(productWithoutOptions), 
+            Page<ProductSearchResult> resultPage = new PageImpl<>(List.of(productWithoutOptions), 
                 PageRequest.of(0, 10), 1);
             
-            given(productRepository.searchProducts(any(ProductSearchCriteria.class), any(Pageable.class)))
-                .willReturn(productPage);
+            given(productRepository.searchProductsOptimized(any(ProductSearchCriteria.class), any(Pageable.class)))
+                .willReturn(resultPage);
             
             // When
             SearchProductsResponse response = searchProductsUseCase.execute(request);
@@ -400,18 +403,18 @@ class SearchProductsUseCaseTest {
                 .sortDirection("DESC")
                 .build();
             
-            List<Product> products = createProductsInCategory();
-            Page<Product> productPage = new PageImpl<>(products, PageRequest.of(0, 10), 3);
+            List<ProductSearchResult> searchResults = createProductSearchResultsInCategory("CAT001");
+            Page<ProductSearchResult> resultPage = new PageImpl<>(searchResults, PageRequest.of(0, 10), 3);
             
-            given(productRepository.searchProducts(any(ProductSearchCriteria.class), any(Pageable.class)))
-                .willReturn(productPage);
+            given(productRepository.searchProductsOptimized(any(ProductSearchCriteria.class), any(Pageable.class)))
+                .willReturn(resultPage);
             
             // When
             SearchProductsResponse response = searchProductsUseCase.execute(request);
             
             // Then
             assertThat(response.getProducts()).hasSize(3);
-            verify(productRepository).searchProducts(
+            verify(productRepository).searchProductsOptimized(
                 any(ProductSearchCriteria.class),
                 argThat(pageable -> {
                     Sort.Order order = pageable.getSort().getOrderFor("createdAt");
@@ -431,18 +434,18 @@ class SearchProductsUseCaseTest {
                 .sortDirection("ASC")
                 .build();
             
-            List<Product> products = createProductsInCategory();
-            Page<Product> productPage = new PageImpl<>(products, PageRequest.of(0, 10), 3);
+            List<ProductSearchResult> searchResults = createProductSearchResultsInCategory("CAT001");
+            Page<ProductSearchResult> resultPage = new PageImpl<>(searchResults, PageRequest.of(0, 10), 3);
             
-            given(productRepository.searchProducts(any(ProductSearchCriteria.class), any(Pageable.class)))
-                .willReturn(productPage);
+            given(productRepository.searchProductsOptimized(any(ProductSearchCriteria.class), any(Pageable.class)))
+                .willReturn(resultPage);
             
             // When
             SearchProductsResponse response = searchProductsUseCase.execute(request);
             
             // Then
             assertThat(response.getProducts()).hasSize(3);
-            verify(productRepository).searchProducts(
+            verify(productRepository).searchProductsOptimized(
                 any(ProductSearchCriteria.class),
                 argThat(pageable -> {
                     Sort.Order order = pageable.getSort().getOrderFor("name");
@@ -450,6 +453,138 @@ class SearchProductsUseCaseTest {
                 })
             );
         }
+    }
+    
+    // Helper methods for creating test data
+    
+    private List<ProductSearchResult> createProductSearchResultsWithKeyword(String keyword) {
+        ProductSearchResult result1 = ProductSearchResultTestBuilder.aProductSearchResult()
+            .withId(UUID.randomUUID().toString())
+            .withName(keyword + " 기본형")
+            .withType(ProductType.NORMAL)
+            .withStatus(ProductStatus.ACTIVE)
+            .withMinPrice(new BigDecimal("20000"))
+            .withMaxPrice(new BigDecimal("20000"))
+            .build();
+            
+        ProductSearchResult result2 = ProductSearchResultTestBuilder.aProductSearchResult()
+            .withId(UUID.randomUUID().toString())
+            .withName("프리미엄 " + keyword)
+            .withType(ProductType.NORMAL)
+            .withStatus(ProductStatus.ACTIVE)
+            .withMinPrice(new BigDecimal("50000"))
+            .withMaxPrice(new BigDecimal("50000"))
+            .build();
+            
+        return List.of(result1, result2);
+    }
+    
+    private List<ProductSearchResult> createProductSearchResultsInCategory(String categoryId) {
+        return List.of(
+            createSimpleProductSearchResult(UUID.randomUUID().toString(), "상품1", List.of(categoryId)),
+            createSimpleProductSearchResult(UUID.randomUUID().toString(), "상품2", List.of(categoryId)),
+            createSimpleProductSearchResult(UUID.randomUUID().toString(), "상품3", List.of(categoryId))
+        );
+    }
+    
+    private List<ProductSearchResult> createProductSearchResultsInPriceRange() {
+        ProductSearchResult result1 = ProductSearchResultTestBuilder.aProductSearchResult()
+            .withId(UUID.randomUUID().toString())
+            .withName("저가 상품")
+            .withType(ProductType.NORMAL)
+            .withStatus(ProductStatus.ACTIVE)
+            .withMinPrice(new BigDecimal("15000"))
+            .withMaxPrice(new BigDecimal("15000"))
+            .build();
+            
+        ProductSearchResult result2 = ProductSearchResultTestBuilder.aProductSearchResult()
+            .withId(UUID.randomUUID().toString())
+            .withName("중가 상품")
+            .withType(ProductType.NORMAL)
+            .withStatus(ProductStatus.ACTIVE)
+            .withMinPrice(new BigDecimal("35000"))
+            .withMaxPrice(new BigDecimal("35000"))
+            .build();
+            
+        return List.of(result1, result2);
+    }
+    
+    private List<ProductSearchResult> createProductSearchResultsWithStatus(ProductStatus status) {
+        return List.of(
+            ProductSearchResultTestBuilder.aProductSearchResult()
+                .withId(UUID.randomUUID().toString())
+                .withName("활성 상품1")
+                .withStatus(status)
+                .withMinPrice(new BigDecimal("20000"))
+                .withMaxPrice(new BigDecimal("20000"))
+                .build(),
+            ProductSearchResultTestBuilder.aProductSearchResult()
+                .withId(UUID.randomUUID().toString())
+                .withName("활성 상품2")
+                .withStatus(status)
+                .withMinPrice(new BigDecimal("30000"))
+                .withMaxPrice(new BigDecimal("30000"))
+                .build()
+        );
+    }
+    
+    private ProductSearchResult createSimpleProductSearchResult(String id, String name, List<String> categoryIds) {
+        return ProductSearchResultTestBuilder.aProductSearchResult()
+            .withId(UUID.randomUUID().toString())  // UUID 형식 사용
+            .withName(name)
+            .withType(ProductType.NORMAL)
+            .withStatus(ProductStatus.ACTIVE)
+            .withMinPrice(new BigDecimal("20000"))
+            .withMaxPrice(new BigDecimal("20000"))
+            .withCategoryIds(categoryIds)
+            .build();
+    }
+    
+    private List<ProductSearchResult> createPremiumProductSearchResults() {
+        return List.of(
+            ProductSearchResultTestBuilder.aProductSearchResult()
+                .withId(UUID.randomUUID().toString())
+                .withName("프리미엄 한정판")
+                .withType(ProductType.NORMAL)
+                .withStatus(ProductStatus.ACTIVE)
+                .withMinPrice(new BigDecimal("80000"))
+                .withMaxPrice(new BigDecimal("80000"))
+                .build()
+        );
+    }
+    
+    private List<ProductSearchResult> createSortedProductSearchResults() {
+        return List.of(
+            createSimpleProductSearchResult(UUID.randomUUID().toString(), "A상품", List.of()),
+            createSimpleProductSearchResult(UUID.randomUUID().toString(), "B상품", List.of()),
+            createSimpleProductSearchResult(UUID.randomUUID().toString(), "C상품", List.of())
+        );
+    }
+    
+    private List<ProductSearchResult> createProductSearchResultsForPagination() {
+        return List.of(
+            createSimpleProductSearchResult(UUID.randomUUID().toString(), "상품3", List.of()),
+            createSimpleProductSearchResult(UUID.randomUUID().toString(), "상품4", List.of())
+        );
+    }
+    
+    private List<ProductSearchResult> createProductSearchResultsWithMixedStock() {
+        return List.of(
+            createSimpleProductSearchResult(UUID.randomUUID().toString(), "재고있음", List.of()),
+            createSimpleProductSearchResult(UUID.randomUUID().toString(), "재고없음", List.of()),
+            createSimpleProductSearchResult(UUID.randomUUID().toString(), "재고소량", List.of())
+        );
+    }
+    
+    private ProductSearchResult createProductSearchResultWithPriceRange() {
+        return ProductSearchResultTestBuilder.aProductSearchResult()
+            .withId(UUID.randomUUID().toString())
+            .withName("다양한 가격 옵션 상품")
+            .withType(ProductType.NORMAL)
+            .withStatus(ProductStatus.ACTIVE)
+            .withMinPrice(new BigDecimal("10000"))  // 최저가 옵션
+            .withMaxPrice(new BigDecimal("30000"))  // 최고가 옵션
+            .build();
     }
     
     // Helper methods for creating test data

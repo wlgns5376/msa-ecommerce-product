@@ -1,6 +1,7 @@
 package com.commerce.product.infrastructure.persistence.repository;
 
 import com.commerce.product.domain.model.ProductStatus;
+import com.commerce.product.infrastructure.persistence.dto.ProductSearchResultDto;
 import com.commerce.product.infrastructure.persistence.entity.ProductJpaEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -11,16 +12,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCustom {
     
     @PersistenceContext
     private EntityManager entityManager;
+    
+    private record WhereClauseResult(String whereClause, Map<String, Object> parameters) {}
     
     @Override
     public Page<ProductJpaEntity> searchProducts(
@@ -44,20 +44,9 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
             idsQueryBuilder.append("SELECT DISTINCT p.id FROM ProductJpaEntity p ");
         }
         
-        // categoryId가 있을 때만 categories 조인
-        if (categoryId != null) {
-            idsQueryBuilder.append("LEFT JOIN p.categories c ");
-        }
-        
-        idsQueryBuilder.append("WHERE p.deletedAt IS NULL ");
-        
-        if (categoryId != null) {
-            idsQueryBuilder.append("AND c.categoryId = :categoryId ");
-        }
-        
-        idsQueryBuilder.append("AND (:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) ")
-                .append("AND ((:minPrice IS NULL AND :maxPrice IS NULL) OR EXISTS (SELECT 1 FROM p.options opt WHERE (:minPrice IS NULL OR opt.price >= :minPrice) AND (:maxPrice IS NULL OR opt.price <= :maxPrice))) ")
-                .append("AND p.status IN :statuses");
+        // Build WHERE clause using helper method
+        WhereClauseResult whereResult = buildWhereClause(categoryId, keyword, minPrice, maxPrice, statuses);
+        idsQueryBuilder.append(whereResult.whereClause());
         
         // price 정렬인 경우 GROUP BY 추가
         if (isPriceSort) {
@@ -75,11 +64,7 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
         TypedQuery<?> idsTypedQuery = isPriceSort 
             ? entityManager.createQuery(idsQuery, Object[].class)
             : entityManager.createQuery(idsQuery, String.class);
-        idsTypedQuery.setParameter("categoryId", categoryId);
-        idsTypedQuery.setParameter("keyword", keyword);
-        idsTypedQuery.setParameter("minPrice", minPrice);
-        idsTypedQuery.setParameter("maxPrice", maxPrice);
-        idsTypedQuery.setParameter("statuses", statuses);
+        setQueryParameters(idsTypedQuery, whereResult.parameters());
         idsTypedQuery.setFirstResult((int) pageable.getOffset());
         idsTypedQuery.setMaxResults(pageable.getPageSize());
         
@@ -124,35 +109,153 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
             .collect(Collectors.toList());
         
         // Count total elements
-        StringBuilder countQueryBuilder = new StringBuilder("SELECT COUNT(DISTINCT p) FROM ProductJpaEntity p ");
+        Long total = countTotalElements(categoryId, keyword, minPrice, maxPrice, statuses);
+        
+        return new PageImpl<>(products, pageable, total);
+    }
+    
+    @Override
+    public Page<ProductSearchResultDto> searchProductsWithDto(
+            String categoryId,
+            String keyword,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            Set<ProductStatus> statuses,
+            Pageable pageable) {
+        
+        // Step 1: Get product search results with pagination
+        boolean isPriceSort = pageable.getSort().stream()
+            .anyMatch(order -> "price".equals(order.getProperty()));
+        
+        StringBuilder queryBuilder = new StringBuilder();
+        queryBuilder.append("SELECT new com.commerce.product.infrastructure.persistence.dto.ProductSearchResultDto(")
+                .append("p.id, p.name, p.description, p.type, p.status, ")
+                .append("MIN(opt.price), MAX(opt.price), p.createdAt) ")
+                .append("FROM ProductJpaEntity p ")
+                .append("LEFT JOIN p.options opt ");
+        
+        // Build WHERE clause using helper method
+        WhereClauseResult whereResult = buildWhereClause(categoryId, keyword, minPrice, maxPrice, statuses);
+        queryBuilder.append(whereResult.whereClause());
+        
+        // GROUP BY for aggregation
+        queryBuilder.append(" GROUP BY p.id, p.name, p.description, p.type, p.status, p.createdAt");
+        
+        // Add dynamic sort
+        String orderByClause = buildOrderByClauseForDto(pageable.getSort());
+        if (!orderByClause.isEmpty()) {
+            queryBuilder.append(" ").append(orderByClause);
+        }
+        
+        String query = queryBuilder.toString();
+        
+        TypedQuery<ProductSearchResultDto> typedQuery = entityManager.createQuery(query, ProductSearchResultDto.class);
+        setQueryParameters(typedQuery, whereResult.parameters());
+        typedQuery.setFirstResult((int) pageable.getOffset());
+        typedQuery.setMaxResults(pageable.getPageSize());
+        
+        List<ProductSearchResultDto> results = typedQuery.getResultList();
+        
+        // Fetch category IDs for the results
+        if (!results.isEmpty()) {
+            List<String> productIds = results.stream()
+                .map(ProductSearchResultDto::getId)
+                .collect(Collectors.toList());
+            
+            String categoryQuery = "SELECT p.id, c.categoryId FROM ProductJpaEntity p " +
+                    "JOIN p.categories c WHERE p.id IN :ids";
+            
+            List<Object[]> categoryResults = entityManager.createQuery(categoryQuery, Object[].class)
+                .setParameter("ids", productIds)
+                .getResultList();
+            
+            // Group categories by product ID
+            Map<String, List<String>> categoriesByProductId = new HashMap<>();
+            for (Object[] row : categoryResults) {
+                String productId = (String) row[0];
+                String categoryIdValue = (String) row[1];
+                categoriesByProductId.computeIfAbsent(productId, k -> new ArrayList<>())
+                    .add(categoryIdValue);
+            }
+            
+            // Update results with category IDs
+            results = results.stream()
+                .map(dto -> ProductSearchResultDto.builder()
+                    .id(dto.getId())
+                    .name(dto.getName())
+                    .description(dto.getDescription())
+                    .type(dto.getType())
+                    .status(dto.getStatus())
+                    .minPrice(dto.getMinPrice())
+                    .maxPrice(dto.getMaxPrice())
+                    .categoryIds(categoriesByProductId.getOrDefault(dto.getId(), List.of()))
+                    .createdAt(dto.getCreatedAt())
+                    .build())
+                .collect(Collectors.toList());
+        }
+        
+        // Count total elements
+        Long total = countTotalElements(categoryId, keyword, minPrice, maxPrice, statuses);
+        
+        return new PageImpl<>(results, pageable, total);
+    }
+    
+    private WhereClauseResult buildWhereClause(
+            String categoryId,
+            String keyword,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            Set<ProductStatus> statuses) {
+        
+        StringBuilder whereBuilder = new StringBuilder();
+        Map<String, Object> parameters = new HashMap<>();
         
         // categoryId가 있을 때만 categories 조인
         if (categoryId != null) {
-            countQueryBuilder.append("LEFT JOIN p.categories c ");
+            whereBuilder.append("LEFT JOIN p.categories c ");
         }
         
-        countQueryBuilder.append("WHERE p.deletedAt IS NULL ");
+        whereBuilder.append("WHERE p.deletedAt IS NULL ");
         
         if (categoryId != null) {
-            countQueryBuilder.append("AND c.categoryId = :categoryId ");
+            whereBuilder.append("AND c.categoryId = :categoryId ");
+            parameters.put("categoryId", categoryId);
         }
         
-        countQueryBuilder.append("AND (:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) ")
+        whereBuilder.append("AND (:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) ")
                 .append("AND ((:minPrice IS NULL AND :maxPrice IS NULL) OR EXISTS (SELECT 1 FROM p.options opt WHERE (:minPrice IS NULL OR opt.price >= :minPrice) AND (:maxPrice IS NULL OR opt.price <= :maxPrice))) ")
                 .append("AND p.status IN :statuses");
         
-        String countQuery = countQueryBuilder.toString();
+        parameters.put("keyword", keyword);
+        parameters.put("minPrice", minPrice);
+        parameters.put("maxPrice", maxPrice);
+        parameters.put("statuses", statuses);
         
-        TypedQuery<Long> countTypedQuery = entityManager.createQuery(countQuery, Long.class);
-        countTypedQuery.setParameter("categoryId", categoryId);
-        countTypedQuery.setParameter("keyword", keyword);
-        countTypedQuery.setParameter("minPrice", minPrice);
-        countTypedQuery.setParameter("maxPrice", maxPrice);
-        countTypedQuery.setParameter("statuses", statuses);
+        return new WhereClauseResult(whereBuilder.toString(), parameters);
+    }
+    
+    private void setQueryParameters(TypedQuery<?> query, Map<String, Object> parameters) {
+        for (Map.Entry<String, Object> entry : parameters.entrySet()) {
+            query.setParameter(entry.getKey(), entry.getValue());
+        }
+    }
+    
+    private Long countTotalElements(
+            String categoryId,
+            String keyword,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            Set<ProductStatus> statuses) {
         
-        Long total = countTypedQuery.getSingleResult();
+        StringBuilder countQueryBuilder = new StringBuilder("SELECT COUNT(DISTINCT p) FROM ProductJpaEntity p ");
         
-        return new PageImpl<>(products, pageable, total);
+        WhereClauseResult whereResult = buildWhereClause(categoryId, keyword, minPrice, maxPrice, statuses);
+        countQueryBuilder.append(whereResult.whereClause());
+        
+        TypedQuery<Long> countQuery = entityManager.createQuery(countQueryBuilder.toString(), Long.class);
+        setQueryParameters(countQuery, whereResult.parameters());
+        
+        return countQuery.getSingleResult();
     }
     
     private String buildOrderByClause(Sort sort, String alias, boolean isPriceSort) {
@@ -171,6 +274,29 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
                 orderBy.append("minPrice");
             } else {
                 orderBy.append(alias).append(".").append(order.getProperty());
+            }
+            orderBy.append(" ").append(order.getDirection().name());
+        });
+        
+        return orderBy.toString();
+    }
+    
+    private String buildOrderByClauseForDto(Sort sort) {
+        if (sort == null || sort.isUnsorted()) {
+            return "";
+        }
+        
+        StringBuilder orderBy = new StringBuilder("ORDER BY ");
+        sort.forEach(order -> {
+            if (orderBy.length() > 9) { // "ORDER BY " has 9 characters
+                orderBy.append(", ");
+            }
+            
+            // price 정렬인 경우 MIN(opt.price) 사용
+            if ("price".equals(order.getProperty())) {
+                orderBy.append("MIN(opt.price)");
+            } else {
+                orderBy.append("p.").append(order.getProperty());
             }
             orderBy.append(" ").append(order.getDirection().name());
         });
