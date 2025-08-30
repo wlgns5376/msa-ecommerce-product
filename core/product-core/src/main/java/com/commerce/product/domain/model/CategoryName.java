@@ -4,10 +4,14 @@ import com.commerce.common.domain.model.ValueObject;
 import com.commerce.product.domain.exception.InvalidCategoryNameException;
 
 public record CategoryName(String value) implements ValueObject {
-    private static final int MAX_LENGTH = 50;
+    private static final int MAX_LENGTH = 100;
     
     public CategoryName {
         validate(value);
+    }
+    
+    public static CategoryName of(String value) {
+        return new CategoryName(value);
     }
 
     private static void validate(String value) {

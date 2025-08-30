@@ -45,22 +45,22 @@ class CategoryNameTest {
     }
 
     @Test
-    @DisplayName("50자를 초과하는 카테고리명으로 생성시 예외가 발생한다")
+    @DisplayName("100자를 초과하는 카테고리명으로 생성시 예외가 발생한다")
     void shouldThrowExceptionWhenNameExceedsMaxLength() {
         // Given
-        String longName = "a".repeat(51);
+        String longName = "a".repeat(101);
 
         // When & Then
         assertThatThrownBy(() -> new CategoryName(longName))
                 .isInstanceOf(InvalidCategoryNameException.class)
-                .hasMessageContaining("Category name cannot exceed 50 characters");
+                .hasMessageContaining("Category name cannot exceed 100 characters");
     }
 
     @Test
-    @DisplayName("50자 이내의 카테고리명은 정상적으로 생성된다")
+    @DisplayName("100자 이내의 카테고리명은 정상적으로 생성된다")
     void shouldCreateCategoryNameWithMaxLength() {
         // Given
-        String maxLengthName = "a".repeat(50);
+        String maxLengthName = "a".repeat(100);
 
         // When
         CategoryName categoryName = new CategoryName(maxLengthName);
