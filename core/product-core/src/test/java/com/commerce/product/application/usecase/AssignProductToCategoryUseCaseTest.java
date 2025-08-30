@@ -172,12 +172,30 @@ class AssignProductToCategoryUseCaseTest {
                 .categoryIds(categoryIds)
                 .build();
 
+        Product product = Product.create(
+                ProductName.of("Test Product"),
+                "Description",
+                ProductType.NORMAL
+        );
+        
+        when(productRepository.findById(ProductId.of(productId)))
+                .thenReturn(Optional.of(product));
+        
+        List<CategoryId> categoryIdList = categoryIds.stream()
+                .map(CategoryId::of)
+                .toList();
+        
+        when(categoryRepository.findAllById(categoryIdList))
+                .thenReturn(categoryIds.stream()
+                        .map(id -> Category.createRoot(CategoryId.of(id), CategoryName.of("Category"), 1))
+                        .toList());
+
         // When & Then
         assertThatThrownBy(() -> assignProductToCategoryUseCase.execute(request))
                 .isInstanceOf(MaxCategoryLimitException.class)
                 .hasMessageContaining("최대 5개의 카테고리");
 
-        verify(productRepository, never()).findById(any(ProductId.class));
+        verify(productRepository, times(1)).findById(any(ProductId.class));
         verify(productRepository, never()).save(any(Product.class));
     }
 

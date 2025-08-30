@@ -1,8 +1,6 @@
 package com.commerce.product.application.usecase;
 
-import com.commerce.product.domain.exception.CannotDeactivateCategoryException;
 import com.commerce.product.domain.exception.InvalidCategoryIdException;
-import com.commerce.product.domain.exception.InvalidCategoryNameException;
 import com.commerce.product.domain.model.Category;
 import com.commerce.product.domain.model.CategoryId;
 import com.commerce.product.domain.model.CategoryName;
@@ -26,12 +24,12 @@ public class UpdateCategoryService implements UpdateCategoryUseCase {
                 .orElseThrow(() -> new InvalidCategoryIdException("Category not found: " + request.getCategoryId()));
         
         if (request.getName() != null) {
-            validateName(request.getName());
+            // CategoryName 값 객체가 유효성 검사를 수행
             category.updateName(CategoryName.of(request.getName()));
         }
         
         if (request.getSortOrder() != null) {
-            validateSortOrder(request.getSortOrder());
+            // Category 도메인이 sortOrder 유효성 검사를 수행
             category.updateSortOrder(request.getSortOrder());
         }
         
@@ -40,9 +38,7 @@ public class UpdateCategoryService implements UpdateCategoryUseCase {
                 category.activate();
             } else {
                 boolean hasActiveProducts = categoryRepository.hasActiveProducts(categoryId);
-                if (hasActiveProducts) {
-                    throw new CannotDeactivateCategoryException("Cannot deactivate category with active products");
-                }
+                category.setHasActiveProducts(hasActiveProducts);
                 category.deactivate();
             }
         }
@@ -50,21 +46,5 @@ public class UpdateCategoryService implements UpdateCategoryUseCase {
         Category savedCategory = categoryRepository.save(category);
         
         return UpdateCategoryResponse.from(savedCategory);
-    }
-    
-    private void validateName(String name) {
-        if (name == null || name.trim().isEmpty()) {
-            throw new InvalidCategoryNameException("Category name cannot be null or empty");
-        }
-        
-        if (name.length() > 100) {
-            throw new InvalidCategoryNameException("Category name must not exceed 100 characters");
-        }
-    }
-    
-    private void validateSortOrder(Integer sortOrder) {
-        if (sortOrder < 0) {
-            throw new IllegalArgumentException("Sort order must be non-negative");
-        }
     }
 }

@@ -1,7 +1,6 @@
 package com.commerce.product.application.usecase;
 
 import com.commerce.product.domain.exception.InvalidCategoryIdException;
-import com.commerce.product.domain.exception.MaxCategoryLimitException;
 import com.commerce.product.domain.exception.ProductNotFoundException;
 import com.commerce.product.domain.model.Category;
 import com.commerce.product.domain.model.CategoryId;
@@ -26,8 +25,6 @@ public class AssignProductToCategoryService implements AssignProductToCategoryUs
     
     @Override
     public AssignProductToCategoryResponse execute(AssignProductToCategoryRequest request) {
-        validateRequest(request);
-        
         ProductId productId = ProductId.of(request.getProductId());
         
         Product product = productRepository.findById(productId)
@@ -41,17 +38,12 @@ public class AssignProductToCategoryService implements AssignProductToCategoryUs
             validateCategories(categoryIds);
         }
         
+        // 도메인 객체가 비즈니스 규칙을 강제하므로 서비스 레벨 검증 제거
         product.assignCategories(categoryIds);
         
         Product savedProduct = productRepository.save(product);
         
         return AssignProductToCategoryResponse.success(savedProduct);
-    }
-    
-    private void validateRequest(AssignProductToCategoryRequest request) {
-        if (request.getCategoryIds() != null && request.getCategoryIds().size() > 5) {
-            throw new MaxCategoryLimitException("상품은 최대 5개의 카테고리에만 할당할 수 있습니다");
-        }
     }
     
     private void validateCategories(List<CategoryId> categoryIds) {

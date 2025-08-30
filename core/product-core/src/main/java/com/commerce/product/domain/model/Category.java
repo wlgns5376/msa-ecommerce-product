@@ -30,6 +30,7 @@ public class Category extends AggregateRoot<CategoryId> {
 
     private Category(CategoryId id, CategoryName name, CategoryId parentId, int level, int sortOrder) {
         validateLevel(level);
+        validateSortOrder(sortOrder);
         
         this.id = id;
         this.name = name;
@@ -52,6 +53,12 @@ public class Category extends AggregateRoot<CategoryId> {
     private static void validateLevel(int level) {
         if (level > MAX_LEVEL) {
             throw new InvalidCategoryLevelException("Maximum category level is " + MAX_LEVEL);
+        }
+    }
+    
+    private static void validateSortOrder(int sortOrder) {
+        if (sortOrder < 0) {
+            throw new IllegalArgumentException("Sort order must be non-negative");
         }
     }
 
@@ -83,6 +90,7 @@ public class Category extends AggregateRoot<CategoryId> {
     }
 
     public void updateSortOrder(int sortOrder) {
+        validateSortOrder(sortOrder);
         this.sortOrder = sortOrder;
     }
 

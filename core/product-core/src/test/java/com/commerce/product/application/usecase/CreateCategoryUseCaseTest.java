@@ -116,7 +116,7 @@ class CreateCategoryUseCaseTest {
         assertThat(response.isActive()).isTrue();
 
         verify(categoryRepository, times(1)).findById(CategoryId.of(parentId));
-        verify(categoryRepository, times(1)).save(any(Category.class));
+        verify(categoryRepository, times(2)).save(any(Category.class)); // 부모와 자식 카테고리 모두 저장
     }
 
     @Test
@@ -168,6 +168,8 @@ class CreateCategoryUseCaseTest {
         assertThat(response).isNotNull();
         assertThat(response.getLevel()).isEqualTo(3);
         assertThat(response.getParentId()).isEqualTo(parentId);
+        
+        verify(categoryRepository, times(2)).save(any(Category.class)); // 부모와 자식 카테고리 모두 저장
     }
 
     @Test

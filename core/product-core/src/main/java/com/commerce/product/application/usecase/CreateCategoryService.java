@@ -1,7 +1,6 @@
 package com.commerce.product.application.usecase;
 
 import com.commerce.product.domain.exception.InvalidCategoryIdException;
-import com.commerce.product.domain.exception.InvalidCategoryNameException;
 import com.commerce.product.domain.exception.MaxCategoryDepthException;
 import com.commerce.product.domain.model.Category;
 import com.commerce.product.domain.model.CategoryId;
@@ -20,7 +19,7 @@ public class CreateCategoryService implements CreateCategoryUseCase {
     
     @Override
     public CreateCategoryResponse execute(CreateCategoryRequest request) {
-        validateRequest(request);
+        validateSortOrder(request.getSortOrder());
         
         Category category;
         
@@ -35,16 +34,8 @@ public class CreateCategoryService implements CreateCategoryUseCase {
         return CreateCategoryResponse.from(savedCategory);
     }
     
-    private void validateRequest(CreateCategoryRequest request) {
-        if (request.getName() == null || request.getName().trim().isEmpty()) {
-            throw new InvalidCategoryNameException("Category name cannot be null or empty");
-        }
-        
-        if (request.getName().length() > 100) {
-            throw new InvalidCategoryNameException("Category name must not exceed 100 characters");
-        }
-        
-        if (request.getSortOrder() < 0) {
+    private void validateSortOrder(int sortOrder) {
+        if (sortOrder < 0) {
             throw new IllegalArgumentException("Sort order must be non-negative");
         }
     }
@@ -78,6 +69,9 @@ public class CreateCategoryService implements CreateCategoryUseCase {
         );
         
         parentCategory.addChild(childCategory);
+        
+        // 부모 카테고리도 저장하여 children 컬렉션 변경사항 반영
+        categoryRepository.save(parentCategory);
         
         return childCategory;
     }

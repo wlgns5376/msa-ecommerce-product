@@ -81,17 +81,9 @@ class GetCategoryTreeUseCaseTest {
                 .includeInactive(false)
                 .build();
 
-        when(categoryRepository.findRootCategories()).thenReturn(Arrays.asList(root1, root2));
-        when(categoryRepository.findByParentId(CategoryId.of(rootId1)))
-                .thenReturn(Arrays.asList(child1, child2));
-        when(categoryRepository.findByParentId(CategoryId.of(rootId2)))
-                .thenReturn(List.of());
-        when(categoryRepository.findByParentId(CategoryId.of(childId1)))
-                .thenReturn(List.of(grandChild));
-        when(categoryRepository.findByParentId(CategoryId.of(childId2)))
-                .thenReturn(List.of());
-        when(categoryRepository.findByParentId(CategoryId.of(grandChildId)))
-                .thenReturn(List.of());
+        when(categoryRepository.findAll()).thenReturn(Arrays.asList(
+                root1, root2, child1, child2, grandChild
+        ));
 
         // When
         GetCategoryTreeResponse response = getCategoryTreeUseCase.execute(request);
@@ -114,8 +106,7 @@ class GetCategoryTreeUseCaseTest {
         assertThat(gamingLaptop.getLevel()).isEqualTo(3);
         assertThat(gamingLaptop.getChildren()).isEmpty();
 
-        verify(categoryRepository, times(1)).findRootCategories();
-        verify(categoryRepository, atLeastOnce()).findByParentId(any());
+        verify(categoryRepository, times(1)).findAll();
     }
 
     @Test
@@ -153,11 +144,9 @@ class GetCategoryTreeUseCaseTest {
                 .includeInactive(false)
                 .build();
 
-        when(categoryRepository.findRootCategories()).thenReturn(List.of(root));
-        when(categoryRepository.findByParentId(CategoryId.of(rootId)))
-                .thenReturn(Arrays.asList(activeChild, inactiveChild));
-        when(categoryRepository.findByParentId(CategoryId.of(activeChildId)))
-                .thenReturn(List.of());
+        when(categoryRepository.findAll()).thenReturn(Arrays.asList(
+                root, activeChild, inactiveChild
+        ));
 
         // When
         GetCategoryTreeResponse response = getCategoryTreeUseCase.execute(request);
@@ -206,13 +195,9 @@ class GetCategoryTreeUseCaseTest {
                 .includeInactive(true)
                 .build();
 
-        when(categoryRepository.findRootCategories()).thenReturn(List.of(root));
-        when(categoryRepository.findByParentId(CategoryId.of(rootId)))
-                .thenReturn(Arrays.asList(activeChild, inactiveChild));
-        when(categoryRepository.findByParentId(CategoryId.of(activeChildId)))
-                .thenReturn(List.of());
-        when(categoryRepository.findByParentId(CategoryId.of(inactiveChildId)))
-                .thenReturn(List.of());
+        when(categoryRepository.findAll()).thenReturn(Arrays.asList(
+                root, activeChild, inactiveChild
+        ));
 
         // When
         GetCategoryTreeResponse response = getCategoryTreeUseCase.execute(request);
@@ -236,7 +221,7 @@ class GetCategoryTreeUseCaseTest {
                 .includeInactive(false)
                 .build();
 
-        when(categoryRepository.findRootCategories()).thenReturn(List.of());
+        when(categoryRepository.findAll()).thenReturn(List.of());
 
         // When
         GetCategoryTreeResponse response = getCategoryTreeUseCase.execute(request);
@@ -245,8 +230,7 @@ class GetCategoryTreeUseCaseTest {
         assertThat(response).isNotNull();
         assertThat(response.getCategories()).isEmpty();
 
-        verify(categoryRepository, times(1)).findRootCategories();
-        verify(categoryRepository, never()).findByParentId(any());
+        verify(categoryRepository, times(1)).findAll();
     }
 
     @Test
@@ -292,15 +276,9 @@ class GetCategoryTreeUseCaseTest {
                 .includeInactive(false)
                 .build();
 
-        when(categoryRepository.findRootCategories()).thenReturn(List.of(root));
-        when(categoryRepository.findByParentId(CategoryId.of(rootId)))
-                .thenReturn(Arrays.asList(child2, child3, child1)); // 순서 섞어서 반환
-        when(categoryRepository.findByParentId(CategoryId.of(childId1)))
-                .thenReturn(List.of());
-        when(categoryRepository.findByParentId(CategoryId.of(childId2)))
-                .thenReturn(List.of());
-        when(categoryRepository.findByParentId(CategoryId.of(childId3)))
-                .thenReturn(List.of());
+        when(categoryRepository.findAll()).thenReturn(Arrays.asList(
+                root, child2, child3, child1  // 순서 섞어서 반환
+        ));
 
         // When
         GetCategoryTreeResponse response = getCategoryTreeUseCase.execute(request);

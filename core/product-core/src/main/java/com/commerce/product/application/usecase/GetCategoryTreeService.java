@@ -9,7 +9,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,11 +23,25 @@ public class GetCategoryTreeService implements GetCategoryTreeUseCase {
     
     @Override
     public GetCategoryTreeResponse execute(GetCategoryTreeRequest request) {
-        List<Category> rootCategories = categoryRepository.findRootCategories();
+        // 모든 카테고리를 한 번에 조회
+        List<Category> allCategories = categoryRepository.findAll();
+        
+        // 부모 ID별로 자식 카테고리를 그룹화
+        Map<CategoryId, List<Category>> childrenByParentId = new HashMap<>();
+        List<Category> rootCategories = new ArrayList<>();
+        
+        for (Category category : allCategories) {
+            if (category.getParentId() == null) {
+                rootCategories.add(category);
+            } else {
+                childrenByParentId.computeIfAbsent(category.getParentId(), k -> new ArrayList<>())
+                        .add(category);
+            }
+        }
         
         List<CategoryTreeNode> treeNodes = rootCategories.stream()
                 .filter(category -> request.isIncludeInactive() || category.isActive())
-                .map(this::buildCategoryTree)
+                .map(category -> buildCategoryTree(category, childrenByParentId))
                 .sorted(Comparator.comparingInt(CategoryTreeNode::getSortOrder))
                 .collect(Collectors.toList());
         
@@ -36,13 +52,13 @@ public class GetCategoryTreeService implements GetCategoryTreeUseCase {
         return GetCategoryTreeResponse.of(treeNodes);
     }
     
-    private CategoryTreeNode buildCategoryTree(Category category) {
+    private CategoryTreeNode buildCategoryTree(Category category, Map<CategoryId, List<Category>> childrenByParentId) {
         CategoryTreeNode node = CategoryTreeNode.from(category);
         
-        List<Category> children = categoryRepository.findByParentId(category.getId());
+        List<Category> children = childrenByParentId.getOrDefault(category.getId(), new ArrayList<>());
         
         for (Category child : children) {
-            CategoryTreeNode childNode = buildCategoryTree(child);
+            CategoryTreeNode childNode = buildCategoryTree(child, childrenByParentId);
             node.addChild(childNode);
         }
         
