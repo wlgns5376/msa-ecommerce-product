@@ -180,16 +180,8 @@ public class ReserveStockService implements ReserveStockUseCase {
     ) {
         Quantity requestedQuantity = Quantity.of(item.getQuantity());
         
-        ReservationId reservationId = inventory.reserve(requestedQuantity);
-        
-        return Reservation.create(
-                reservationId,
-                inventory.getId(),
-                requestedQuantity,
-                orderId,
-                currentTime.plusSeconds(ttlSeconds),
-                currentTime
-        );
+        // inventory.reserve()가 이제 Reservation 객체를 반환함
+        return inventory.reserve(requestedQuantity, orderId, ttlSeconds);
     }
     
     private List<ReserveStockResponse.ReservationResult> convertToResults(

@@ -171,17 +171,8 @@ public class ReserveBundleStockService implements ReserveBundleStockUseCase {
             Inventory inventory = inventoryMap.get(request.skuId());
             
             // 재고 예약 (도메인 객체가 재고 확인 및 예외 처리 담당)
-            ReservationId reservationId = inventory.reserve(request.quantity());
-            
-            // 예약 엔티티 생성
-            Reservation reservation = Reservation.create(
-                reservationId,
-                inventory.getSkuId(),
-                request.quantity(),
-                command.getOrderId(),
-                expiresAt,
-                now
-            );
+            // inventory.reserve()가 이제 Reservation 객체를 반환함
+            Reservation reservation = inventory.reserve(request.quantity(), command.getOrderId(), defaultTtlSeconds);
             
             reservationsToSave.add(reservation);
             modifiedInventories.add(inventory);

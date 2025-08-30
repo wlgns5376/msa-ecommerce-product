@@ -40,7 +40,7 @@ public class ReleaseReservationService implements ReleaseReservationUseCase {
         Inventory inventory = findInventoryOrThrow(reservation.getSkuId());
 
         // 4. 재고의 예약 수량 복원
-        inventory.releaseReservedQuantity(reservation.getQuantity());
+        inventory.releaseReservedQuantity(reservation.getQuantity(), reservation.getId());
 
         // 5. 영속성 처리
         saveReservationPort.save(reservation);
