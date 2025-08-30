@@ -1,5 +1,6 @@
 package com.commerce.product.application.service;
 
+import com.commerce.product.application.service.port.out.EventPublisher;
 import com.commerce.product.application.usecase.UpdateProductRequest;
 import com.commerce.product.application.usecase.UpdateProductResponse;
 import com.commerce.product.application.usecase.UpdateProductUseCase;
@@ -22,6 +23,7 @@ public class UpdateProductService implements UpdateProductUseCase {
         "Product has been modified by another user. Please refresh and try again.";
     
     private final ProductRepository productRepository;
+    private final EventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -41,6 +43,8 @@ public class UpdateProductService implements UpdateProductUseCase {
         if (product.update(request.getName(), request.getDescription())) {
             try {
                 product = productRepository.save(product);
+                // 도메인 이벤트 발행
+                eventPublisher.publishAll(product.pullDomainEvents());
             } catch (OptimisticLockingFailureException e) {
                 throw new ProductConflictException(
                     "Product has been modified by another user. Please refresh and try again.", e
