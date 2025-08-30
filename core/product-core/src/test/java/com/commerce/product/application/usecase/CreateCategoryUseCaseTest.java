@@ -101,7 +101,9 @@ class CreateCategoryUseCaseTest {
                 sortOrder
         );
 
-        when(categoryRepository.save(any(Category.class))).thenReturn(savedCategory);
+        when(categoryRepository.save(any(Category.class)))
+                .thenReturn(parentCategory)  // 첫 번째 호출 (부모 저장)
+                .thenReturn(savedCategory);  // 두 번째 호출 (자식 저장)
 
         // When
         CreateCategoryResponse response = createCategoryUseCase.execute(request);
@@ -159,7 +161,9 @@ class CreateCategoryUseCaseTest {
                 sortOrder
         );
 
-        when(categoryRepository.save(any(Category.class))).thenReturn(savedCategory);
+        when(categoryRepository.save(any(Category.class)))
+                .thenReturn(parentCategory)  // 첫 번째 호출 (부모 저장)
+                .thenReturn(savedCategory);  // 두 번째 호출 (자식 저장)
 
         // When
         CreateCategoryResponse response = createCategoryUseCase.execute(request);

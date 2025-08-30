@@ -19,25 +19,17 @@ public class CreateCategoryService implements CreateCategoryUseCase {
     
     @Override
     public CreateCategoryResponse execute(CreateCategoryRequest request) {
-        validateSortOrder(request.getSortOrder());
-        
         Category category;
         
         if (request.getParentId() == null) {
             category = createRootCategory(request);
+            category = categoryRepository.save(category);
         } else {
             category = createChildCategory(request);
+            // createChildCategory 내부에서 이미 저장 처리됨
         }
         
-        Category savedCategory = categoryRepository.save(category);
-        
-        return CreateCategoryResponse.from(savedCategory);
-    }
-    
-    private void validateSortOrder(int sortOrder) {
-        if (sortOrder < 0) {
-            throw new IllegalArgumentException("Sort order must be non-negative");
-        }
+        return CreateCategoryResponse.from(category);
     }
     
     private Category createRootCategory(CreateCategoryRequest request) {
@@ -68,11 +60,13 @@ public class CreateCategoryService implements CreateCategoryUseCase {
                 request.getSortOrder()
         );
         
+        // 양방향 관계 설정
         parentCategory.addChild(childCategory);
         
-        // 부모 카테고리도 저장하여 children 컬렉션 변경사항 반영
+        // 부모 카테고리 저장 (children 컬렉션 변경사항 반영)
         categoryRepository.save(parentCategory);
         
-        return childCategory;
+        // 자식 카테고리는 cascade나 명시적 저장으로 처리
+        return categoryRepository.save(childCategory);
     }
 }
