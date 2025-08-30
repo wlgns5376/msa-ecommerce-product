@@ -1,6 +1,7 @@
 package com.commerce.product.application.service;
 
 import com.commerce.product.application.factory.ProductOptionFactory;
+import com.commerce.product.application.service.port.out.EventPublisher;
 import com.commerce.product.application.usecase.AddProductOptionRequest;
 import com.commerce.product.application.usecase.AddProductOptionResponse;
 import com.commerce.product.application.usecase.AddProductOptionUseCase;
@@ -19,6 +20,7 @@ public class AddProductOptionService implements AddProductOptionUseCase {
 
     private final ProductRepository productRepository;
     private final ProductOptionFactory productOptionFactory;
+    private final EventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -31,6 +33,8 @@ public class AddProductOptionService implements AddProductOptionUseCase {
 
         product.addOption(option);
         productRepository.save(product);
+        // 도메인 이벤트 발행
+        eventPublisher.publishAll(product.pullDomainEvents());
 
         return AddProductOptionResponse.builder()
             .productId(product.getId().value())

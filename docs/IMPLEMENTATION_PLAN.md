@@ -107,10 +107,10 @@ PRD 문서와 설계 문서를 기반으로 수립한 구현 작업 계획입니
 이벤트 드리븐 아키텍처 기반
 
 #### 6.1 Inventory Events
-- [ ] StockReceivedEvent
-- [ ] StockReservedEvent
-- [ ] ReservationReleasedEvent
-- [ ] StockDepletedEvent
+- [x] StockReceivedEvent
+- [x] StockReservedEvent
+- [x] ReservationReleasedEvent
+- [x] StockDepletedEvent
 
 #### 6.2 Product Events
 - [x] ProductCreatedEvent

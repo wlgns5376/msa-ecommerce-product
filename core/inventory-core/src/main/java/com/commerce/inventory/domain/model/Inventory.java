@@ -4,6 +4,10 @@ import com.commerce.common.domain.model.Quantity;
 import com.commerce.inventory.domain.exception.InsufficientStockException;
 import com.commerce.inventory.domain.exception.InvalidInventoryException;
 import com.commerce.common.domain.model.AggregateRoot;
+import com.commerce.inventory.domain.event.StockReceivedEvent;
+import com.commerce.inventory.domain.event.StockReservedEvent;
+import com.commerce.inventory.domain.event.ReservationReleasedEvent;
+import com.commerce.inventory.domain.event.StockDepletedEvent;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
@@ -68,7 +72,7 @@ public class Inventory extends AggregateRoot<SkuId> {
         return getAvailableQuantity().isGreaterThanOrEqualTo(quantity);
     }
     
-    public void receive(Quantity quantity) {
+    public void receive(Quantity quantity, String reference) {
         if (quantity == null || quantity.isZero()) {
             throw new InvalidInventoryException("입고 수량은 0보다 커야 합니다");
         }
@@ -76,11 +80,11 @@ public class Inventory extends AggregateRoot<SkuId> {
         this.totalQuantity = this.totalQuantity.add(quantity);
         updateTimestamp();
         
-        // 도메인 이벤트 발생 (추후 구현)
-        // this.raise(new StockReceivedEvent(this.skuId, quantity));
+        // 도메인 이벤트 발생
+        this.raise(new StockReceivedEvent(this.skuId, quantity, reference));
     }
     
-    public ReservationId reserve(Quantity quantity) {
+    public Reservation reserve(Quantity quantity, String orderId, int ttlSeconds) {
         if (!canReserve(quantity)) {
             throw new InsufficientStockException(
                 String.format("재고가 부족합니다. 가용 재고: %d, 요청 수량: %d", 
@@ -89,15 +93,20 @@ public class Inventory extends AggregateRoot<SkuId> {
         }
         
         this.reservedQuantity = this.reservedQuantity.add(quantity);
-        ReservationId reservationId = ReservationId.generate();
+        Reservation reservation = Reservation.create(this.skuId, quantity, orderId, ttlSeconds);
         
-        // 도메인 이벤트 발생 (추후 구현)
-        // this.raise(new StockReservedEvent(this.skuId, reservationId, quantity));
+        // 도메인 이벤트 발생
+        this.raise(new StockReservedEvent(this.skuId, reservation));
         
-        return reservationId;
+        // 재고가 완전히 소진된 경우 추가 이벤트 발생
+        if (getAvailableQuantity().isZero()) {
+            this.raise(new StockDepletedEvent(this.skuId));
+        }
+        
+        return reservation;
     }
     
-    public void releaseReservedQuantity(Quantity quantity) {
+    public void releaseReservedQuantity(Quantity quantity, ReservationId reservationId) {
         if (quantity == null || quantity.isZero()) {
             throw new InvalidInventoryException("해제할 수량은 0보다 커야 합니다");
         }
@@ -111,8 +120,8 @@ public class Inventory extends AggregateRoot<SkuId> {
         
         this.reservedQuantity = this.reservedQuantity.subtract(quantity);
         
-        // 도메인 이벤트 발생 (추후 구현)
-        // this.raise(new ReservationReleasedEvent(this.skuId, quantity));
+        // 도메인 이벤트 발생
+        this.raise(new ReservationReleasedEvent(this.skuId, reservationId));
     }
     
     public void confirmReservedQuantity(Quantity quantity) {

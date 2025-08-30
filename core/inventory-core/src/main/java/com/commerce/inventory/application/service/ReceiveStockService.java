@@ -59,7 +59,7 @@ public class ReceiveStockService implements ReceiveStockUseCase {
         
         // 재고 입고 처리
         Quantity quantity = Quantity.of(command.getQuantity());
-        inventory.receive(quantity);
+        inventory.receive(quantity, command.getReference());
         
         // 재고 저장
         saveInventoryPort.save(inventory);

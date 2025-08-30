@@ -86,6 +86,12 @@ public class Reservation extends BaseEntity<ReservationId> {
         );
     }
     
+    // Inventory 모델에서 사용하기 위한 편의 메서드
+    public static Reservation create(SkuId skuId, Quantity quantity, String orderId, int ttlSeconds) {
+        LocalDateTime now = LocalDateTime.now();
+        return createWithTTL(skuId, quantity, orderId, ttlSeconds, now);
+    }
+    
     public static Reservation restore(
             ReservationId id,
             SkuId skuId,

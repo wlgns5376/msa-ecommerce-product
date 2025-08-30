@@ -1,7 +1,7 @@
 package com.commerce.product.application.service;
 
 import com.commerce.common.event.DomainEvent;
-import com.commerce.common.event.DomainEventPublisher;
+import com.commerce.product.application.service.port.out.EventPublisher;
 import com.commerce.product.domain.model.AggregateRoot;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,14 +16,14 @@ import java.util.List;
 @Transactional
 public abstract class ApplicationService {
     
-    private final DomainEventPublisher domainEventPublisher;
+    private final EventPublisher eventPublisher;
     
     /**
      * 애그리게이트의 도메인 이벤트를 발행합니다.
      */
     protected void publishDomainEvents(AggregateRoot<?> aggregateRoot) {
         List<DomainEvent> events = aggregateRoot.clearDomainEvents();
-        events.forEach(domainEventPublisher::publish);
+        eventPublisher.publishAll(events);
     }
     
     /**

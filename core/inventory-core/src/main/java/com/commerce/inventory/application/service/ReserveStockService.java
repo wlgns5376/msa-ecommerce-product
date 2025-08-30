@@ -1,9 +1,10 @@
-package com.commerce.inventory.application.usecase;
+package com.commerce.inventory.application.service;
 
 import com.commerce.common.domain.model.Quantity;
 import com.commerce.inventory.application.usecase.ReserveStockCommand;
 import com.commerce.inventory.application.usecase.ReserveStockResponse;
 import com.commerce.inventory.application.usecase.ReserveStockUseCase;
+import com.commerce.inventory.application.service.port.out.EventPublisher;
 import com.commerce.inventory.application.service.port.out.LoadInventoryPort;
 import com.commerce.inventory.application.service.port.out.SaveInventoryPort;
 import com.commerce.inventory.application.util.ValidationHelper;
@@ -37,6 +38,7 @@ public class ReserveStockService implements ReserveStockUseCase {
     private final SaveInventoryPort saveInventoryPort;
     private final LoadReservationPort loadReservationPort;
     private final SaveReservationPort saveReservationPort;
+    private final EventPublisher eventPublisher;
     private final Clock clock;
     
     @Override
@@ -59,6 +61,10 @@ public class ReserveStockService implements ReserveStockUseCase {
         
         // 변경된 모든 재고를 일괄 저장
         saveInventoryPort.saveAll(new ArrayList<>(inventoryMap.values()));
+        
+        // 도메인 이벤트 발행
+        inventoryMap.values().forEach(inventory -> 
+            eventPublisher.publishAll(inventory.pullDomainEvents()));
         
         // DTO 변환
         List<ReserveStockResponse.ReservationResult> results = convertToResults(savedReservations);
@@ -180,16 +186,8 @@ public class ReserveStockService implements ReserveStockUseCase {
     ) {
         Quantity requestedQuantity = Quantity.of(item.getQuantity());
         
-        ReservationId reservationId = inventory.reserve(requestedQuantity);
-        
-        return Reservation.create(
-                reservationId,
-                inventory.getId(),
-                requestedQuantity,
-                orderId,
-                currentTime.plusSeconds(ttlSeconds),
-                currentTime
-        );
+        // inventory.reserve()가 이제 Reservation 객체를 반환함
+        return inventory.reserve(requestedQuantity, orderId, ttlSeconds);
     }
     
     private List<ReserveStockResponse.ReservationResult> convertToResults(
