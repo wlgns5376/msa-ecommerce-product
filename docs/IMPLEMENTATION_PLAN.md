@@ -116,7 +116,7 @@ PRD 문서와 설계 문서를 기반으로 수립한 구현 작업 계획입니
 - [x] ProductCreatedEvent
 - [x] ProductUpdatedEvent
 - [x] ProductOptionAddedEvent
-- [ ] ProductOutOfStockEvent
+- [x] ProductOutOfStockEvent
 
 ## Phase 3: Infrastructure Layer 구현 (3주차)
 
