@@ -6,6 +6,7 @@ import com.commerce.product.domain.exception.InvalidProductIdException;
 import com.commerce.product.domain.exception.InvalidProductNameException;
 import com.commerce.product.domain.exception.ProductConflictException;
 import com.commerce.product.application.service.UpdateProductService;
+import com.commerce.product.application.service.port.out.EventPublisher;
 import com.commerce.product.domain.model.*;
 import com.commerce.product.domain.repository.ProductRepository;
 import com.commerce.product.test.helper.ProductTestBuilder;
@@ -32,12 +33,15 @@ class UpdateProductUseCaseTest {
 
     @Mock
     private ProductRepository productRepository;
+    
+    @Mock
+    private EventPublisher eventPublisher;
 
     private UpdateProductUseCase updateProductUseCase;
 
     @BeforeEach
     void setUp() {
-        updateProductUseCase = new UpdateProductService(productRepository);
+        updateProductUseCase = new UpdateProductService(productRepository, eventPublisher);
     }
 
     @Test
@@ -80,8 +84,13 @@ class UpdateProductUseCaseTest {
 
         assertThat(savedProduct.getName().value()).isEqualTo("Updated Product");
         assertThat(savedProduct.getDescription()).isEqualTo("Updated description");
-        assertThat(savedProduct.getDomainEvents()).hasSize(1);
-        assertThat(savedProduct.getDomainEvents().get(0)).isInstanceOf(ProductUpdatedEvent.class);
+        
+        // 도메인 이벤트가 EventPublisher로 발행되었는지 확인
+        ArgumentCaptor<List> eventsCaptor = ArgumentCaptor.forClass(List.class);
+        verify(eventPublisher).publishAll(eventsCaptor.capture());
+        List events = eventsCaptor.getValue();
+        assertThat(events).hasSize(1);
+        assertThat(events.get(0)).isInstanceOf(ProductUpdatedEvent.class);
     }
 
     @Test
