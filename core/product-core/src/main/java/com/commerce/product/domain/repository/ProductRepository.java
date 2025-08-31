@@ -67,4 +67,10 @@ public interface ProductRepository extends Repository<Product, ProductId> {
      * 성능 최적화를 위해 가격 정보가 이미 계산된 결과를 반환합니다.
      */
     Page<ProductSearchResult> searchProductsOptimized(ProductSearchCriteria criteria, Pageable pageable);
+    
+    /**
+     * SKU ID와 연관된 모든 상품을 조회합니다.
+     * 해당 SKU를 옵션으로 가지고 있는 모든 상품을 반환합니다.
+     */
+    List<Product> findProductsBySkuId(String skuId);
 }
