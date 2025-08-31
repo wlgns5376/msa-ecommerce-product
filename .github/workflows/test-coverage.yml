@@ -34,7 +34,7 @@ jobs:
       run: chmod +x gradlew
     
     - name: Run tests with JaCoCo
-      run: ./gradlew testAll jacocoTestReport
+      run: ./gradlew testAll jacocoRootReport
     
     - name: Generate JaCoCo Badge
       id: jacoco
@@ -42,6 +42,7 @@ jobs:
       with:
         generate-branches-badge: true
         generate-summary: true
+        jacoco-csv-file: build/reports/jacoco/jacocoRootReport/jacocoRootReport.csv
     
     - name: Log coverage percentages
       run: |
@@ -53,7 +54,7 @@ jobs:
       uses: madrapps/jacoco-report@v1.6.1
       with:
         paths: |
-          ${{ github.workspace }}/**/build/reports/jacoco/test/jacocoTestReport.xml
+          ${{ github.workspace }}/build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml
         token: ${{ secrets.GITHUB_TOKEN }}
         min-coverage-overall: 70
         min-coverage-changed-files: 70
@@ -66,6 +67,7 @@ jobs:
       with:
         name: jacoco-reports
         path: |
+          build/reports/jacoco/jacocoRootReport/html/
           **/build/reports/jacoco/test/html/
         retention-days: 7
     

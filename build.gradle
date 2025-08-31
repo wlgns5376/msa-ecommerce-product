@@ -59,7 +59,7 @@ subprojects {
         reports {
             xml.required = true
             html.required = true
-            csv.required = false
+            csv.required = true
         }
     }
     
@@ -202,4 +202,20 @@ jacoco {
 task testAll {
     description = 'Runs all tests in all subprojects'
     dependsOn subprojects.test
+}
+
+// 통합 JaCoCo 리포트 생성
+task jacocoRootReport(type: JacocoReport) {
+    description = 'Generates an aggregate report from all subprojects'
+    dependsOn subprojects.test
+    
+    sourceDirectories.setFrom(files(subprojects.sourceSets.main.allSource.srcDirs))
+    classDirectories.setFrom(files(subprojects.sourceSets.main.output))
+    executionData.setFrom(files(subprojects.jacocoTestReport.executionData).filter { it.exists() })
+    
+    reports {
+        html.required = true
+        xml.required = true
+        csv.required = true
+    }
 }
