@@ -36,6 +36,15 @@ jobs:
     - name: Run tests with JaCoCo
       run: ./gradlew testAll jacocoRootReport
     
+    - name: Debug JaCoCo Reports
+      run: |
+        echo "=== Finding all CSV files ==="
+        find . -name "*.csv" -type f | grep -i jacoco || echo "No JaCoCo CSV files found"
+        echo "=== Checking build directory ==="
+        ls -la build/reports/jacoco/jacocoRootReport/ || echo "jacocoRootReport directory not found"
+        echo "=== Current working directory ==="
+        pwd
+    
     - name: Generate JaCoCo Badge
       id: jacoco
       uses: cicirello/jacoco-badge-generator@v2
