@@ -240,5 +240,24 @@ task jacocoRootReport(type: JacocoReport) {
         println "  CSV: ${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.csv"
         println "  XML: ${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
         println "  HTML: ${buildDir}/reports/jacoco/jacocoRootReport/html"
+        
+        // GitHub Actions 호환성을 위한 Maven 디렉토리 구조 생성
+        def targetDir = file("${rootDir}/target/site/jacoco")
+        targetDir.mkdirs()
+        
+        // 리포트 파일 복사
+        copy {
+            from "${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.csv"
+            into targetDir
+            rename { "jacoco.csv" }
+        }
+        
+        copy {
+            from "${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
+            into targetDir
+            rename { "jacoco.xml" }
+        }
+        
+        println "Maven-compatible reports copied to: ${targetDir}"
     }
 }

@@ -34,26 +34,36 @@ jobs:
       run: chmod +x gradlew
     
     - name: Run tests with JaCoCo
-      run: ./gradlew clean testAll jacocoRootReport --no-daemon --no-build-cache
+      run: ./gradlew clean testAll jacocoRootReport --no-daemon --no-build-cache --info
+    
+    - name: Debug - List build directory structure
+      run: |
+        echo "=== Checking build directory structure ==="
+        if [ -d build ]; then
+          echo "Build directory exists"
+          find build -name "*.csv" -o -name "*.xml" | head -20
+        else
+          echo "Build directory does not exist"
+        fi
+        echo "=== Current directory structure ==="
+        ls -la
     
     - name: Verify JaCoCo Reports
       run: |
-        if [ ! -f build/reports/jacoco/jacocoRootReport/jacocoRootReport.csv ]; then
-          echo "ERROR: JaCoCo CSV report not found"
+        echo "=== Verifying JaCoCo reports in Maven-compatible directory ==="
+        if [ ! -f target/site/jacoco/jacoco.csv ]; then
+          echo "ERROR: JaCoCo CSV report not found at target/site/jacoco/jacoco.csv"
+          echo "Checking target directory structure:"
+          find target -type f 2>/dev/null || echo "No files found in target directory"
           exit 1
         fi
-        if [ ! -f build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml ]; then
-          echo "ERROR: JaCoCo XML report not found"
+        if [ ! -f target/site/jacoco/jacoco.xml ]; then
+          echo "ERROR: JaCoCo XML report not found at target/site/jacoco/jacoco.xml"
           exit 1
         fi
-        echo "JaCoCo reports successfully generated"
-    
-    - name: Create Maven-compatible directory structure
-      run: |
-        mkdir -p target/site/jacoco
-        cp build/reports/jacoco/jacocoRootReport/jacocoRootReport.csv target/site/jacoco/jacoco.csv
-        cp build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml target/site/jacoco/jacoco.xml
-        echo "JaCoCo reports copied to Maven-compatible directory"
+        echo "JaCoCo reports successfully generated in Maven-compatible directory"
+        echo "Contents of target/site/jacoco:"
+        ls -la target/site/jacoco/
     
     - name: Generate JaCoCo Badge
       id: jacoco
