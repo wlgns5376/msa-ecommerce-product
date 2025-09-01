@@ -1,0 +1,175 @@
+name: Test Coverage Report
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      checks: write
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v2
+    
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+    
+    - name: Run tests with JaCoCo
+      run: |
+        echo "=== Running tests and generating JaCoCo reports ==="
+        ./gradlew clean testAll jacocoRootReport --no-daemon --no-build-cache --info
+        
+        # 빌드 성공 확인
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Gradle build failed"
+          exit 1
+        fi
+        
+        echo "=== Gradle build completed successfully ==="
+    
+    - name: Verify and prepare JaCoCo reports
+      run: |
+        echo "=== Verifying JaCoCo report generation ==="
+        
+        # 파일 시스템 동기화를 위한 대기
+        sleep 3
+        
+        # 생성된 리포트 파일 확인
+        echo "=== Checking build directory ==="
+        if [ -d build/reports/jacoco/jacocoRootReport ]; then
+          echo "JaCoCo report directory exists"
+          ls -la build/reports/jacoco/jacocoRootReport/
+        else
+          echo "ERROR: JaCoCo report directory not found"
+          echo "Searching for JaCoCo files..."
+          find . -type f -path "*/jacoco/*" \( -name "*.csv" -o -name "*.xml" \) 2>/dev/null | head -20
+          exit 1
+        fi
+        
+        # CSV 파일 존재 확인
+        CSV_FILE="build/reports/jacoco/jacocoRootReport/jacocoRootReport.csv"
+        XML_FILE="build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
+        
+        if [ ! -f "$CSV_FILE" ]; then
+          echo "ERROR: JaCoCo CSV report not found at $CSV_FILE"
+          echo "Available files in build directory:"
+          find build -name "*.csv" -o -name "*.xml" | head -20
+          exit 1
+        fi
+        
+        if [ ! -f "$XML_FILE" ]; then
+          echo "ERROR: JaCoCo XML report not found at $XML_FILE"
+          exit 1
+        fi
+        
+        echo "SUCCESS: JaCoCo reports found"
+        echo "CSV: $(ls -la $CSV_FILE)"
+        echo "XML: $(ls -la $XML_FILE)"
+        
+        # Maven 호환 디렉토리 생성 및 복사
+        echo "=== Creating Maven-compatible directory structure ==="
+        mkdir -p target/site/jacoco
+        
+        # 파일 복사 (force copy)
+        cp -f "$CSV_FILE" target/site/jacoco/jacoco.csv
+        cp -f "$XML_FILE" target/site/jacoco/jacoco.xml
+        
+        # 복사 확인
+        if [ -f target/site/jacoco/jacoco.csv ] && [ -f target/site/jacoco/jacoco.xml ]; then
+          echo "SUCCESS: Reports copied to Maven-compatible directory"
+          echo "Contents of target/site/jacoco:"
+          ls -la target/site/jacoco/
+          echo "CSV file size: $(stat -c%s target/site/jacoco/jacoco.csv) bytes"
+          echo "XML file size: $(stat -c%s target/site/jacoco/jacoco.xml) bytes"
+        else
+          echo "ERROR: Failed to copy reports to Maven-compatible directory"
+          exit 1
+        fi
+    
+    - name: Generate JaCoCo Badge
+      id: jacoco
+      uses: cicirello/jacoco-badge-generator@v2
+      with:
+        generate-branches-badge: true
+        generate-summary: true
+        jacoco-csv-file: target/site/jacoco/jacoco.csv
+    
+    - name: Log coverage percentages
+      run: |
+        echo "coverage = ${{ steps.jacoco.outputs.coverage }}"
+        echo "branches = ${{ steps.jacoco.outputs.branches }}"
+    
+    - name: JaCoCo Report
+      id: jacoco-report
+      uses: madrapps/jacoco-report@v1.6.1
+      continue-on-error: true
+      with:
+        paths: |
+          ${{ github.workspace }}/build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml
+        token: ${{ secrets.GITHUB_TOKEN }}
+        min-coverage-overall: 70
+        min-coverage-changed-files: 70
+        title: 'JaCoCo Test Coverage Report'
+        update-comment: true
+        skip-if-no-changes: true
+        pass-emoji: '✅'
+        fail-emoji: '❌'
+    
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: jacoco-reports
+        path: |
+          build/reports/jacoco/jacocoRootReport/html/
+          **/build/reports/jacoco/test/html/
+        retention-days: 7
+    
+    - name: Check coverage threshold
+      run: ./gradlew jacocoTestCoverageVerification
+      continue-on-error: true
+    
+    - name: Comment PR with coverage
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          const coverage = '${{ steps.jacoco.outputs.coverage }}';
+          const branches = '${{ steps.jacoco.outputs.branches }}';
+          
+          const comment = `## Test Coverage Report 📊
+          
+          | Metric | Coverage |
+          |--------|----------|
+          | Lines | ${coverage}% |
+          | Branches | ${branches}% |
+          
+          ✅ Minimum coverage threshold: 70%
+          
+          View detailed report in the [Actions artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });

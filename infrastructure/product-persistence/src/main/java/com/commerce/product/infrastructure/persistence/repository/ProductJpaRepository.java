@@ -48,4 +48,10 @@ public interface ProductJpaRepository extends JpaRepository<ProductJpaEntity, St
            "AND p.deletedAt IS NULL")
     Page<ProductJpaEntity> searchByName(@Param("keyword") String keyword, Pageable pageable);
     
+    @Query("SELECT DISTINCT p FROM ProductJpaEntity p " +
+           "LEFT JOIN FETCH p.options o " +
+           "WHERE EXISTS (SELECT 1 FROM p.options opt WHERE opt.skuCode = :skuId) " +
+           "AND p.deletedAt IS NULL")
+    List<ProductJpaEntity> findProductsBySkuId(@Param("skuId") String skuId);
+    
 }

@@ -137,10 +137,10 @@ class InventoryPersistenceAdapterTest {
         SkuId skuId2 = SkuId.generate();
         
         Inventory inventory1 = Inventory.createWithInitialStock(skuId1, Quantity.of(100));
-        inventory1.reserve(Quantity.of(20));
+        inventory1.reserve(Quantity.of(20), "ORDER-2024-001", 3600);
         
         Inventory inventory2 = Inventory.createWithInitialStock(skuId2, Quantity.of(50));
-        inventory2.reserve(Quantity.of(10));
+        inventory2.reserve(Quantity.of(10), "ORDER-2024-002", 3600);
         
         List<Inventory> inventories = Arrays.asList(inventory1, inventory2);
         

@@ -2,6 +2,7 @@ package com.commerce.product.application.usecase;
 
 import com.commerce.product.application.factory.ProductOptionFactory;
 import com.commerce.product.application.service.AddProductOptionService;
+import com.commerce.product.application.service.port.out.EventPublisher;
 import com.commerce.product.domain.exception.*;
 import com.commerce.product.domain.model.*;
 import com.commerce.product.domain.repository.ProductRepository;
@@ -28,13 +29,15 @@ class AddProductOptionUseCaseTest {
     @Mock
     private ProductRepository productRepository;
 
+    @Mock
+    private EventPublisher eventPublisher;
 
     private AddProductOptionUseCase useCase;
 
     @BeforeEach
     void setUp() {
         ProductOptionFactory productOptionFactory = new ProductOptionFactory();
-        useCase = new AddProductOptionService(productRepository, productOptionFactory);
+        useCase = new AddProductOptionService(productRepository, productOptionFactory, eventPublisher);
     }
 
     private AddProductOptionRequest createDefaultRequest(String productId) {

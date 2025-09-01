@@ -182,4 +182,12 @@ public class ProductRepositoryAdapter implements ProductRepository {
             dto.getCreatedAt()
         ));
     }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<Product> findProductsBySkuId(String skuId) {
+        return productJpaRepository.findProductsBySkuId(skuId).stream()
+                .map(ProductJpaEntity::toDomainModel)
+                .collect(Collectors.toList());
+    }
 }
