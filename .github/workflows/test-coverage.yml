@@ -51,10 +51,17 @@ jobs:
         if [ -f build/reports/jacoco/jacocoRootReport/jacocoRootReport.csv ]; then
           cp build/reports/jacoco/jacocoRootReport/jacocoRootReport.csv target/site/jacoco/jacoco.csv
           echo "CSV report copied to target/site/jacoco/jacoco.csv"
+          ls -la target/site/jacoco/
+        else
+          echo "ERROR: CSV report not found at build/reports/jacoco/jacocoRootReport/jacocoRootReport.csv"
+          exit 1
         fi
         if [ -f build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml ]; then
           cp build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml target/site/jacoco/jacoco.xml
           echo "XML report copied to target/site/jacoco/jacoco.xml"
+        else
+          echo "ERROR: XML report not found at build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
+          exit 1
         fi
     
     - name: Generate JaCoCo Badge
@@ -63,7 +70,7 @@ jobs:
       with:
         generate-branches-badge: true
         generate-summary: true
-        jacoco-csv-file: build/reports/jacoco/jacocoRootReport/jacocoRootReport.csv
+        jacoco-csv-file: target/site/jacoco/jacoco.csv
     
     - name: Log coverage percentages
       run: |
