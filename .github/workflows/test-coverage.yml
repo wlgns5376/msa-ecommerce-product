@@ -45,6 +45,18 @@ jobs:
         echo "=== Current working directory ==="
         pwd
     
+    - name: Create Maven-compatible directory structure
+      run: |
+        mkdir -p target/site/jacoco
+        if [ -f build/reports/jacoco/jacocoRootReport/jacocoRootReport.csv ]; then
+          cp build/reports/jacoco/jacocoRootReport/jacocoRootReport.csv target/site/jacoco/jacoco.csv
+          echo "CSV report copied to target/site/jacoco/jacoco.csv"
+        fi
+        if [ -f build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml ]; then
+          cp build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml target/site/jacoco/jacoco.xml
+          echo "XML report copied to target/site/jacoco/jacoco.xml"
+        fi
+    
     - name: Generate JaCoCo Badge
       id: jacoco
       uses: cicirello/jacoco-badge-generator@v2

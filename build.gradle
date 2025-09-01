@@ -230,5 +230,8 @@ task jacocoRootReport(type: JacocoReport) {
         html.required = true
         xml.required = true
         csv.required = true
+        csv.destination = file("${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.csv")
+        xml.destination = file("${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml")
+        html.destination = file("${buildDir}/reports/jacoco/jacocoRootReport/html")
     }
 }
