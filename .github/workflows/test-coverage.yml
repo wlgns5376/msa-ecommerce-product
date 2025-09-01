@@ -34,35 +34,26 @@ jobs:
       run: chmod +x gradlew
     
     - name: Run tests with JaCoCo
-      run: ./gradlew testAll jacocoRootReport
+      run: ./gradlew clean testAll jacocoRootReport --no-daemon --no-build-cache
     
-    - name: Debug JaCoCo Reports
+    - name: Verify JaCoCo Reports
       run: |
-        echo "=== Finding all CSV files ==="
-        find . -name "*.csv" -type f | grep -i jacoco || echo "No JaCoCo CSV files found"
-        echo "=== Checking build directory ==="
-        ls -la build/reports/jacoco/jacocoRootReport/ || echo "jacocoRootReport directory not found"
-        echo "=== Current working directory ==="
-        pwd
+        if [ ! -f build/reports/jacoco/jacocoRootReport/jacocoRootReport.csv ]; then
+          echo "ERROR: JaCoCo CSV report not found"
+          exit 1
+        fi
+        if [ ! -f build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml ]; then
+          echo "ERROR: JaCoCo XML report not found"
+          exit 1
+        fi
+        echo "JaCoCo reports successfully generated"
     
     - name: Create Maven-compatible directory structure
       run: |
         mkdir -p target/site/jacoco
-        if [ -f build/reports/jacoco/jacocoRootReport/jacocoRootReport.csv ]; then
-          cp build/reports/jacoco/jacocoRootReport/jacocoRootReport.csv target/site/jacoco/jacoco.csv
-          echo "CSV report copied to target/site/jacoco/jacoco.csv"
-          ls -la target/site/jacoco/
-        else
-          echo "ERROR: CSV report not found at build/reports/jacoco/jacocoRootReport/jacocoRootReport.csv"
-          exit 1
-        fi
-        if [ -f build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml ]; then
-          cp build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml target/site/jacoco/jacoco.xml
-          echo "XML report copied to target/site/jacoco/jacoco.xml"
-        else
-          echo "ERROR: XML report not found at build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
-          exit 1
-        fi
+        cp build/reports/jacoco/jacocoRootReport/jacocoRootReport.csv target/site/jacoco/jacoco.csv
+        cp build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml target/site/jacoco/jacoco.xml
+        echo "JaCoCo reports copied to Maven-compatible directory"
     
     - name: Generate JaCoCo Badge
       id: jacoco

@@ -234,4 +234,11 @@ task jacocoRootReport(type: JacocoReport) {
         xml.destination = file("${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml")
         html.destination = file("${buildDir}/reports/jacoco/jacocoRootReport/html")
     }
+    
+    doLast {
+        println "JaCoCo reports generated at:"
+        println "  CSV: ${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.csv"
+        println "  XML: ${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
+        println "  HTML: ${buildDir}/reports/jacoco/jacocoRootReport/html"
+    }
 }
