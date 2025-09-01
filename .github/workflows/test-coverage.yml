@@ -34,56 +34,74 @@ jobs:
       run: chmod +x gradlew
     
     - name: Run tests with JaCoCo
-      run: ./gradlew clean testAll jacocoRootReport --no-daemon --no-build-cache --info
-    
-    - name: Debug - Check JaCoCo report generation
       run: |
-        echo "=== Checking build directory structure ==="
-        if [ -d build/reports/jacoco ]; then
-          echo "JaCoCo reports directory exists"
-          find build/reports/jacoco -type f -name "*.csv" -o -name "*.xml" | head -20
-        else
-          echo "JaCoCo reports directory does not exist"
-        fi
-        echo "=== Checking Maven-compatible directory structure ==="
-        if [ -d target/site/jacoco ]; then
-          echo "Maven-compatible directory exists"
-          ls -la target/site/jacoco/
-        else
-          echo "Maven-compatible directory does not exist"
-        fi
-    
-    - name: Ensure JaCoCo reports exist
-      run: |
-        echo "=== Ensuring JaCoCo reports exist in Maven-compatible directory ==="
-        # Wait a moment for file system sync
-        sleep 2
+        echo "=== Running tests and generating JaCoCo reports ==="
+        ./gradlew clean testAll jacocoRootReport --no-daemon --no-build-cache --info
         
-        # Check if reports were generated
-        if [ ! -f target/site/jacoco/jacoco.csv ]; then
-          echo "ERROR: JaCoCo CSV report not found at target/site/jacoco/jacoco.csv"
-          echo "Attempting to manually copy from build directory..."
-          
-          # Try to manually copy if not present
-          if [ -f build/reports/jacoco/jacocoRootReport/jacocoRootReport.csv ]; then
-            mkdir -p target/site/jacoco
-            cp build/reports/jacoco/jacocoRootReport/jacocoRootReport.csv target/site/jacoco/jacoco.csv
-            cp build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml target/site/jacoco/jacoco.xml
-            echo "Manually copied reports to Maven-compatible directory"
-          else
-            echo "ERROR: No JaCoCo reports found in build directory either"
-            find . -name "*.csv" -path "*/jacoco/*" 2>/dev/null || echo "No CSV files found"
-            exit 1
-          fi
+        # 빌드 성공 확인
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Gradle build failed"
+          exit 1
         fi
         
-        # Verify final state
+        echo "=== Gradle build completed successfully ==="
+    
+    - name: Verify and prepare JaCoCo reports
+      run: |
+        echo "=== Verifying JaCoCo report generation ==="
+        
+        # 파일 시스템 동기화를 위한 대기
+        sleep 3
+        
+        # 생성된 리포트 파일 확인
+        echo "=== Checking build directory ==="
+        if [ -d build/reports/jacoco/jacocoRootReport ]; then
+          echo "JaCoCo report directory exists"
+          ls -la build/reports/jacoco/jacocoRootReport/
+        else
+          echo "ERROR: JaCoCo report directory not found"
+          echo "Searching for JaCoCo files..."
+          find . -type f -path "*/jacoco/*" \( -name "*.csv" -o -name "*.xml" \) 2>/dev/null | head -20
+          exit 1
+        fi
+        
+        # CSV 파일 존재 확인
+        CSV_FILE="build/reports/jacoco/jacocoRootReport/jacocoRootReport.csv"
+        XML_FILE="build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
+        
+        if [ ! -f "$CSV_FILE" ]; then
+          echo "ERROR: JaCoCo CSV report not found at $CSV_FILE"
+          echo "Available files in build directory:"
+          find build -name "*.csv" -o -name "*.xml" | head -20
+          exit 1
+        fi
+        
+        if [ ! -f "$XML_FILE" ]; then
+          echo "ERROR: JaCoCo XML report not found at $XML_FILE"
+          exit 1
+        fi
+        
+        echo "SUCCESS: JaCoCo reports found"
+        echo "CSV: $(ls -la $CSV_FILE)"
+        echo "XML: $(ls -la $XML_FILE)"
+        
+        # Maven 호환 디렉토리 생성 및 복사
+        echo "=== Creating Maven-compatible directory structure ==="
+        mkdir -p target/site/jacoco
+        
+        # 파일 복사 (force copy)
+        cp -f "$CSV_FILE" target/site/jacoco/jacoco.csv
+        cp -f "$XML_FILE" target/site/jacoco/jacoco.xml
+        
+        # 복사 확인
         if [ -f target/site/jacoco/jacoco.csv ] && [ -f target/site/jacoco/jacoco.xml ]; then
-          echo "SUCCESS: JaCoCo reports are available"
+          echo "SUCCESS: Reports copied to Maven-compatible directory"
           echo "Contents of target/site/jacoco:"
           ls -la target/site/jacoco/
+          echo "CSV file size: $(stat -c%s target/site/jacoco/jacoco.csv) bytes"
+          echo "XML file size: $(stat -c%s target/site/jacoco/jacoco.xml) bytes"
         else
-          echo "ERROR: Failed to ensure JaCoCo reports exist"
+          echo "ERROR: Failed to copy reports to Maven-compatible directory"
           exit 1
         fi
     
