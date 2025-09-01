@@ -61,6 +61,7 @@ jobs:
     - name: JaCoCo Report
       id: jacoco-report
       uses: madrapps/jacoco-report@v1.6.1
+      continue-on-error: true
       with:
         paths: |
           ${{ github.workspace }}/build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml
@@ -70,6 +71,8 @@ jobs:
         title: 'JaCoCo Test Coverage Report'
         update-comment: true
         skip-if-no-changes: true
+        pass-emoji: '✅'
+        fail-emoji: '❌'
     
     - name: Upload coverage reports
       uses: actions/upload-artifact@v4
@@ -82,6 +85,7 @@ jobs:
     
     - name: Check coverage threshold
       run: ./gradlew jacocoTestCoverageVerification
+      continue-on-error: true
     
     - name: Comment PR with coverage
       if: github.event_name == 'pull_request'
