@@ -235,29 +235,47 @@ task jacocoRootReport(type: JacocoReport) {
         html.destination = file("${buildDir}/reports/jacoco/jacocoRootReport/html")
     }
     
+    doFirst {
+        // GitHub Actions 호환성을 위한 Maven 디렉토리 구조 사전 생성
+        def targetDir = file("${rootDir}/target/site/jacoco")
+        targetDir.mkdirs()
+        println "Created Maven-compatible directory: ${targetDir}"
+    }
+    
     doLast {
         println "JaCoCo reports generated at:"
         println "  CSV: ${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.csv"
         println "  XML: ${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
         println "  HTML: ${buildDir}/reports/jacoco/jacocoRootReport/html"
         
-        // GitHub Actions 호환성을 위한 Maven 디렉토리 구조 생성
+        // GitHub Actions 호환성을 위한 Maven 디렉토리 구조로 복사
         def targetDir = file("${rootDir}/target/site/jacoco")
-        targetDir.mkdirs()
         
-        // 리포트 파일 복사
-        copy {
-            from "${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.csv"
-            into targetDir
-            rename { "jacoco.csv" }
+        // CSV 파일 복사
+        def csvSource = file("${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.csv")
+        def csvTarget = file("${targetDir}/jacoco.csv")
+        if (csvSource.exists()) {
+            csvTarget.text = csvSource.text
+            println "Copied CSV report to: ${csvTarget}"
+        } else {
+            throw new GradleException("CSV report not found at: ${csvSource}")
         }
         
-        copy {
-            from "${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
-            into targetDir
-            rename { "jacoco.xml" }
+        // XML 파일 복사
+        def xmlSource = file("${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml")
+        def xmlTarget = file("${targetDir}/jacoco.xml")
+        if (xmlSource.exists()) {
+            xmlTarget.text = xmlSource.text
+            println "Copied XML report to: ${xmlTarget}"
+        } else {
+            throw new GradleException("XML report not found at: ${xmlSource}")
         }
         
-        println "Maven-compatible reports copied to: ${targetDir}"
+        println "Maven-compatible reports successfully copied to: ${targetDir}"
+        
+        // 파일 존재 확인
+        if (!csvTarget.exists() || !xmlTarget.exists()) {
+            throw new GradleException("Failed to create Maven-compatible reports")
+        }
     }
 }

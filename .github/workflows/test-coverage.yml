@@ -36,34 +36,56 @@ jobs:
     - name: Run tests with JaCoCo
       run: ./gradlew clean testAll jacocoRootReport --no-daemon --no-build-cache --info
     
-    - name: Debug - List build directory structure
+    - name: Debug - Check JaCoCo report generation
       run: |
         echo "=== Checking build directory structure ==="
-        if [ -d build ]; then
-          echo "Build directory exists"
-          find build -name "*.csv" -o -name "*.xml" | head -20
+        if [ -d build/reports/jacoco ]; then
+          echo "JaCoCo reports directory exists"
+          find build/reports/jacoco -type f -name "*.csv" -o -name "*.xml" | head -20
         else
-          echo "Build directory does not exist"
+          echo "JaCoCo reports directory does not exist"
         fi
-        echo "=== Current directory structure ==="
-        ls -la
+        echo "=== Checking Maven-compatible directory structure ==="
+        if [ -d target/site/jacoco ]; then
+          echo "Maven-compatible directory exists"
+          ls -la target/site/jacoco/
+        else
+          echo "Maven-compatible directory does not exist"
+        fi
     
-    - name: Verify JaCoCo Reports
+    - name: Ensure JaCoCo reports exist
       run: |
-        echo "=== Verifying JaCoCo reports in Maven-compatible directory ==="
+        echo "=== Ensuring JaCoCo reports exist in Maven-compatible directory ==="
+        # Wait a moment for file system sync
+        sleep 2
+        
+        # Check if reports were generated
         if [ ! -f target/site/jacoco/jacoco.csv ]; then
           echo "ERROR: JaCoCo CSV report not found at target/site/jacoco/jacoco.csv"
-          echo "Checking target directory structure:"
-          find target -type f 2>/dev/null || echo "No files found in target directory"
+          echo "Attempting to manually copy from build directory..."
+          
+          # Try to manually copy if not present
+          if [ -f build/reports/jacoco/jacocoRootReport/jacocoRootReport.csv ]; then
+            mkdir -p target/site/jacoco
+            cp build/reports/jacoco/jacocoRootReport/jacocoRootReport.csv target/site/jacoco/jacoco.csv
+            cp build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml target/site/jacoco/jacoco.xml
+            echo "Manually copied reports to Maven-compatible directory"
+          else
+            echo "ERROR: No JaCoCo reports found in build directory either"
+            find . -name "*.csv" -path "*/jacoco/*" 2>/dev/null || echo "No CSV files found"
+            exit 1
+          fi
+        fi
+        
+        # Verify final state
+        if [ -f target/site/jacoco/jacoco.csv ] && [ -f target/site/jacoco/jacoco.xml ]; then
+          echo "SUCCESS: JaCoCo reports are available"
+          echo "Contents of target/site/jacoco:"
+          ls -la target/site/jacoco/
+        else
+          echo "ERROR: Failed to ensure JaCoCo reports exist"
           exit 1
         fi
-        if [ ! -f target/site/jacoco/jacoco.xml ]; then
-          echo "ERROR: JaCoCo XML report not found at target/site/jacoco/jacoco.xml"
-          exit 1
-        fi
-        echo "JaCoCo reports successfully generated in Maven-compatible directory"
-        echo "Contents of target/site/jacoco:"
-        ls -la target/site/jacoco/
     
     - name: Generate JaCoCo Badge
       id: jacoco
