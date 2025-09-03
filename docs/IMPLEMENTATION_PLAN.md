@@ -124,10 +124,10 @@ PRD 문서와 설계 문서를 기반으로 수립한 구현 작업 계획입니
 JPA 기반 영속성 계층
 
 #### 7.1 JPA Entity 구현
-- [ ] SKU JPA Entity
-- [ ] Inventory JPA Entity
-- [ ] Product JPA Entity
-- [ ] Category JPA Entity
+- [x] SKU JPA Entity
+- [x] Inventory JPA Entity
+- [x] Product JPA Entity
+- [x] Category JPA Entity
 
 #### 7.2 Repository Adapter 구현
 - [ ] InventoryRepositoryAdapter
