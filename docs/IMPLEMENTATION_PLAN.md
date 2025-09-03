@@ -130,9 +130,9 @@ JPA 기반 영속성 계층
 - [x] Category JPA Entity
 
 #### 7.2 Repository Adapter 구현
-- [ ] InventoryRepositoryAdapter
-- [ ] ProductRepositoryAdapter
-- [ ] CategoryRepositoryAdapter
+- [x] InventoryRepositoryAdapter
+- [x] ProductRepositoryAdapter (기존 구현 사용)
+- [x] CategoryRepositoryAdapter
 
 #### 7.3 Mapper 구현
 - [ ] Domain ↔ JPA Entity 매핑
