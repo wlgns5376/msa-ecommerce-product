@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface CategoryJpaRepository extends JpaRepository<CategoryJpaEntity, String> {
+public interface CategoryJpaRepository extends JpaRepository<CategoryJpaEntity, String>, CategoryJpaRepositoryCustom {
     
     /**
      * 최상위 카테고리 목록을 조회합니다.
@@ -36,21 +36,6 @@ public interface CategoryJpaRepository extends JpaRepository<CategoryJpaEntity, 
     @Query("SELECT DISTINCT c FROM CategoryJpaEntity c LEFT JOIN FETCH c.children WHERE c.id = :id AND c.deletedAt IS NULL")
     Optional<CategoryJpaEntity> findByIdWithChildren(@Param("id") String id);
     
-    /**
-     * 카테고리 경로를 조회합니다.
-     * 리프 카테고리부터 루트까지의 경로를 반환합니다.
-     */
-    @Query(value = """
-            WITH RECURSIVE category_path AS (
-                SELECT c.* FROM categories c WHERE c.id = :leafCategoryId AND c.deleted_at IS NULL
-                UNION ALL
-                SELECT c.* FROM categories c 
-                INNER JOIN category_path cp ON c.id = cp.parent_id
-                WHERE c.deleted_at IS NULL
-            )
-            SELECT * FROM category_path ORDER BY level DESC
-            """, nativeQuery = true)
-    List<CategoryJpaEntity> findCategoryPath(@Param("leafCategoryId") String leafCategoryId);
     
     /**
      * 카테고리에 활성 상품이 있는지 확인합니다.
