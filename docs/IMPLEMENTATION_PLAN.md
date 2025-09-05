@@ -135,8 +135,8 @@ JPA 기반 영속성 계층
 - [x] CategoryRepositoryAdapter
 
 #### 7.3 Mapper 구현
-- [ ] Domain ↔ JPA Entity 매핑
-- [ ] 복잡한 관계 매핑 처리
+- [x] Domain ↔ JPA Entity 매핑
+- [x] 복잡한 관계 매핑 처리
 
 ### 8. Event Adapter 구현 ⭐⭐⭐
 Kafka 기반 이벤트 처리
