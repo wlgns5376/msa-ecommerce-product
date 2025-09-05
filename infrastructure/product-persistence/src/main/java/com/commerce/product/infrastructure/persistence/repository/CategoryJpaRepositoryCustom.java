@@ -26,4 +26,24 @@ public interface CategoryJpaRepositoryCustom {
      * 리프 카테고리부터 루트까지의 경로를 조회합니다.
      */
     List<CategoryJpaEntity> findCategoryPath(String leafCategoryId);
+    
+    /**
+     * 최상위 카테고리 목록을 조회합니다.
+     */
+    List<CategoryJpaEntity> findRootCategoriesQueryDsl();
+    
+    /**
+     * 특정 부모 카테고리의 하위 카테고리 목록을 조회합니다.
+     */
+    List<CategoryJpaEntity> findByParentIdQueryDsl(String parentId);
+    
+    /**
+     * 활성 상태의 카테고리 목록을 조회합니다.
+     */
+    List<CategoryJpaEntity> findActiveCategoriesQueryDsl();
+    
+    /**
+     * 여러 ID로 카테고리들을 조회합니다.
+     */
+    List<CategoryJpaEntity> findAllByIdInQueryDsl(List<String> categoryIds);
 }

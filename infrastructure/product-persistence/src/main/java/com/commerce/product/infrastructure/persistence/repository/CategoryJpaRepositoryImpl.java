@@ -91,4 +91,51 @@ public class CategoryJpaRepositoryImpl implements CategoryJpaRepositoryCustom {
         
         return path;
     }
+    
+    @Override
+    public List<CategoryJpaEntity> findRootCategoriesQueryDsl() {
+        QCategoryJpaEntity category = QCategoryJpaEntity.categoryJpaEntity;
+        
+        return queryFactory
+                .selectFrom(category)
+                .where(category.parentId.isNull()
+                        .and(category.deletedAt.isNull()))
+                .orderBy(category.sortOrder.asc(), category.name.asc())
+                .fetch();
+    }
+    
+    @Override
+    public List<CategoryJpaEntity> findByParentIdQueryDsl(String parentId) {
+        QCategoryJpaEntity category = QCategoryJpaEntity.categoryJpaEntity;
+        
+        return queryFactory
+                .selectFrom(category)
+                .where(category.parentId.eq(parentId)
+                        .and(category.deletedAt.isNull()))
+                .orderBy(category.sortOrder.asc(), category.name.asc())
+                .fetch();
+    }
+    
+    @Override
+    public List<CategoryJpaEntity> findActiveCategoriesQueryDsl() {
+        QCategoryJpaEntity category = QCategoryJpaEntity.categoryJpaEntity;
+        
+        return queryFactory
+                .selectFrom(category)
+                .where(category.isActive.eq(true)
+                        .and(category.deletedAt.isNull()))
+                .orderBy(category.level.asc(), category.sortOrder.asc(), category.name.asc())
+                .fetch();
+    }
+    
+    @Override
+    public List<CategoryJpaEntity> findAllByIdInQueryDsl(List<String> categoryIds) {
+        QCategoryJpaEntity category = QCategoryJpaEntity.categoryJpaEntity;
+        
+        return queryFactory
+                .selectFrom(category)
+                .where(category.id.in(categoryIds)
+                        .and(category.deletedAt.isNull()))
+                .fetch();
+    }
 }
