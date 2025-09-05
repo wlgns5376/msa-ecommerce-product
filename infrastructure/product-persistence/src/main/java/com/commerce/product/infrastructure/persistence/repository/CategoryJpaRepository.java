@@ -2,60 +2,78 @@ package com.commerce.product.infrastructure.persistence.repository;
 
 import com.commerce.product.infrastructure.persistence.entity.CategoryJpaEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface CategoryJpaRepository extends JpaRepository<CategoryJpaEntity, String>, CategoryJpaRepositoryCustom {
+public interface CategoryJpaRepository extends JpaRepository<CategoryJpaEntity, String> {
     
     /**
      * 최상위 카테고리 목록을 조회합니다.
      */
-    default List<CategoryJpaEntity> findRootCategories() {
-        return findRootCategoriesQueryDsl();
-    }
+    @Query("SELECT c FROM CategoryJpaEntity c WHERE c.parentId IS NULL AND c.deletedAt IS NULL ORDER BY c.sortOrder ASC, c.name ASC")
+    List<CategoryJpaEntity> findRootCategories();
     
     /**
      * 특정 부모 카테고리의 하위 카테고리 목록을 조회합니다.
      */
-    default List<CategoryJpaEntity> findByParentId(String parentId) {
-        return findByParentIdQueryDsl(parentId);
-    }
+    @Query("SELECT c FROM CategoryJpaEntity c WHERE c.parentId = :parentId AND c.deletedAt IS NULL ORDER BY c.sortOrder ASC, c.name ASC")
+    List<CategoryJpaEntity> findByParentId(@Param("parentId") String parentId);
     
     /**
      * 활성 상태의 카테고리 목록을 조회합니다.
      */
-    default List<CategoryJpaEntity> findActiveCategories() {
-        return findActiveCategoriesQueryDsl();
-    }
+    @Query("SELECT c FROM CategoryJpaEntity c WHERE c.isActive = true AND c.deletedAt IS NULL ORDER BY c.level ASC, c.sortOrder ASC, c.name ASC")
+    List<CategoryJpaEntity> findActiveCategories();
     
     /**
      * ID로 카테고리를 자식들과 함께 조회합니다.
      */
-    default Optional<CategoryJpaEntity> findByIdWithChildren(String id) {
-        return findByIdWithChildrenQueryDsl(id);
-    }
+    @Query("SELECT DISTINCT c FROM CategoryJpaEntity c LEFT JOIN FETCH c.children WHERE c.id = :id AND c.deletedAt IS NULL")
+    Optional<CategoryJpaEntity> findByIdWithChildren(@Param("id") String id);
+    
+    /**
+     * 카테고리 경로를 조회합니다.
+     * 리프 카테고리부터 루트까지의 경로를 반환합니다.
+     */
+    @Query(value = """
+            WITH RECURSIVE category_path AS (
+                SELECT c.* FROM categories c WHERE c.id = :leafCategoryId AND c.deleted_at IS NULL
+                UNION ALL
+                SELECT c.* FROM categories c 
+                INNER JOIN category_path cp ON c.id = cp.parent_id
+                WHERE c.deleted_at IS NULL
+            )
+            SELECT * FROM category_path ORDER BY level DESC
+            """, nativeQuery = true)
+    List<CategoryJpaEntity> findCategoryPath(@Param("leafCategoryId") String leafCategoryId);
     
     /**
      * 카테고리에 활성 상품이 있는지 확인합니다.
      */
-    default boolean hasActiveProducts(String categoryId) {
-        return hasActiveProductsQueryDsl(categoryId);
-    }
+    @Query("""
+            SELECT CASE WHEN COUNT(pc) > 0 THEN true ELSE false END
+            FROM ProductCategoryJpaEntity pc
+            JOIN pc.product p
+            WHERE pc.category.id = :categoryId 
+            AND p.status = 'ACTIVE'
+            AND p.deletedAt IS NULL
+            """)
+    boolean hasActiveProducts(@Param("categoryId") String categoryId);
     
     /**
      * 여러 ID로 카테고리들을 조회합니다.
      */
-    default List<CategoryJpaEntity> findAllByIdIn(List<String> categoryIds) {
-        return findAllByIdInQueryDsl(categoryIds);
-    }
+    @Query("SELECT c FROM CategoryJpaEntity c WHERE c.id IN :categoryIds AND c.deletedAt IS NULL")
+    List<CategoryJpaEntity> findAllByIdIn(@Param("categoryIds") List<String> categoryIds);
     
     /**
      * 모든 카테고리를 계층 구조로 조회합니다.
      */
-    default List<CategoryJpaEntity> findAllWithHierarchy() {
-        return findAllWithHierarchyQueryDsl();
-    }
+    @Query("SELECT DISTINCT c FROM CategoryJpaEntity c LEFT JOIN FETCH c.children WHERE c.parentId IS NULL AND c.deletedAt IS NULL ORDER BY c.sortOrder ASC, c.name ASC")
+    List<CategoryJpaEntity> findAllWithHierarchy();
 }

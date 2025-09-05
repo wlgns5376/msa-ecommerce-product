@@ -18,6 +18,7 @@ import java.util.Optional;
 public class CategoryJpaRepositoryImpl implements CategoryJpaRepositoryCustom {
     
     private final JPAQueryFactory queryFactory;
+    private final CategoryPathQueryExecutor categoryPathQueryExecutor;
     
     @Override
     public Optional<CategoryJpaEntity> findByIdWithChildrenQueryDsl(String id) {
@@ -69,27 +70,8 @@ public class CategoryJpaRepositoryImpl implements CategoryJpaRepositoryCustom {
     
     @Override
     public List<CategoryJpaEntity> findCategoryPath(String leafCategoryId) {
-        List<CategoryJpaEntity> path = new ArrayList<>();
-        CategoryJpaEntity current = queryFactory
-                .selectFrom(QCategoryJpaEntity.categoryJpaEntity)
-                .where(QCategoryJpaEntity.categoryJpaEntity.id.eq(leafCategoryId)
-                        .and(QCategoryJpaEntity.categoryJpaEntity.deletedAt.isNull()))
-                .fetchOne();
-                
-        while (current != null) {
-            path.add(0, current); // 리스트의 맨 앞에 추가하여 루트->리프 순서로 만듦
-            if (current.getParentId() != null) {
-                current = queryFactory
-                        .selectFrom(QCategoryJpaEntity.categoryJpaEntity)
-                        .where(QCategoryJpaEntity.categoryJpaEntity.id.eq(current.getParentId())
-                                .and(QCategoryJpaEntity.categoryJpaEntity.deletedAt.isNull()))
-                        .fetchOne();
-            } else {
-                current = null;
-            }
-        }
-        
-        return path;
+        // 복잡한 재귀 쿼리는 전용 실행자에 위임합니다
+        return categoryPathQueryExecutor.findCategoryPath(leafCategoryId);
     }
     
     @Override
