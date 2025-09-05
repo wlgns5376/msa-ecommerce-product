@@ -32,23 +32,20 @@ public interface CategoryJpaRepository extends JpaRepository<CategoryJpaEntity, 
     
     /**
      * ID로 카테고리를 자식들과 함께 조회합니다.
+     * QueryDSL을 사용하는 메서드는 CategoryJpaRepositoryCustom 인터페이스에서 제공됩니다.
      */
-    @Query("SELECT DISTINCT c FROM CategoryJpaEntity c LEFT JOIN FETCH c.children WHERE c.id = :id AND c.deletedAt IS NULL")
-    Optional<CategoryJpaEntity> findByIdWithChildren(@Param("id") String id);
+    default Optional<CategoryJpaEntity> findByIdWithChildren(String id) {
+        return findByIdWithChildrenQueryDsl(id);
+    }
     
     
     /**
      * 카테고리에 활성 상품이 있는지 확인합니다.
+     * QueryDSL을 사용하는 메서드는 CategoryJpaRepositoryCustom 인터페이스에서 제공됩니다.
      */
-    @Query("""
-            SELECT CASE WHEN COUNT(pc) > 0 THEN true ELSE false END
-            FROM ProductCategoryJpaEntity pc
-            JOIN pc.product p
-            WHERE pc.category.id = :categoryId 
-            AND p.status = 'ACTIVE'
-            AND p.deletedAt IS NULL
-            """)
-    boolean hasActiveProducts(@Param("categoryId") String categoryId);
+    default boolean hasActiveProducts(String categoryId) {
+        return hasActiveProductsQueryDsl(categoryId);
+    }
     
     /**
      * 여러 ID로 카테고리들을 조회합니다.
@@ -58,7 +55,9 @@ public interface CategoryJpaRepository extends JpaRepository<CategoryJpaEntity, 
     
     /**
      * 모든 카테고리를 계층 구조로 조회합니다.
+     * QueryDSL을 사용하는 메서드는 CategoryJpaRepositoryCustom 인터페이스에서 제공됩니다.
      */
-    @Query("SELECT DISTINCT c FROM CategoryJpaEntity c LEFT JOIN FETCH c.children WHERE c.parentId IS NULL AND c.deletedAt IS NULL ORDER BY c.sortOrder ASC, c.name ASC")
-    List<CategoryJpaEntity> findAllWithHierarchy();
+    default List<CategoryJpaEntity> findAllWithHierarchy() {
+        return findAllWithHierarchyQueryDsl();
+    }
 }
