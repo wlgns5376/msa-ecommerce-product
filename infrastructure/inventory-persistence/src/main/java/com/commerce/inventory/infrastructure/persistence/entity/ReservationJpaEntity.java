@@ -1,5 +1,10 @@
 package com.commerce.inventory.infrastructure.persistence.entity;
 
+import com.commerce.common.domain.model.Quantity;
+import com.commerce.inventory.domain.model.Reservation;
+import com.commerce.inventory.domain.model.ReservationId;
+import com.commerce.inventory.domain.model.ReservationStatus;
+import com.commerce.inventory.domain.model.SkuId;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -60,5 +65,51 @@ public class ReservationJpaEntity {
         CONFIRMED,
         RELEASED,
         EXPIRED
+    }
+    
+    public static ReservationJpaEntity fromDomainModel(Reservation reservation) {
+        return ReservationJpaEntity.builder()
+                .id(reservation.getId().value())
+                .skuId(reservation.getSkuId().value())
+                .inventoryId(reservation.getSkuId().value()) // SKU ID를 inventory ID로 사용
+                .quantity(reservation.getQuantity().value())
+                .orderId(reservation.getOrderId())
+                .expiresAt(reservation.getExpiresAt())
+                .status(mapToJpaStatus(reservation.getStatus()))
+                .createdAt(reservation.getCreatedAt())
+                .updatedAt(reservation.getUpdatedAt())
+                .version(reservation.getVersion())
+                .build();
+    }
+    
+    public Reservation toDomainModel() {
+        return Reservation.restore(
+                new ReservationId(id),
+                new SkuId(skuId),
+                Quantity.of(quantity),
+                orderId,
+                expiresAt,
+                mapToDomainStatus(status),
+                createdAt,
+                version
+        );
+    }
+    
+    private static ReservationStatus mapToJpaStatus(com.commerce.inventory.domain.model.ReservationStatus domainStatus) {
+        return switch (domainStatus) {
+            case ACTIVE -> ReservationStatus.ACTIVE;
+            case CONFIRMED -> ReservationStatus.CONFIRMED;
+            case RELEASED -> ReservationStatus.RELEASED;
+            case EXPIRED -> ReservationStatus.EXPIRED;
+        };
+    }
+    
+    private static com.commerce.inventory.domain.model.ReservationStatus mapToDomainStatus(ReservationStatus jpaStatus) {
+        return switch (jpaStatus) {
+            case ACTIVE -> com.commerce.inventory.domain.model.ReservationStatus.ACTIVE;
+            case CONFIRMED -> com.commerce.inventory.domain.model.ReservationStatus.CONFIRMED;
+            case RELEASED -> com.commerce.inventory.domain.model.ReservationStatus.RELEASED;
+            case EXPIRED -> com.commerce.inventory.domain.model.ReservationStatus.EXPIRED;
+        };
     }
 }
