@@ -1,5 +1,8 @@
 package com.commerce.inventory.infrastructure.persistence.entity;
 
+import com.commerce.common.domain.model.Quantity;
+import com.commerce.inventory.domain.model.Inventory;
+import com.commerce.inventory.domain.model.SkuId;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -32,4 +35,26 @@ public class InventoryJpaEntity {
     
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+    
+    public static InventoryJpaEntity fromDomainModel(Inventory inventory) {
+        return InventoryJpaEntity.builder()
+                .skuId(inventory.getSkuId().value())
+                .totalQuantity(inventory.getTotalQuantity().value())
+                .reservedQuantity(inventory.getReservedQuantity().value())
+                .version(inventory.getVersion())
+                .createdAt(inventory.getCreatedAt())
+                .updatedAt(inventory.getUpdatedAt())
+                .build();
+    }
+    
+    public Inventory toDomainModel() {
+        return Inventory.restore(
+                SkuId.of(skuId),
+                Quantity.of(totalQuantity),
+                Quantity.of(reservedQuantity),
+                version,
+                createdAt,
+                updatedAt
+        );
+    }
 }

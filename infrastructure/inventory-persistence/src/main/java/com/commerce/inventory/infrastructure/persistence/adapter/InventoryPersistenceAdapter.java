@@ -1,6 +1,5 @@
 package com.commerce.inventory.infrastructure.persistence.adapter;
 
-import com.commerce.common.domain.model.Quantity;
 import com.commerce.inventory.application.service.port.out.LoadInventoryPort;
 import com.commerce.inventory.application.service.port.out.SaveInventoryPort;
 import com.commerce.inventory.domain.model.Inventory;
@@ -15,7 +14,6 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -46,7 +44,7 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
     @Transactional(readOnly = true)
     public Optional<Inventory> load(SkuId skuId) {
         return inventoryJpaRepository.findById(skuId.value())
-                .map(this::toDomainEntity);
+                .map(InventoryJpaEntity::toDomainModel);
     }
     
     @Override
@@ -68,7 +66,7 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
                     .collect(Collectors.toList());
             
             Map<SkuId, Inventory> batchResult = inventoryJpaRepository.findAllById(batchIds).stream()
-                    .map(this::toDomainEntity)
+                    .map(InventoryJpaEntity::toDomainModel)
                     .collect(Collectors.toMap(
                             Inventory::getSkuId,
                             inventory -> inventory
@@ -92,7 +90,7 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
                 .collect(Collectors.toList());
         
         return inventoryJpaRepository.findAllByIdWithLock(skuIdStrings).stream()
-                .map(this::toDomainEntity)
+                .map(InventoryJpaEntity::toDomainModel)
                 .collect(Collectors.toMap(
                         Inventory::getSkuId,
                         inventory -> inventory
@@ -103,7 +101,7 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
     @Transactional
     public void save(Inventory inventory) {
         try {
-            InventoryJpaEntity entity = toJpaEntity(inventory);
+            InventoryJpaEntity entity = InventoryJpaEntity.fromDomainModel(inventory);
             inventoryJpaRepository.save(entity);
         } catch (OptimisticLockException | org.springframework.dao.OptimisticLockingFailureException e) {
             throw new OptimisticLockingFailureException(
@@ -121,7 +119,7 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
         }
         try {
             List<InventoryJpaEntity> entities = inventories.stream()
-                .map(this::toJpaEntity)
+                .map(InventoryJpaEntity::fromDomainModel)
                 .collect(Collectors.toList());
             inventoryJpaRepository.saveAll(entities);
         } catch (OptimisticLockException | org.springframework.dao.OptimisticLockingFailureException e) {
@@ -141,27 +139,5 @@ public class InventoryPersistenceAdapter implements LoadInventoryPort, SaveInven
             ids += " 등 (총 " + inventories.size() + "개)";
         }
         return "SKU IDs: " + ids;
-    }
-    
-    private Inventory toDomainEntity(InventoryJpaEntity entity) {
-        return Inventory.restore(
-                SkuId.of(entity.getSkuId()),
-                Quantity.of(entity.getTotalQuantity()),
-                Quantity.of(entity.getReservedQuantity()),
-                entity.getVersion(),
-                entity.getCreatedAt(),
-                entity.getUpdatedAt()
-        );
-    }
-    
-    private InventoryJpaEntity toJpaEntity(Inventory inventory) {
-        return InventoryJpaEntity.builder()
-                .skuId(inventory.getSkuId().value())
-                .totalQuantity(inventory.getTotalQuantity().value())
-                .reservedQuantity(inventory.getReservedQuantity().value())
-                .version(inventory.getVersion())
-                .createdAt(inventory.getCreatedAt())
-                .updatedAt(inventory.getUpdatedAt())
-                .build();
     }
 }
