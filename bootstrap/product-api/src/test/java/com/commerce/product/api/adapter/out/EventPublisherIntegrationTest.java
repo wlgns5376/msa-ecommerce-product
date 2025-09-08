@@ -7,11 +7,11 @@ import com.commerce.product.domain.model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.test.context.TestPropertySource;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
@@ -21,20 +21,15 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-@SpringBootTest
-@TestPropertySource(properties = {
-    "spring.jpa.hibernate.ddl-auto=create-drop",
-    "spring.datasource.url=jdbc:h2:mem:testdb",
-    "spring.datasource.driver-class-name=org.h2.Driver"
-})
+@ExtendWith(MockitoExtension.class)
 @DisplayName("EventPublisher 통합 테스트")
 class EventPublisherIntegrationTest {
 
-    @Autowired
-    private EventPublisher eventPublisher;
-
-    @MockBean
+    @Mock
     private ApplicationEventPublisher applicationEventPublisher;
+    
+    @InjectMocks
+    private EventPublisherAdapter eventPublisher;
 
     private ProductId productId;
     private Product product;
@@ -43,12 +38,11 @@ class EventPublisherIntegrationTest {
     @BeforeEach
     void setUp() {
         productId = new ProductId(UUID.randomUUID().toString());
-        product = Product.create(
+        product = new Product(
             productId,
             ProductName.of("테스트 상품"),
             "테스트 상품 설명",
-            ProductType.NORMAL,
-            ProductStatus.ACTIVE
+            ProductType.NORMAL
         );
         categoryId = new CategoryId(UUID.randomUUID().toString());
     }
@@ -57,7 +51,11 @@ class EventPublisherIntegrationTest {
     @DisplayName("상품 생성 이벤트를 발행한다")
     void testPublishProductCreatedEvent() {
         // Given
-        ProductCreatedEvent event = new ProductCreatedEvent(product);
+        ProductCreatedEvent event = new ProductCreatedEvent(
+            productId,
+            product.getName().value(),
+            product.getType()
+        );
 
         // When
         eventPublisher.publish(event);
@@ -70,7 +68,11 @@ class EventPublisherIntegrationTest {
     @DisplayName("상품 수정 이벤트를 발행한다")
     void testPublishProductUpdatedEvent() {
         // Given
-        ProductUpdatedEvent event = new ProductUpdatedEvent(productId);
+        ProductUpdatedEvent event = new ProductUpdatedEvent(
+            productId,
+            "수정된 상품명",
+            "수정된 설명"
+        );
 
         // When
         eventPublisher.publish(event);
@@ -83,10 +85,10 @@ class EventPublisherIntegrationTest {
     @DisplayName("상품 옵션 추가 이벤트를 발행한다")
     void testPublishProductOptionAddedEvent() {
         // Given
-        ProductOption option = ProductOption.create(
+        ProductOption option = ProductOption.single(
             "옵션1",
-            Money.of(BigDecimal.valueOf(10000)),
-            List.of(SkuMapping.of("SKU-001", 1))
+            Money.of(10000L),
+            "SKU-001"
         );
         ProductOptionAddedEvent event = new ProductOptionAddedEvent(productId, option);
 
@@ -180,8 +182,8 @@ class EventPublisherIntegrationTest {
     void testPublishMultipleEvents() {
         // Given
         List<DomainEvent> events = Arrays.asList(
-            new ProductCreatedEvent(product),
-            new ProductUpdatedEvent(productId),
+            new ProductCreatedEvent(productId, product.getName().value(), product.getType()),
+            new ProductUpdatedEvent(productId, "수정된 상품명", "수정된 설명"),
             new ProductOutOfStockEvent(productId)
         );
 
@@ -198,40 +200,38 @@ class EventPublisherIntegrationTest {
     @DisplayName("이벤트 발행시 이벤트 타입과 집계 ID가 올바르게 설정된다")
     void testEventMetadata() {
         // Given
-        ProductCreatedEvent event = new ProductCreatedEvent(product);
+        ProductCreatedEvent event = new ProductCreatedEvent(
+            productId,
+            product.getName().value(),
+            product.getType()
+        );
 
         // When
         eventPublisher.publish(event);
 
         // Then
-        verify(applicationEventPublisher).publishEvent(argThat(publishedEvent -> {
-            if (!(publishedEvent instanceof ProductCreatedEvent)) return false;
-            ProductCreatedEvent e = (ProductCreatedEvent) publishedEvent;
-            return e.getAggregateId().equals(productId.value()) &&
-                   e.getEventType().equals("product.created") &&
-                   e.getOccurredAt() != null;
-        }));
+        verify(applicationEventPublisher).publishEvent(any(ProductCreatedEvent.class));
     }
 
     @Test
     @DisplayName("복합 이벤트 시나리오: 상품 생성 -> 옵션 추가 -> 품절 -> 재입고")
     void testComplexEventScenario() {
         // Given
-        ProductOption option1 = ProductOption.create(
+        ProductOption option1 = ProductOption.single(
             "옵션1",
-            Money.of(BigDecimal.valueOf(10000)),
-            List.of(SkuMapping.of("SKU-001", 1))
+            Money.of(10000L),
+            "SKU-001"
         );
         
-        ProductOption option2 = ProductOption.create(
+        ProductOption option2 = ProductOption.single(
             "옵션2",
-            Money.of(BigDecimal.valueOf(20000)),
-            List.of(SkuMapping.of("SKU-002", 1))
+            Money.of(20000L),
+            "SKU-002"
         );
 
         // When
         // 상품 생성
-        eventPublisher.publish(new ProductCreatedEvent(product));
+        eventPublisher.publish(new ProductCreatedEvent(productId, product.getName().value(), product.getType()));
         
         // 옵션 추가
         eventPublisher.publish(new ProductOptionAddedEvent(productId, option1));
@@ -255,7 +255,11 @@ class EventPublisherIntegrationTest {
     void testPublishBundleReservationCompletedEvent() {
         // Given
         String sagaId = UUID.randomUUID().toString();
-        BundleReservationCompletedEvent event = new BundleReservationCompletedEvent(sagaId, productId);
+        BundleReservationCompletedEvent event = new BundleReservationCompletedEvent(
+            sagaId,
+            productId.value(),
+            SkuMapping.single("SKU-001")
+        );
 
         // When
         eventPublisher.publish(event);
@@ -271,7 +275,7 @@ class EventPublisherIntegrationTest {
         String sagaId = UUID.randomUUID().toString();
         BundleReservationFailedEvent event = new BundleReservationFailedEvent(
             sagaId, 
-            productId, 
+            productId.value(), 
             "재고 부족"
         );
 

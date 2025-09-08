@@ -53,7 +53,7 @@ class KafkaErrorHandlerTest {
     
     @Test
     @DisplayName("재시도 불가능한 에러인 경우 DLQ로 이동한다")
-    void testHandleError_NonRetryableError() {
+    void testHandleError_NonRetryableError() throws InterruptedException {
         // Given
         TestDomainEvent event = new TestDomainEvent();
         IllegalArgumentException error = new IllegalArgumentException("Invalid argument");
@@ -61,7 +61,8 @@ class KafkaErrorHandlerTest {
         // When
         errorHandler.handleError(event, error);
         
-        // Then
+        // Then - wait for async execution
+        Thread.sleep(100);
         verify(retryableEventStore).moveToDeadLetter(eq(event), contains("Invalid argument"));
         verify(retryableEventStore, never()).retry(any());
     }
@@ -77,7 +78,7 @@ class KafkaErrorHandlerTest {
         errorHandler.handleError(event, error);
         
         // Then
-        verify(retryableEventStore).moveToDeadLetter(eq(event), anyString());
+        verify(retryableEventStore, timeout(1000)).moveToDeadLetter(eq(event), anyString());
         verify(retryableEventStore, never()).retry(any());
     }
     
@@ -113,7 +114,7 @@ class KafkaErrorHandlerTest {
     
     @Test
     @DisplayName("null 메시지를 가진 에러는 재시도하지 않는다")
-    void testHandleError_NullMessage() {
+    void testHandleError_NullMessage() throws InterruptedException {
         // Given
         TestDomainEvent event = new TestDomainEvent();
         RuntimeException error = new RuntimeException((String) null);
@@ -121,8 +122,9 @@ class KafkaErrorHandlerTest {
         // When
         errorHandler.handleError(event, error);
         
-        // Then
-        verify(retryableEventStore).moveToDeadLetter(eq(event), anyString());
+        // Then - wait for async execution
+        Thread.sleep(100);
+        verify(retryableEventStore).moveToDeadLetter(eq(event), eq(null));
         verify(retryableEventStore, never()).retry(any());
     }
     

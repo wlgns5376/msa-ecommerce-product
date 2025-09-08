@@ -53,15 +53,26 @@ public class KafkaErrorHandler {
      */
     private boolean isRetryableError(Throwable error) {
         // 네트워크 오류, 타임아웃 등 재시도 가능한 에러 판단
+        
+        // TimeoutException 타입 체크
+        if (error instanceof java.util.concurrent.TimeoutException) {
+            return true;
+        }
+        
         String errorMessage = error.getMessage();
         if (errorMessage == null) {
             return false;
         }
         
+        // 재시도 불가능한 에러 체크
+        if (errorMessage.contains("RecordTooLargeException")) {
+            return false;
+        }
+        
+        // 재시도 가능한 에러 체크
         return errorMessage.contains("TimeoutException") ||
                errorMessage.contains("NetworkException") ||
-               errorMessage.contains("NotLeaderForPartitionException") ||
-               errorMessage.contains("RecordTooLargeException") == false;
+               errorMessage.contains("NotLeaderForPartitionException");
     }
     
     /**
@@ -105,8 +116,10 @@ public class KafkaErrorHandler {
         log.error("Non-retryable error for event: {}, Error: {}", 
             event.eventType(), error.getMessage());
         
-        // Dead Letter Queue로 이동
-        retryableEventStore.moveToDeadLetter(event, error.getMessage());
+        // Dead Letter Queue로 이동 - 비동기로 처리
+        scheduledExecutor.schedule(() -> {
+            retryableEventStore.moveToDeadLetter(event, error.getMessage());
+        }, 0, TimeUnit.MILLISECONDS);
         
         // 알림 발송 (선택적)
         notifyFailure(event, error);

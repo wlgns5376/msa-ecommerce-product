@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -95,13 +96,13 @@ class EventPublisherAdapterTest {
     void testPublishEventWithException() {
         // Given
         RuntimeException expectedException = new RuntimeException("Event publishing failed");
-        doThrow(expectedException).when(applicationEventPublisher).publishEvent(any());
+        doThrow(expectedException).when(applicationEventPublisher).publishEvent(testEvent);
 
         // When & Then
-        org.assertj.core.api.Assertions.assertThatThrownBy(() -> 
-            eventPublisherAdapter.publish(testEvent)
-        ).isInstanceOf(RuntimeException.class)
-         .hasMessage("Event publishing failed");
+        RuntimeException thrown = assertThrows(RuntimeException.class, () -> {
+            eventPublisherAdapter.publish(testEvent);
+        });
+        assertEquals("Event publishing failed", thrown.getMessage());
 
         verify(applicationEventPublisher, times(1)).publishEvent(testEvent);
     }
@@ -120,10 +121,10 @@ class EventPublisherAdapterTest {
         doThrow(expectedException).when(applicationEventPublisher).publishEvent(event2);
 
         // When & Then
-        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
-            eventPublisherAdapter.publishAll(events)
-        ).isInstanceOf(RuntimeException.class)
-         .hasMessage("Event publishing failed");
+        RuntimeException thrown = assertThrows(RuntimeException.class, () -> {
+            eventPublisherAdapter.publishAll(events);
+        });
+        assertEquals("Event publishing failed", thrown.getMessage());
 
         // event1은 발행되고, event2에서 실패, event3는 발행되지 않음
         verify(applicationEventPublisher, times(1)).publishEvent(event1);
