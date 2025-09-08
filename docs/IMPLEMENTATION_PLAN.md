@@ -142,9 +142,9 @@ JPA 기반 영속성 계층
 Kafka 기반 이벤트 처리
 
 #### 8.1 Event Publisher
-- [ ] KafkaEventPublisher 구현
-- [ ] Event Serialization 처리
-- [ ] Error Handling
+- [x] KafkaEventPublisher 구현
+- [x] Event Serialization 처리
+- [x] Error Handling
 
 #### 8.2 Event Consumer
 - [ ] Event Handler 구현

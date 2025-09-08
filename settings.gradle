@@ -21,6 +21,9 @@ project(':inventory-persistence').projectDir = file('infrastructure/inventory-pe
 include 'product-kafka'
 project(':product-kafka').projectDir = file('infrastructure/product-kafka')
 
+include 'inventory-event-kafka'
+project(':inventory-event-kafka').projectDir = file('infrastructure/inventory-event-kafka')
+
 // Bootstrap modules
 include 'product-api'
 project(':product-api').projectDir = file('bootstrap/product-api')
