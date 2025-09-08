@@ -95,7 +95,7 @@ class EventPublisherAdapterTest {
     void testPublishEventWithException() {
         // Given
         RuntimeException expectedException = new RuntimeException("Event publishing failed");
-        doThrow(expectedException).when(applicationEventPublisher).publishEvent(any());
+        doThrow(expectedException).when(applicationEventPublisher).publishEvent(any(DomainEvent.class));
 
         // When & Then
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> 

@@ -185,7 +185,7 @@ class KafkaEventPublisherTest {
     }
     
     // Test event classes
-    static class TestDomainEvent implements DomainEvent {
+    static class TestDomainEvent implements DomainEvent, AggregateEvent {
         private final String id;
         private final LocalDateTime occurredAt = LocalDateTime.now();
         
@@ -201,6 +201,11 @@ class KafkaEventPublisherTest {
         @Override
         public String eventType() {
             return "TestDomainEvent";
+        }
+        
+        @Override
+        public String getAggregateId() {
+            return id;
         }
     }
     
