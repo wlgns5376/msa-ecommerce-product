@@ -19,12 +19,7 @@ public class KafkaTopicResolver {
     @Value("${kafka.topics.default:inventory-events}")
     private String defaultTopic;
     
-    private final Map<String, String> topicMappings = new ConcurrentHashMap<>();
-    
-    public KafkaTopicResolver() {
-        // 이벤트 타입별 토픽 매핑 초기화
-        initializeTopicMappings();
-    }
+    private final Map<String, String> customTopicMappings = new ConcurrentHashMap<>();
     
     /**
      * 도메인 이벤트에 대한 Kafka 토픽 결정
@@ -32,32 +27,19 @@ public class KafkaTopicResolver {
     public String resolveTopic(DomainEvent event) {
         String eventType = event.eventType();
         
-        // 명시적 매핑이 있는 경우
-        if (topicMappings.containsKey(eventType)) {
-            return topicMappings.get(eventType);
+        // 커스텀 매핑이 있는 경우 우선 사용
+        if (customTopicMappings.containsKey(eventType)) {
+            return customTopicMappings.get(eventType);
+        }
+        
+        // Enum 기반 매핑 확인
+        KafkaTopic kafkaTopic = KafkaTopic.findByEventType(eventType);
+        if (kafkaTopic != null) {
+            return kafkaTopic.getTopicName();
         }
         
         // 이벤트 타입 기반 토픽 생성
         return generateTopicName(eventType);
-    }
-    
-    /**
-     * 이벤트 타입별 토픽 매핑 초기화
-     */
-    private void initializeTopicMappings() {
-        // Stock 관련 이벤트
-        topicMappings.put("StockReceivedEvent", "inventory-stock-events");
-        topicMappings.put("StockReservedEvent", "inventory-stock-events");
-        topicMappings.put("StockDepletedEvent", "inventory-stock-events");
-        topicMappings.put("ReservationReleasedEvent", "inventory-stock-events");
-        
-        // SKU 관련 이벤트
-        topicMappings.put("SkuCreatedEvent", "inventory-sku-events");
-        topicMappings.put("SkuUpdatedEvent", "inventory-sku-events");
-        topicMappings.put("SkuDeletedEvent", "inventory-sku-events");
-        
-        // Movement 관련 이벤트
-        topicMappings.put("StockMovementCreatedEvent", "inventory-movement-events");
     }
     
     /**
@@ -74,16 +56,17 @@ public class KafkaTopicResolver {
     }
     
     /**
-     * 특정 이벤트 타입에 대한 토픽 매핑 추가
+     * 특정 이벤트 타입에 대한 커스텀 토픽 매핑 추가
+     * Enum에 정의되지 않은 이벤트 타입에 대한 동적 매핑을 위해 사용
      */
-    public void addMapping(String eventType, String topic) {
-        topicMappings.put(eventType, topic);
+    public void addCustomMapping(String eventType, String topic) {
+        customTopicMappings.put(eventType, topic);
     }
     
     /**
-     * 특정 이벤트 타입에 대한 토픽 매핑 제거
+     * 특정 이벤트 타입에 대한 커스텀 토픽 매핑 제거
      */
-    public void removeMapping(String eventType) {
-        topicMappings.remove(eventType);
+    public void removeCustomMapping(String eventType) {
+        customTopicMappings.remove(eventType);
     }
 }
