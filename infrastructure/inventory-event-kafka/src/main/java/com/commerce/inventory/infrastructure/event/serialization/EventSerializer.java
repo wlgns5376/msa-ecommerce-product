@@ -8,6 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -33,7 +35,7 @@ public class EventSerializer {
             return EventMessage.builder()
                 .eventId(UUID.randomUUID().toString())
                 .eventType(event.eventType())
-                .occurredAt(Instant.from(event.getOccurredAt()))
+                .occurredAt(convertToInstant(event.getOccurredAt()))
                 .payload(payloadJson)
                 .metadata(extractMetadata(event))
                 .aggregateId(extractAggregateId(event))
@@ -100,6 +102,13 @@ public class EventSerializer {
             return ((AggregateEvent) event).getAggregateType();
         }
         return null;
+    }
+    
+    private Instant convertToInstant(LocalDateTime localDateTime) {
+        if (localDateTime == null) {
+            return Instant.now();
+        }
+        return localDateTime.atZone(ZoneId.systemDefault()).toInstant();
     }
     
     /**
