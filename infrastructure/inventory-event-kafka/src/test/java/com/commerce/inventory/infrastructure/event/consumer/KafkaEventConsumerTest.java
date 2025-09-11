@@ -1,9 +1,11 @@
 package com.commerce.inventory.infrastructure.event.consumer;
 
+import com.commerce.inventory.infrastructure.event.dlq.DeadLetterQueueService;
 import com.commerce.inventory.infrastructure.event.serialization.EventMessage;
 import com.commerce.inventory.infrastructure.event.handler.EventHandler;
 import com.commerce.inventory.infrastructure.event.handler.EventHandlerRegistry;
 import com.commerce.inventory.infrastructure.event.idempotency.IdempotencyService;
+import com.commerce.inventory.infrastructure.event.retry.RetryService;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +30,12 @@ class KafkaEventConsumerTest {
 
     @Mock
     private IdempotencyService idempotencyService;
+    
+    @Mock
+    private RetryService retryService;
+    
+    @Mock
+    private DeadLetterQueueService deadLetterQueueService;
 
     @Mock
     private EventHandler eventHandler;
@@ -39,7 +47,7 @@ class KafkaEventConsumerTest {
 
     @BeforeEach
     void setUp() {
-        consumer = new KafkaEventConsumer(handlerRegistry, idempotencyService);
+        consumer = new KafkaEventConsumer(handlerRegistry, idempotencyService, retryService, deadLetterQueueService);
     }
 
     @Test
@@ -123,6 +131,9 @@ class KafkaEventConsumerTest {
         when(idempotencyService.isProcessed(eventId)).thenReturn(false);
         when(handlerRegistry.getHandler("StockReservedEvent")).thenReturn(eventHandler);
         when(eventHandler.handle(any())).thenThrow(new RuntimeException("Handler error"));
+        // 재시도 설정 - 최대 재시도 횟수 초과 상태로 설정
+        when(retryService.shouldRetry(eventId)).thenReturn(false);
+        when(retryService.getRetryCount(eventId)).thenReturn(3);
 
         // When
         consumer.consume(record, acknowledgment);
@@ -132,7 +143,10 @@ class KafkaEventConsumerTest {
         verify(handlerRegistry).getHandler("StockReservedEvent");
         verify(eventHandler).handle(eventMessage);
         verify(idempotencyService, never()).markAsProcessed(eventId);
-        verify(acknowledgment, never()).acknowledge();
+        // DLQ로 전송 후 acknowledge됨
+        verify(deadLetterQueueService).sendToDeadLetterQueue(eq(eventMessage), eq("inventory-events"), any(Throwable.class), eq(3));
+        verify(acknowledgment).acknowledge();
+        verify(retryService).clearRetryInfo(eventId);
     }
 
     @Test

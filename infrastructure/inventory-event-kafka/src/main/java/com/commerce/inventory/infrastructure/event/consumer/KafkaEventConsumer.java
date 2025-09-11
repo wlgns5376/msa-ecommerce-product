@@ -1,8 +1,10 @@
 package com.commerce.inventory.infrastructure.event.consumer;
 
+import com.commerce.inventory.infrastructure.event.dlq.DeadLetterQueueService;
 import com.commerce.inventory.infrastructure.event.handler.EventHandler;
 import com.commerce.inventory.infrastructure.event.handler.EventHandlerRegistry;
 import com.commerce.inventory.infrastructure.event.idempotency.IdempotencyService;
+import com.commerce.inventory.infrastructure.event.retry.RetryService;
 import com.commerce.inventory.infrastructure.event.serialization.EventMessage;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
@@ -15,9 +17,11 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Kafka 이벤트 컨슈머
+ * 재시도 메커니즘과 Dead Letter Queue를 통해 안정적인 메시지 처리를 보장
  */
 @Component
 public class KafkaEventConsumer {
@@ -26,11 +30,17 @@ public class KafkaEventConsumer {
     
     private final EventHandlerRegistry handlerRegistry;
     private final IdempotencyService idempotencyService;
+    private final RetryService retryService;
+    private final DeadLetterQueueService deadLetterQueueService;
     
     public KafkaEventConsumer(EventHandlerRegistry handlerRegistry, 
-                             IdempotencyService idempotencyService) {
+                             IdempotencyService idempotencyService,
+                             RetryService retryService,
+                             DeadLetterQueueService deadLetterQueueService) {
         this.handlerRegistry = handlerRegistry;
         this.idempotencyService = idempotencyService;
+        this.retryService = retryService;
+        this.deadLetterQueueService = deadLetterQueueService;
     }
     
     @KafkaListener(
@@ -66,21 +76,18 @@ public class KafkaEventConsumer {
             CompletableFuture<Void> future = handler.handle(eventMessage);
             future.whenComplete((result, error) -> {
                 if (error != null) {
-                    logger.error("Failed to process event: eventId={}, eventType={}", 
-                               eventId, eventType, error);
-                    // 에러 발생 시 acknowledgment하지 않아 재처리되도록 함
+                    handleProcessingError(eventMessage, "inventory-events", error, acknowledgment);
                 } else {
                     logger.info("Successfully processed event: eventId={}, eventType={}", 
                               eventId, eventType);
                     idempotencyService.markAsProcessed(eventId);
+                    retryService.clearRetryInfo(eventId);
                     acknowledgment.acknowledge();
                 }
             }).join(); // 동기적으로 처리 완료를 기다림
             
         } catch (Exception e) {
-            logger.error("Error processing event: eventId={}, eventType={}", 
-                       eventId, eventType, e);
-            // 예외 발생 시 acknowledgment하지 않아 재처리되도록 함
+            handleProcessingError(eventMessage, "inventory-events", e, acknowledgment);
         }
     }
     
@@ -115,12 +122,12 @@ public class KafkaEventConsumer {
                     .whenComplete((result, error) -> {
                         if (error == null) {
                             idempotencyService.markAsProcessed(eventMessage.getEventId());
+                            retryService.clearRetryInfo(eventMessage.getEventId());
                             acknowledgment.acknowledge();
                             logger.info("Successfully processed product event: {}", 
                                       eventMessage.getEventId());
                         } else {
-                            logger.error("Failed to process product event: {}", 
-                                       eventMessage.getEventId(), error);
+                            handleProcessingError(eventMessage, topic, error, acknowledgment);
                         }
                     }).join();
             } else {
@@ -129,7 +136,55 @@ public class KafkaEventConsumer {
             }
             
         } catch (Exception e) {
-            logger.error("Error processing product event: {}", eventMessage.getEventId(), e);
+            handleProcessingError(eventMessage, topic, e, acknowledgment);
+        }
+    }
+    
+    /**
+     * 처리 에러 핸들링
+     * 재시도 로직과 DLQ 전송을 처리
+     */
+    private void handleProcessingError(EventMessage eventMessage, String topic, 
+                                      Throwable error, Acknowledgment acknowledgment) {
+        String eventId = eventMessage.getEventId();
+        String eventType = eventMessage.getEventType();
+        
+        logger.error("Failed to process event: eventId={}, eventType={}, error={}", 
+                    eventId, eventType, error.getMessage(), error);
+        
+        // 재시도 가능 여부 확인
+        if (retryService.shouldRetry(eventId)) {
+            int retryCount = retryService.incrementRetryCount(eventId);
+            long backoffMillis = retryService.calculateBackoffMillis(eventId);
+            
+            logger.info("Scheduling retry {} for event {} after {}ms", 
+                       retryCount, eventId, backoffMillis);
+            
+            try {
+                // 백오프 시간만큼 대기
+                Thread.sleep(backoffMillis);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                logger.warn("Retry backoff interrupted for event: {}", eventId);
+            }
+            
+            // acknowledgment하지 않아 메시지가 다시 처리되도록 함
+            logger.info("Event {} will be retried (attempt {} of max attempts)", 
+                       eventId, retryCount);
+            
+        } else {
+            // 최대 재시도 횟수 초과 - DLQ로 전송
+            int finalRetryCount = retryService.getRetryCount(eventId);
+            logger.error("Max retries ({}) reached for event: {}. Sending to DLQ.", 
+                        finalRetryCount, eventId);
+            
+            deadLetterQueueService.sendToDeadLetterQueue(eventMessage, topic, error, finalRetryCount);
+            
+            // DLQ로 전송 후 메시지를 acknowledge하여 offset을 이동
+            acknowledgment.acknowledge();
+            
+            // 재시도 정보 정리
+            retryService.clearRetryInfo(eventId);
         }
     }
 }
