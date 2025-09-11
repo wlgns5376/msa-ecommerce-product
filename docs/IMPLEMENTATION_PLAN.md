@@ -147,9 +147,9 @@ Kafka 기반 이벤트 처리
 - [x] Event Publisher 테스트 코드 작성
 
 #### 8.2 Event Consumer
-- [ ] Event Handler 구현
-- [ ] Event Deserialization
-- [ ] Idempotency 처리
+- [x] Event Handler 구현 (모든 도메인 이벤트 핸들러 구현 완료)
+- [x] Event Deserialization (EventSerializer 구현 및 테스트 완료)
+- [x] Idempotency 처리 (RedisIdempotencyService 구현 완료)
 
 ### 9. Cache Adapter 구현 ⭐⭐
 Redis 기반 캐싱

@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
@@ -22,17 +22,17 @@ public class EventMessage {
     private String eventType;
     private String aggregateId;
     private String aggregateType;
-    private LocalDateTime occurredAt;
-    private Map<String, Object> payload;
+    private Instant occurredAt;
+    private String payload;  // JSON string으로 저장
     private Map<String, String> metadata;
     private Integer version;
     
-    public static EventMessage create(String eventType, Map<String, Object> payload) {
+    public static EventMessage create(String eventType, String payload) {
         return EventMessage.builder()
             .eventId(UUID.randomUUID().toString())
             .eventType(eventType)
             .payload(payload)
-            .occurredAt(LocalDateTime.now())
+            .occurredAt(Instant.now())
             .version(1)
             .build();
     }

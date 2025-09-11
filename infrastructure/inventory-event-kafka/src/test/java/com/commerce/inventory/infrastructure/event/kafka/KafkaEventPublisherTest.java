@@ -180,7 +180,7 @@ class KafkaEventPublisherTest {
         return EventMessage.builder()
             .eventId(UUID.randomUUID().toString())
             .eventType("TestEvent")
-            .occurredAt(LocalDateTime.now())
+            .occurredAt(java.time.Instant.now())
             .build();
     }
     

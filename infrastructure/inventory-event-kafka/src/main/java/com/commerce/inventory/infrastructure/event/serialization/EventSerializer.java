@@ -7,6 +7,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -27,12 +30,13 @@ public class EventSerializer {
     public EventMessage serialize(DomainEvent event) {
         try {
             Map<String, Object> payload = convertToMap(event);
+            String payloadJson = objectMapper.writeValueAsString(payload);
             
             return EventMessage.builder()
                 .eventId(UUID.randomUUID().toString())
                 .eventType(event.eventType())
-                .occurredAt(event.getOccurredAt())
-                .payload(payload)
+                .occurredAt(convertToInstant(event.getOccurredAt()))
+                .payload(payloadJson)
                 .metadata(extractMetadata(event))
                 .aggregateId(extractAggregateId(event))
                 .aggregateType(extractAggregateType(event))
@@ -50,7 +54,11 @@ public class EventSerializer {
      */
     public <T extends DomainEvent> T deserialize(EventMessage message, Class<T> eventClass) {
         try {
-            return objectMapper.convertValue(message.getPayload(), eventClass);
+            String payloadStr = message.getPayload();
+            if (payloadStr == null || payloadStr.isEmpty()) {
+                throw new EventSerializationException("Empty payload");
+            }
+            return objectMapper.readValue(payloadStr, eventClass);
         } catch (Exception e) {
             log.error("Failed to deserialize event message: {}", message, e);
             throw new EventSerializationException("Failed to deserialize event message", e);
@@ -94,6 +102,13 @@ public class EventSerializer {
             return ((AggregateEvent) event).getAggregateType();
         }
         return null;
+    }
+    
+    private Instant convertToInstant(LocalDateTime localDateTime) {
+        if (localDateTime == null) {
+            return Instant.now();
+        }
+        return localDateTime.atZone(ZoneId.systemDefault()).toInstant();
     }
     
     /**
