@@ -80,18 +80,20 @@ class EventSerializerTest {
     
     @Test
     @DisplayName("EventMessage를 DomainEvent로 역직렬화한다")
-    void testDeserialize() {
+    void testDeserialize() throws Exception {
         // Given
         Map<String, Object> payload = new HashMap<>();
         payload.put("id", "test-id");
         payload.put("data", "test data");
         payload.put("occurredAt", LocalDateTime.now().toString());
         
+        String payloadJson = objectMapper.writeValueAsString(payload);
+        
         EventMessage message = EventMessage.builder()
             .eventId("event-123")
             .eventType("TestDomainEvent")
-            .payload(payload)
-            .occurredAt(LocalDateTime.now())
+            .payload(payloadJson)
+            .occurredAt(java.time.Instant.now())
             .build();
         
         // When
@@ -117,15 +119,17 @@ class EventSerializerTest {
     
     @Test
     @DisplayName("역직렬화 실패 시 EventSerializationException을 던진다")
-    void testDeserializeFailure() {
+    void testDeserializeFailure() throws Exception {
         // Given
         Map<String, Object> invalidPayload = new HashMap<>();
         invalidPayload.put("invalid", "data");
         
+        String payloadJson = objectMapper.writeValueAsString(invalidPayload);
+        
         EventMessage message = EventMessage.builder()
             .eventId("event-123")
             .eventType("InvalidEvent")
-            .payload(invalidPayload)
+            .payload(payloadJson)
             .build();
         
         // When & Then
