@@ -1,0 +1,22 @@
+plugins {
+    id 'java'
+    id 'java-library'
+}
+
+dependencies {
+    api project(':common')
+    
+    implementation 'org.springframework:spring-context'
+    implementation 'org.springframework:spring-tx'
+    implementation 'org.springframework:spring-core'
+    implementation 'org.springframework:spring-aop'
+    implementation 'org.aspectj:aspectjweaver'
+    
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.assertj:assertj-core'
+    testImplementation 'org.mockito:mockito-core'
+    testImplementation 'org.mockito:mockito-junit-jupiter'
+}

@@ -1,0 +1,68 @@
+# AI DevTeam
+.ai-devteam/
+
+# Local configuration
+CLAUDE.local.md
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# IDE
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+
+# Eclipse
+.classpath
+.project
+.settings/
+bin/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# Runtime
+*.pid
+*.tmp
+*.temp
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Application specific
+application-local.yml
+application-*.properties
+!application-dev.yml
+!application-prod.yml
+
+# Docker
+docker-compose.override.yml
+
+# Coverage reports
+.jacoco/
+jacoco.exec
+
+# Node (if using frontend)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Certificates
+*.p12
+*.jks
+*.keystore

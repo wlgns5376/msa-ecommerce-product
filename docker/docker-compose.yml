@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # MariaDB Database
+  mariadb:
+    image: mariadb:10.11
+    container_name: product-mariadb
+    environment:
+      MYSQL_DATABASE: commerce
+      MYSQL_USER: commerce_user
+      MYSQL_PASSWORD: commerce_pass
+      MYSQL_ROOT_PASSWORD: root_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - product-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: product-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - product-network
+
+  # Kafka with Zookeeper
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: product-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - product-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: product-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    networks:
+      - product-network
+
+  # Eureka Service Discovery
+  # NOTE: springcloud/eureka 이미지는 deprecated되었습니다.
+  # 필요한 경우 자체 Eureka 이미지를 빌드하거나 Spring Cloud Consul 등을 고려해주세요.
+  eureka:
+    image: springcloud/eureka
+    container_name: product-eureka
+    ports:
+      - "8761:8761"
+    networks:
+      - product-network
+
+volumes:
+  mariadb_data:
+  redis_data:
+
+networks:
+  product-network:
+    driver: bridge

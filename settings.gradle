@@ -1,0 +1,32 @@
+rootProject.name = 'msa-ecommerce-product'
+
+// Common module
+include 'common'
+project(':common').projectDir = file('core/common')
+
+// Core modules
+include 'product-core'
+project(':product-core').projectDir = file('core/product-core')
+
+include 'inventory-core'
+project(':inventory-core').projectDir = file('core/inventory-core')
+
+// Infrastructure modules
+include 'product-persistence'
+project(':product-persistence').projectDir = file('infrastructure/product-persistence')
+
+include 'inventory-persistence'
+project(':inventory-persistence').projectDir = file('infrastructure/inventory-persistence')
+
+include 'product-kafka'
+project(':product-kafka').projectDir = file('infrastructure/product-kafka')
+
+include 'inventory-event-kafka'
+project(':inventory-event-kafka').projectDir = file('infrastructure/inventory-event-kafka')
+
+// Bootstrap modules
+include 'product-api'
+project(':product-api').projectDir = file('bootstrap/product-api')
+
+include 'inventory-api'
+project(':inventory-api').projectDir = file('bootstrap/inventory-api')

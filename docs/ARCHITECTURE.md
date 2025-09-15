@@ -1,0 +1,520 @@
+# 상품 관리 시스템 아키텍처 설계 문서
+
+## 1. 시스템 개요
+
+### 1.1 아키텍처 원칙
+- **마이크로서비스 아키텍처**: 독립적으로 배포 가능한 서비스 단위
+- **도메인 주도 설계 (DDD)**: Bounded Context 기반 서비스 분리
+- **이벤트 드리븐 아키텍처**: 서비스 간 비동기 통신
+- **API 우선 설계**: 명확한 인터페이스 정의
+
+### 1.2 기술 스택
+- **언어/프레임워크**: Node.js, TypeScript, NestJS
+- **데이터베이스**: PostgreSQL (각 서비스별 독립 DB)
+- **메시지 브로커**: Apache Kafka
+- **캐시**: Redis
+- **API Gateway**: Kong
+- **컨테이너**: Docker, Kubernetes
+
+## 2. 서비스 아키텍처
+
+### 2.1 서비스 구성
+
+```mermaid
+graph TB
+    subgraph "API Layer"
+        GW[API Gateway<br/>Kong]
+    end
+    
+    subgraph "Service Layer"
+        PS[Product Service<br/>- Products<br/>- Options<br/>- Categories]
+        IS[Inventory Service<br/>- SKUs<br/>- Stock<br/>- Reservations<br/>- Movements]
+    end
+    
+    subgraph "Data Layer"
+        PDB[(PostgreSQL<br/>Product DB)]
+        IDB[(PostgreSQL<br/>Inventory DB)]
+    end
+    
+    subgraph "Messaging Layer"
+        MB[Message Broker<br/>Kafka]
+    end
+    
+    GW --> PS
+    GW --> IS
+    PS --> PDB
+    IS --> IDB
+    PS -.-> MB
+    IS -.-> MB
+    MB -.-> PS
+    MB -.-> IS
+    
+    style GW fill:#f9f,stroke:#333,stroke-width:2px
+    style PS fill:#bbf,stroke:#333,stroke-width:2px
+    style IS fill:#bbf,stroke:#333,stroke-width:2px
+    style PDB fill:#f96,stroke:#333,stroke-width:2px
+    style IDB fill:#f96,stroke:#333,stroke-width:2px
+    style MB fill:#9f9,stroke:#333,stroke-width:2px
+```
+
+### 2.2 서비스 책임
+
+#### Product Service
+- 상품 정보 관리 (생성, 수정, 조회, 삭제)
+- 상품 옵션 관리
+- 카테고리 관리 및 상품 분류
+- 상품 검색 및 필터링
+
+#### Inventory Service
+- SKU 관리
+- 재고 수량 관리
+- 재고 입출고 처리
+- 재고 선점/해제
+- 재고 이동 이력 관리
+
+### 2.3 서비스 간 통신
+
+#### 동기 통신 (REST/gRPC)
+```yaml
+Product → Inventory:
+  - GET /api/inventory/stock-status
+  - POST /api/inventory/check-availability
+  
+Inventory → Product:
+  - GET /api/products/sku-mappings
+```
+
+#### 비동기 통신 (Event)
+```yaml
+Events:
+  - inventory.stock.updated
+  - inventory.stock.reserved
+  - inventory.stock.released
+  - product.created
+  - product.updated
+  - product.deleted
+```
+
+## 3. 도메인 모델
+
+### 3.1 Product Service 도메인
+
+```typescript
+// Aggregate Root
+class Product {
+  id: string
+  name: string
+  description: string
+  type: ProductType // NORMAL | BUNDLE
+  status: ProductStatus
+  images: ProductImage[]
+  options: ProductOption[]
+  categories: Category[]
+  createdAt: Date
+  updatedAt: Date
+}
+
+// Value Objects
+class ProductOption {
+  id: string
+  productId: string
+  name: string
+  price: Money
+  status: OptionStatus
+  skuMappings: SkuMapping[]
+}
+
+class SkuMapping {
+  skuId: string
+  quantity: number
+}
+
+// Entity
+class Category {
+  id: string
+  name: string
+  parentId?: string
+  level: number
+  sortOrder: number
+  isActive: boolean
+}
+```
+
+### 3.2 Inventory Service 도메인
+
+```typescript
+// Aggregate Root
+class SKU {
+  id: string
+  code: string
+  name: string
+  description?: string
+  weight?: number
+  volume?: number
+  createdAt: Date
+}
+
+// Entity
+class Inventory {
+  skuId: string
+  totalQuantity: number
+  reservedQuantity: number
+  availableQuantity: number // calculated
+  lastUpdated: Date
+}
+
+// Value Object
+class StockMovement {
+  id: string
+  skuId: string
+  type: MovementType
+  quantity: number
+  reference: string
+  createdAt: Date
+}
+
+// Entity
+class Reservation {
+  id: string
+  skuId: string
+  quantity: number
+  orderId: string
+  expiresAt: Date
+  status: ReservationStatus
+}
+```
+
+## 4. 데이터베이스 설계
+
+### 4.1 Product Service Schema
+
+```sql
+-- Products Table
+CREATE TABLE products (
+  id UUID PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  type VARCHAR(50) NOT NULL,
+  status VARCHAR(50) NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE,
+  updated_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Product Options Table
+CREATE TABLE product_options (
+  id UUID PRIMARY KEY,
+  product_id UUID REFERENCES products(id),
+  name VARCHAR(255) NOT NULL,
+  price DECIMAL(10,2),
+  status VARCHAR(50),
+  created_at TIMESTAMP WITH TIME ZONE
+);
+
+-- SKU Mappings Table
+CREATE TABLE sku_mappings (
+  id UUID PRIMARY KEY,
+  option_id UUID REFERENCES product_options(id),
+  sku_id VARCHAR(100) NOT NULL,
+  quantity INTEGER NOT NULL
+);
+
+-- Categories Table
+CREATE TABLE categories (
+  id UUID PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  parent_id UUID REFERENCES categories(id),
+  level INTEGER NOT NULL,
+  sort_order INTEGER,
+  is_active BOOLEAN DEFAULT true
+);
+
+-- Product Categories (N:M)
+CREATE TABLE product_categories (
+  product_id UUID REFERENCES products(id),
+  category_id UUID REFERENCES categories(id),
+  is_primary BOOLEAN DEFAULT false,
+  PRIMARY KEY (product_id, category_id)
+);
+```
+
+### 4.2 Inventory Service Schema
+
+```sql
+-- SKUs Table
+CREATE TABLE skus (
+  id VARCHAR(100) PRIMARY KEY,
+  code VARCHAR(100) UNIQUE NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  weight DECIMAL(10,3),
+  volume DECIMAL(10,3),
+  created_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Inventory Table
+CREATE TABLE inventory (
+  sku_id VARCHAR(100) PRIMARY KEY REFERENCES skus(id),
+  total_quantity INTEGER NOT NULL DEFAULT 0,
+  reserved_quantity INTEGER NOT NULL DEFAULT 0,
+  last_updated TIMESTAMP WITH TIME ZONE
+);
+
+-- Stock Movements Table
+CREATE TABLE stock_movements (
+  id UUID PRIMARY KEY,
+  sku_id VARCHAR(100) REFERENCES skus(id),
+  type VARCHAR(50) NOT NULL,
+  quantity INTEGER NOT NULL,
+  reference VARCHAR(255),
+  created_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Reservations Table
+CREATE TABLE reservations (
+  id UUID PRIMARY KEY,
+  sku_id VARCHAR(100) REFERENCES skus(id),
+  quantity INTEGER NOT NULL,
+  order_id VARCHAR(100),
+  expires_at TIMESTAMP WITH TIME ZONE,
+  status VARCHAR(50),
+  created_at TIMESTAMP WITH TIME ZONE
+);
+```
+
+## 5. API 설계
+
+### 5.1 Product Service API
+
+#### 상품 관리
+```yaml
+# 상품 생성
+POST /api/products
+Request:
+  name: string
+  description: string
+  type: NORMAL | BUNDLE
+  categoryIds: string[]
+
+# 상품 조회
+GET /api/products/{productId}
+Response:
+  product: Product
+  options: ProductOption[]
+  stockStatus: StockStatus[]
+
+# 상품 목록
+GET /api/products
+Query:
+  categoryId?: string
+  cursor?: string
+  limit: number
+  sort: string
+```
+
+#### 카테고리 관리
+```yaml
+# 카테고리 트리 조회
+GET /api/categories/tree
+Response:
+  categories: CategoryTree[]
+
+# 카테고리별 상품
+GET /api/categories/{categoryId}/products
+Query:
+  page: number
+  size: number
+```
+
+### 5.2 Inventory Service API
+
+#### SKU 관리
+```yaml
+# SKU 생성
+POST /api/skus
+Request:
+  code: string
+  name: string
+  initialStock: number
+
+# 재고 조회
+GET /api/inventory/{skuId}
+Response:
+  skuId: string
+  totalQuantity: number
+  reservedQuantity: number
+  availableQuantity: number
+```
+
+#### 재고 작업
+```yaml
+# 재고 입고
+POST /api/inventory/{skuId}/receive
+Request:
+  quantity: number
+  reference: string
+
+# 재고 선점
+POST /api/inventory/reservations
+Request:
+  skuId: string
+  quantity: number
+  orderId: string
+  ttl: number
+```
+
+## 6. 이벤트 설계
+
+### 6.1 이벤트 스키마
+
+```typescript
+interface DomainEvent<T> {
+  eventId: string
+  eventType: string
+  aggregateId: string
+  timestamp: Date
+  payload: T
+}
+
+// 재고 업데이트 이벤트
+interface StockUpdatedEvent extends DomainEvent<{
+  skuId: string
+  previousQuantity: number
+  currentQuantity: number
+  movementType: string
+}> {
+  eventType: 'inventory.stock.updated'
+}
+
+// 재고 선점 이벤트
+interface StockReservedEvent extends DomainEvent<{
+  reservationId: string
+  skuId: string
+  quantity: number
+  orderId: string
+}> {
+  eventType: 'inventory.stock.reserved'
+}
+```
+
+### 6.2 이벤트 흐름
+
+```mermaid
+flowchart TD
+    A[주문 생성] --> B[재고 확인]
+    B --> C{재고 충분?}
+    C -->|Yes| D[재고 선점]
+    C -->|No| E[품절 처리]
+    D --> F[선점 이벤트 발행]
+    F --> G[주문 진행]
+    E --> H[주문 실패]
+    
+    style A fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    style B fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    style C fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    style D fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+    style E fill:#ffebee,stroke:#b71c1c,stroke-width:2px
+    style F fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+```
+
+## 7. 성능 최적화 전략
+
+### 7.1 캐싱 전략
+- **Redis 캐싱**: 자주 조회되는 상품 정보
+- **캐시 무효화**: 이벤트 기반 캐시 갱신
+- **TTL 설정**: 카테고리(1시간), 상품(10분), 재고(30초)
+
+### 7.2 데이터베이스 최적화
+- **인덱싱**: 검색 필드 복합 인덱스
+- **파티셔닝**: 재고 이동 이력 테이블 월별 파티션
+- **읽기 전용 복제본**: 조회 트래픽 분산
+
+### 7.3 API 최적화
+- **GraphQL**: 필요한 필드만 선택적 조회
+- **배치 API**: 대량 재고 조회
+- **페이지네이션**: 커서 기반 페이징
+
+## 8. 보안 설계
+
+### 8.1 인증/인가
+- **JWT 토큰**: API Gateway 레벨 인증
+- **역할 기반 접근 제어**: Admin, Manager, User
+- **서비스 간 인증**: mTLS
+
+### 8.2 데이터 보안
+- **전송 암호화**: TLS 1.3
+- **민감 정보 암호화**: AES-256
+- **감사 로그**: 모든 변경 작업 기록
+
+## 9. 모니터링 및 로깅
+
+### 9.1 메트릭
+- **비즈니스 메트릭**: 상품 조회수, 재고 정확도
+- **기술 메트릭**: API 응답시간, 에러율
+- **인프라 메트릭**: CPU, 메모리, 디스크
+
+### 9.2 로깅
+- **구조화 로깅**: JSON 형식
+- **분산 추적**: OpenTelemetry
+- **로그 집계**: ELK Stack
+
+## 10. 배포 전략
+
+### 10.1 CI/CD
+- **빌드**: GitHub Actions
+- **테스트**: 단위/통합/E2E 테스트
+- **배포**: Kubernetes Rolling Update
+
+### 10.2 환경 구성
+- **개발**: Minikube
+- **스테이징**: EKS 클러스터
+- **운영**: Multi-AZ EKS
+
+## 11. 재해 복구
+
+```mermaid
+graph TB
+    subgraph "Primary Region"
+        PS1[Product Service]
+        IS1[Inventory Service]
+        PDB1[(Product DB Master)]
+        IDB1[(Inventory DB Master)]
+        K1[Kafka Primary]
+    end
+    
+    subgraph "Secondary Region"
+        PS2[Product Service Standby]
+        IS2[Inventory Service Standby]
+        PDB2[(Product DB Replica)]
+        IDB2[(Inventory DB Replica)]
+        K2[Kafka Mirror]
+    end
+    
+    subgraph "Backup Storage"
+        S3[S3 Backup Storage]
+        SNAP[DB Snapshots]
+    end
+    
+    PDB1 -.->|Replication| PDB2
+    IDB1 -.->|Replication| IDB2
+    K1 -.->|Mirror| K2
+    PDB1 -->|Daily Backup| S3
+    IDB1 -->|Daily Backup| S3
+    PDB1 -->|Hourly Snapshot| SNAP
+    IDB1 -->|Hourly Snapshot| SNAP
+    
+    style PS1 fill:#bbf,stroke:#333,stroke-width:2px
+    style IS1 fill:#bbf,stroke:#333,stroke-width:2px
+    style PS2 fill:#ddd,stroke:#666,stroke-width:1px
+    style IS2 fill:#ddd,stroke:#666,stroke-width:1px
+```
+
+### 11.1 백업 전략
+- **데이터베이스**: 일일 전체 백업, 시간별 증분 백업
+- **설정 파일**: Git 버전 관리
+- **복구 시간 목표(RTO)**: 1시간
+- **복구 시점 목표(RPO)**: 15분
+
+### 11.2 고가용성
+- **서비스**: 최소 3개 레플리카
+- **데이터베이스**: Master-Slave 구성
+- **로드 밸런서**: 다중 AZ 분산
