@@ -169,7 +169,7 @@ Redis 기반 캐싱
 ### 10. REST API Controller 구현 ⭐⭐⭐
 
 #### 10.1 Product API
-- [ ] POST /api/products
+- [x] POST /api/products
 - [ ] GET /api/products/{id}
 - [ ] PUT /api/products/{id}
 - [ ] POST /api/products/{id}/options
