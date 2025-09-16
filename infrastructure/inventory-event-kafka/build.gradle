@@ -1,0 +1,45 @@
+plugins {
+    id 'java'
+}
+
+dependencies {
+    implementation project(':common')
+    implementation project(':inventory-core')
+    
+    // Spring Kafka
+    implementation 'org.springframework.kafka:spring-kafka'
+    implementation 'org.springframework.boot:spring-boot-starter'
+    
+    // Spring Data Redis for idempotency
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    
+    // Jakarta Annotations for @PostConstruct
+    implementation 'jakarta.annotation:jakarta.annotation-api'
+    
+    // Jackson for JSON serialization
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    
+    // Apache Kafka clients
+    implementation 'org.apache.kafka:kafka-clients'
+    
+    // Micrometer for metrics
+    implementation 'io.micrometer:micrometer-core'
+    
+    // Configuration
+    implementation 'org.springframework.boot:spring-boot-configuration-processor'
+    
+    // Testing
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
+    testImplementation 'org.testcontainers:kafka'
+    testImplementation 'org.testcontainers:junit-jupiter'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+jar {
+    enabled = true
+}

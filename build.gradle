@@ -1,0 +1,304 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.2.0' apply false
+    id 'io.spring.dependency-management' version '1.1.4'
+    id 'jacoco'
+}
+
+allprojects {
+    group = 'com.commerce.product'
+    version = '1.0.0'
+    
+    repositories {
+        mavenCentral()
+    }
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'io.spring.dependency-management'
+    apply plugin: 'jacoco'
+    
+    java {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    
+    configurations {
+        compileOnly {
+            extendsFrom annotationProcessor
+        }
+    }
+    
+    dependencyManagement {
+        imports {
+            mavenBom "org.springframework.boot:spring-boot-dependencies:3.2.0"
+            mavenBom "org.springframework.cloud:spring-cloud-dependencies:2023.0.0"
+        }
+    }
+    
+    dependencies {
+        // Lombok
+        compileOnly 'org.projectlombok:lombok'
+        annotationProcessor 'org.projectlombok:lombok'
+        
+        // Testing
+        testImplementation 'org.junit.jupiter:junit-jupiter'
+        testImplementation 'org.assertj:assertj-core'
+        testImplementation 'org.mockito:mockito-core'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    }
+    
+    test {
+        useJUnitPlatform()
+        finalizedBy jacocoTestReport
+    }
+    
+    jacocoTestReport {
+        dependsOn test
+        reports {
+            xml.required = true
+            html.required = true
+            csv.required = true
+        }
+    }
+    
+    // 기본 커버리지 검증 규칙은 각 모듈에서 개별 설정
+}
+
+// Common 모듈 설정
+project(':common') {
+    dependencies {
+        implementation 'org.springframework:spring-context'
+        implementation 'org.springframework.boot:spring-boot-starter-validation'
+        implementation 'org.springframework.data:spring-data-commons'
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    }
+}
+
+// Core 모듈들 설정
+configure(subprojects.findAll { it.path.contains(':product-core') || it.path.contains(':inventory-core') }) {
+    dependencies {
+        implementation project(':common')
+        implementation 'org.springframework:spring-context'
+        implementation 'org.springframework:spring-tx'
+        implementation 'org.springframework.boot:spring-boot-starter-validation'
+        implementation 'org.springframework.data:spring-data-commons'
+        implementation 'org.springframework.retry:spring-retry'
+        implementation 'org.springframework:spring-aspects'
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    }
+    
+    jacocoTestCoverageVerification {
+        dependsOn jacocoTestReport
+        violationRules {
+            rule {
+                limit {
+                    minimum = 0.70
+                }
+            }
+        }
+    }
+}
+
+
+// Infrastructure 모듈 설정
+configure(subprojects.findAll { it.path.contains(':product-persistence') || it.path.contains(':inventory-persistence') }) {
+    apply plugin: 'org.springframework.boot'
+    apply plugin: 'io.spring.dependency-management'
+    
+    bootJar {
+        enabled = false
+    }
+    jar {
+        enabled = true
+    }
+    
+    // Persistence 모듈은 개발 중이므로 임시로 낮은 커버리지 허용
+    jacocoTestCoverageVerification {
+        violationRules {
+            rule {
+                limit {
+                    minimum = 0.30
+                }
+            }
+        }
+    }
+    
+    dependencies {
+        implementation project(':common')
+        implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+        implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+        implementation 'org.flywaydb:flyway-core'
+        runtimeOnly 'com.h2database:h2'
+        runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+        testImplementation 'org.testcontainers:junit-jupiter'
+        testImplementation 'org.testcontainers:mariadb'
+    }
+}
+
+project(':product-persistence') {
+    dependencies {
+        implementation project(':product-core')
+    }
+}
+
+project(':inventory-persistence') {
+    dependencies {
+        implementation project(':inventory-core')
+    }
+}
+
+configure(subprojects.findAll { it.path.contains(':product-kafka') }) {
+    apply plugin: 'org.springframework.boot'
+    apply plugin: 'io.spring.dependency-management'
+    
+    bootJar {
+        enabled = false
+    }
+    jar {
+        enabled = true
+    }
+    
+    dependencies {
+        implementation project(':common')
+        implementation project(':product-core')
+        implementation 'org.springframework.kafka:spring-kafka'
+        implementation 'org.springframework.boot:spring-boot-starter'
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+        testImplementation 'org.springframework.kafka:spring-kafka-test'
+        testImplementation 'org.testcontainers:kafka'
+    }
+}
+
+// Bootstrap 모듈들 설정 (API 서버들)
+configure(subprojects.findAll { it.path.contains(':product-api') }) {
+    apply plugin: 'org.springframework.boot'
+    apply plugin: 'io.spring.dependency-management'
+    
+    dependencies {
+        implementation project(':common')
+        implementation project(':product-core')
+        implementation project(':product-persistence')
+        implementation project(':product-kafka')
+        implementation 'org.springframework.boot:spring-boot-starter-web'
+        implementation 'org.springframework.boot:spring-boot-starter-actuator'
+        implementation 'org.springframework.boot:spring-boot-starter-security'
+        implementation 'org.springframework.boot:spring-boot-starter-validation'
+        implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+        implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
+        implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
+        implementation 'io.jsonwebtoken:jjwt-impl:0.12.3'
+        implementation 'io.jsonwebtoken:jjwt-jackson:0.12.3'
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+        testImplementation 'org.springframework.security:spring-security-test'
+    }
+}
+
+ext {
+    set('springCloudVersion', "2023.0.0")
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+    }
+}
+
+// 루트 프로젝트 JaCoCo 설정
+jacoco {
+    toolVersion = "0.8.8"
+}
+
+// 모든 테스트 실행
+task testAll {
+    description = 'Runs all tests in all subprojects'
+    dependsOn subprojects.test
+}
+
+// 통합 JaCoCo 리포트 생성
+task jacocoRootReport(type: JacocoReport) {
+    description = 'Generates an aggregate report from all subprojects'
+    dependsOn subprojects.test
+    
+    sourceDirectories.setFrom(files(subprojects.sourceSets.main.allSource.srcDirs))
+    classDirectories.setFrom(files(subprojects.sourceSets.main.output))
+    executionData.setFrom(files(subprojects.jacocoTestReport.executionData).filter { it.exists() })
+    
+    reports {
+        html.required = true
+        xml.required = true
+        csv.required = true
+        csv.destination = file("${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.csv")
+        xml.destination = file("${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml")
+        html.destination = file("${buildDir}/reports/jacoco/jacocoRootReport/html")
+    }
+    
+    doFirst {
+        // 리포트 디렉토리 생성
+        file("${buildDir}/reports/jacoco/jacocoRootReport").mkdirs()
+        
+        // GitHub Actions 호환성을 위한 Maven 디렉토리 구조 사전 생성
+        def targetDir = file("${rootDir}/target/site/jacoco")
+        targetDir.mkdirs()
+        println "Created Maven-compatible directory: ${targetDir}"
+    }
+    
+    doLast {
+        println "JaCoCo reports generated at:"
+        println "  CSV: ${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.csv"
+        println "  XML: ${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
+        println "  HTML: ${buildDir}/reports/jacoco/jacocoRootReport/html"
+        
+        // GitHub Actions 호환성을 위한 Maven 디렉토리 구조로 복사
+        def targetDir = file("${rootDir}/target/site/jacoco")
+        
+        // CSV 파일 복사
+        def csvSource = file("${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.csv")
+        def csvTarget = file("${targetDir}/jacoco.csv")
+        if (csvSource.exists()) {
+            // 파일 내용 확인
+            if (csvSource.length() == 0) {
+                println "WARNING: CSV report is empty at: ${csvSource}"
+            }
+            csvSource.withInputStream { input ->
+                csvTarget.withOutputStream { output ->
+                    output << input
+                }
+            }
+            println "Copied CSV report to: ${csvTarget} (${csvTarget.length()} bytes)"
+        } else {
+            throw new GradleException("CSV report not found at: ${csvSource}")
+        }
+        
+        // XML 파일 복사
+        def xmlSource = file("${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml")
+        def xmlTarget = file("${targetDir}/jacoco.xml")
+        if (xmlSource.exists()) {
+            // 파일 내용 확인
+            if (xmlSource.length() == 0) {
+                println "WARNING: XML report is empty at: ${xmlSource}"
+            }
+            xmlSource.withInputStream { input ->
+                xmlTarget.withOutputStream { output ->
+                    output << input
+                }
+            }
+            println "Copied XML report to: ${xmlTarget} (${xmlTarget.length()} bytes)"
+        } else {
+            throw new GradleException("XML report not found at: ${xmlSource}")
+        }
+        
+        println "Maven-compatible reports successfully copied to: ${targetDir}"
+        
+        // 파일 존재 및 크기 확인
+        if (!csvTarget.exists() || !xmlTarget.exists()) {
+            throw new GradleException("Failed to create Maven-compatible reports")
+        }
+        
+        if (csvTarget.length() == 0 || xmlTarget.length() == 0) {
+            println "WARNING: One or more report files are empty"
+        }
+    }
+}
