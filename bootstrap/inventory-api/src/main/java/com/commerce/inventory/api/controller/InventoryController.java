@@ -2,6 +2,7 @@ package com.commerce.inventory.api.controller;
 
 import com.commerce.inventory.api.dto.CreateSkuRequest;
 import com.commerce.inventory.api.dto.CreateSkuResponseDto;
+import com.commerce.inventory.api.mapper.InventoryMapper;
 import com.commerce.inventory.application.usecase.CreateSkuCommand;
 import com.commerce.inventory.application.usecase.CreateSkuResponse;
 import com.commerce.inventory.application.usecase.CreateSkuUseCase;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class InventoryController {
 
     private final CreateSkuUseCase createSkuUseCase;
+    private final InventoryMapper inventoryMapper;
 
     /**
      * SKU 생성 엔드포인트
@@ -44,29 +46,9 @@ public class InventoryController {
     })
     @PostMapping("/skus")
     public ResponseEntity<CreateSkuResponseDto> createSku(@Valid @RequestBody CreateSkuRequest request) {
-        CreateSkuCommand command = CreateSkuCommand.builder()
-                .code(request.getCode())
-                .name(request.getName())
-                .description(request.getDescription())
-                .weight(request.getWeight())
-                .weightUnit(request.getWeightUnit())
-                .volume(request.getVolume())
-                .volumeUnit(request.getVolumeUnit())
-                .build();
-
+        CreateSkuCommand command = inventoryMapper.toCreateSkuCommand(request);
         CreateSkuResponse response = createSkuUseCase.execute(command);
-
-        CreateSkuResponseDto responseDto = CreateSkuResponseDto.builder()
-                .id(response.getId())
-                .code(response.getCode())
-                .name(response.getName())
-                .description(response.getDescription())
-                .weight(response.getWeight())
-                .weightUnit(response.getWeightUnit())
-                .volume(response.getVolume())
-                .volumeUnit(response.getVolumeUnit())
-                .createdAt(response.getCreatedAt())
-                .build();
+        CreateSkuResponseDto responseDto = inventoryMapper.toCreateSkuResponseDto(response);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
