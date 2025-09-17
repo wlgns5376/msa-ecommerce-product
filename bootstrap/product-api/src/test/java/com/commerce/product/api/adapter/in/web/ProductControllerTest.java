@@ -4,6 +4,9 @@ import com.commerce.product.api.adapter.in.web.dto.CreateProductRequest;
 import com.commerce.product.api.adapter.in.web.dto.ProductResponse;
 import com.commerce.product.application.usecase.CreateProductResponse;
 import com.commerce.product.application.usecase.CreateProductUseCase;
+import com.commerce.product.application.usecase.GetProductRequest;
+import com.commerce.product.application.usecase.GetProductResponse;
+import com.commerce.product.application.usecase.GetProductUseCase;
 import com.commerce.product.domain.model.ProductStatus;
 import com.commerce.product.domain.model.ProductType;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,7 +23,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.security.test.context.support.WithMockUser;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -38,6 +43,9 @@ class ProductControllerTest {
 
     @MockBean
     private CreateProductUseCase createProductUseCase;
+
+    @MockBean
+    private GetProductUseCase getProductUseCase;
 
     @Nested
     @DisplayName("POST /api/products - 상품 생성")
@@ -137,6 +145,116 @@ class ProductControllerTest {
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.productId").value("PROD-002"))
                     .andExpect(jsonPath("$.type").value("BUNDLE"));
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/products/{id} - 상품 조회")
+    class GetProduct {
+
+        private GetProductResponse getProductResponse;
+
+        @BeforeEach
+        void setUp() {
+            getProductResponse = GetProductResponse.builder()
+                    .productId("PROD-001")
+                    .name("테스트 상품")
+                    .description("테스트 상품 설명")
+                    .type(ProductType.NORMAL)
+                    .status(ProductStatus.ACTIVE)
+                    .build();
+        }
+
+        @Test
+        @DisplayName("상품 ID로 조회 성공")
+        void getProduct_Success() throws Exception {
+            // Given
+            String productId = "PROD-001";
+            when(getProductUseCase.execute(any(GetProductRequest.class))).thenReturn(getProductResponse);
+
+            // When & Then
+            mockMvc.perform(get("/api/products/{id}", productId)
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.productId").value("PROD-001"))
+                    .andExpect(jsonPath("$.name").value("테스트 상품"))
+                    .andExpect(jsonPath("$.description").value("테스트 상품 설명"))
+                    .andExpect(jsonPath("$.type").value("NORMAL"))
+                    .andExpect(jsonPath("$.status").value("ACTIVE"));
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 상품 조회 시 404 에러")
+        void getProduct_NotFound() throws Exception {
+            // Given
+            String productId = "NON-EXISTENT";
+            when(getProductUseCase.execute(any(GetProductRequest.class)))
+                    .thenThrow(new IllegalArgumentException("Product not found: " + productId));
+
+            // When & Then
+            mockMvc.perform(get("/api/products/{id}", productId)
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("null 응답 시 404 에러")
+        void getProduct_NullResponse() throws Exception {
+            // Given
+            String productId = "NULL-ID";
+            when(getProductUseCase.execute(any(GetProductRequest.class)))
+                    .thenReturn(null);
+
+            // When & Then
+            mockMvc.perform(get("/api/products/{id}", productId)
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("묶음 상품 조회 성공")
+        void getBundleProduct_Success() throws Exception {
+            // Given
+            String productId = "PROD-002";
+            GetProductResponse bundleResponse = GetProductResponse.builder()
+                    .productId("PROD-002")
+                    .name("묶음 상품")
+                    .description("묶음 상품 설명")
+                    .type(ProductType.BUNDLE)
+                    .status(ProductStatus.ACTIVE)
+                    .build();
+            
+            when(getProductUseCase.execute(any(GetProductRequest.class))).thenReturn(bundleResponse);
+
+            // When & Then
+            mockMvc.perform(get("/api/products/{id}", productId)
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.productId").value("PROD-002"))
+                    .andExpect(jsonPath("$.type").value("BUNDLE"));
+        }
+
+        @Test
+        @DisplayName("비활성 상품 조회 성공")
+        void getInactiveProduct_Success() throws Exception {
+            // Given
+            String productId = "PROD-003";
+            GetProductResponse inactiveResponse = GetProductResponse.builder()
+                    .productId("PROD-003")
+                    .name("비활성 상품")
+                    .description("비활성 상품 설명")
+                    .type(ProductType.NORMAL)
+                    .status(ProductStatus.INACTIVE)
+                    .build();
+            
+            when(getProductUseCase.execute(any(GetProductRequest.class))).thenReturn(inactiveResponse);
+
+            // When & Then
+            mockMvc.perform(get("/api/products/{id}", productId)
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.productId").value("PROD-003"))
+                    .andExpect(jsonPath("$.status").value("INACTIVE"));
         }
     }
 }
