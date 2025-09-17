@@ -55,6 +55,8 @@ docker-compose.override.yml
 # Coverage reports
 .jacoco/
 jacoco.exec
+coverage/
+target/
 
 # Node (if using frontend)
 node_modules/
