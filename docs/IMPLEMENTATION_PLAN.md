@@ -170,8 +170,8 @@ Redis 기반 캐싱
 
 #### 10.1 Product API
 - [x] POST /api/products
-- [ ] GET /api/products/{id}
-- [ ] PUT /api/products/{id}
+- [x] GET /api/products/{id} ✅ 구현 완료
+- [x] PUT /api/products/{id} ✅ 구현 완료
 - [ ] POST /api/products/{id}/options
 - [ ] GET /api/products (검색/필터)
 
