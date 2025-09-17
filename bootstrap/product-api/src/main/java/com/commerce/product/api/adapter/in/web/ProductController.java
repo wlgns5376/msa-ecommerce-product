@@ -2,11 +2,16 @@ package com.commerce.product.api.adapter.in.web;
 
 import com.commerce.product.api.adapter.in.web.dto.CreateProductRequest;
 import com.commerce.product.api.adapter.in.web.dto.ProductResponse;
+import com.commerce.product.api.adapter.in.web.dto.UpdateProductRequest;
+import com.commerce.product.api.adapter.in.web.dto.UpdateProductResponse;
 import com.commerce.product.application.usecase.CreateProductResponse;
 import com.commerce.product.application.usecase.CreateProductUseCase;
 import com.commerce.product.application.usecase.GetProductRequest;
 import com.commerce.product.application.usecase.GetProductResponse;
 import com.commerce.product.application.usecase.GetProductUseCase;
+import com.commerce.product.application.usecase.UpdateProductUseCase;
+import com.commerce.product.domain.exception.InvalidProductException;
+import com.commerce.product.domain.exception.ProductConflictException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -19,6 +24,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,6 +37,7 @@ public class ProductController {
     
     private final CreateProductUseCase createProductUseCase;
     private final GetProductUseCase getProductUseCase;
+    private final UpdateProductUseCase updateProductUseCase;
     
     @Operation(summary = "상품 생성", description = "새로운 상품을 생성합니다.")
     @ApiResponses(value = {
@@ -69,8 +76,39 @@ public class ProductController {
         return ResponseEntity.ok(response);
     }
     
+    @Operation(summary = "상품 수정", description = "기존 상품 정보를 수정합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "상품 수정 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청"),
+            @ApiResponse(responseCode = "404", description = "상품을 찾을 수 없음"),
+            @ApiResponse(responseCode = "409", description = "동시 수정 충돌"),
+            @ApiResponse(responseCode = "500", description = "서버 오류")
+    })
+    @PutMapping("/{id}")
+    public ResponseEntity<UpdateProductResponse> updateProduct(
+            @PathVariable String id,
+            @Valid @RequestBody UpdateProductRequest request) {
+        
+        com.commerce.product.application.usecase.UpdateProductResponse useCaseResponse = 
+                updateProductUseCase.updateProduct(request.toUseCaseRequest(id));
+        
+        UpdateProductResponse response = UpdateProductResponse.from(useCaseResponse);
+        
+        return ResponseEntity.ok(response);
+    }
+    
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<String> handleIllegalArgumentException(IllegalArgumentException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+    }
+    
+    @ExceptionHandler(InvalidProductException.class)
+    public ResponseEntity<String> handleInvalidProductException(InvalidProductException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+    }
+    
+    @ExceptionHandler(ProductConflictException.class)
+    public ResponseEntity<String> handleProductConflictException(ProductConflictException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
     }
 }
