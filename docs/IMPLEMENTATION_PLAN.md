@@ -177,7 +177,7 @@ Redis 기반 캐싱
 
 #### 10.2 Inventory API
 - [x] POST /api/inventory/skus ✅ 구현 완료
-- [ ] GET /api/inventory/skus/{id}
+- [x] GET /api/inventory/skus/{id} ✅ 구현 완료
 - [ ] POST /api/inventory/skus/{id}/receive
 - [ ] POST /api/inventory/reservations
 - [ ] DELETE /api/inventory/reservations/{id}

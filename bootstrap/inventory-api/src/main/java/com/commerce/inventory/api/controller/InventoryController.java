@@ -2,11 +2,16 @@ package com.commerce.inventory.api.controller;
 
 import com.commerce.inventory.api.dto.CreateSkuRequest;
 import com.commerce.inventory.api.dto.CreateSkuResponseDto;
+import com.commerce.inventory.api.dto.GetSkuByIdResponseDto;
 import com.commerce.inventory.api.mapper.InventoryMapper;
 import com.commerce.inventory.application.usecase.CreateSkuCommand;
 import com.commerce.inventory.application.usecase.CreateSkuResponse;
 import com.commerce.inventory.application.usecase.CreateSkuUseCase;
+import com.commerce.inventory.application.usecase.GetSkuByIdQuery;
+import com.commerce.inventory.application.usecase.GetSkuByIdResponse;
+import com.commerce.inventory.application.usecase.GetSkuByIdUseCase;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +19,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class InventoryController {
 
     private final CreateSkuUseCase createSkuUseCase;
+    private final GetSkuByIdUseCase getSkuByIdUseCase;
     private final InventoryMapper inventoryMapper;
 
     /**
@@ -51,5 +59,28 @@ public class InventoryController {
         CreateSkuResponseDto responseDto = inventoryMapper.toCreateSkuResponseDto(response);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
+    }
+
+    /**
+     * SKU 조회 엔드포인트
+     *
+     * @param id 조회할 SKU ID
+     * @return SKU 정보
+     */
+    @Operation(summary = "SKU 조회", description = "ID로 SKU(Stock Keeping Unit)를 조회합니다")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "SKU 조회 성공"),
+            @ApiResponse(responseCode = "404", description = "SKU를 찾을 수 없음"),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류")
+    })
+    @GetMapping("/skus/{id}")
+    public ResponseEntity<GetSkuByIdResponseDto> getSkuById(
+            @Parameter(description = "SKU ID", required = true)
+            @PathVariable("id") String id) {
+        GetSkuByIdQuery query = GetSkuByIdQuery.of(id);
+        GetSkuByIdResponse response = getSkuByIdUseCase.execute(query);
+        GetSkuByIdResponseDto responseDto = inventoryMapper.toGetSkuByIdResponseDto(response);
+        
+        return ResponseEntity.ok(responseDto);
     }
 }

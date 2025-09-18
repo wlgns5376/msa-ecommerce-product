@@ -2,8 +2,10 @@ package com.commerce.inventory.api.mapper;
 
 import com.commerce.inventory.api.dto.CreateSkuRequest;
 import com.commerce.inventory.api.dto.CreateSkuResponseDto;
+import com.commerce.inventory.api.dto.GetSkuByIdResponseDto;
 import com.commerce.inventory.application.usecase.CreateSkuCommand;
 import com.commerce.inventory.application.usecase.CreateSkuResponse;
+import com.commerce.inventory.application.usecase.GetSkuByIdResponse;
 import org.springframework.stereotype.Component;
 
 /**
@@ -56,6 +58,30 @@ public class InventoryMapper {
                 .volume(response.getVolume())
                 .volumeUnit(response.getVolumeUnit())
                 .createdAt(response.getCreatedAt())
+                .build();
+    }
+
+    /**
+     * GetSkuByIdResponse를 GetSkuByIdResponseDto로 변환
+     *
+     * @param response UseCase 응답
+     * @return API 응답 DTO
+     */
+    public GetSkuByIdResponseDto toGetSkuByIdResponseDto(GetSkuByIdResponse response) {
+        if (response == null) {
+            return null;
+        }
+
+        return GetSkuByIdResponseDto.builder()
+                .id(response.getId())
+                .code(response.getCode())
+                .name(response.getName())
+                .description(response.getDescription())
+                .weight(response.getWeight())
+                .volume(response.getVolume())
+                .createdAt(response.getCreatedAt())
+                .updatedAt(response.getUpdatedAt())
+                .version(response.getVersion())
                 .build();
     }
 }
