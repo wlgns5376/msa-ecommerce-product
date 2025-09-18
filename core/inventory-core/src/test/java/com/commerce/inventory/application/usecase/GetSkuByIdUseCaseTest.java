@@ -1,6 +1,6 @@
 package com.commerce.inventory.application.usecase;
 
-import com.commerce.inventory.application.service.GetSkuByIdService;
+import com.commerce.inventory.application.service.GetSkuService;
 import com.commerce.inventory.domain.exception.SkuNotFoundException;
 import com.commerce.inventory.domain.model.Sku;
 import com.commerce.inventory.domain.model.SkuCode;
@@ -35,7 +35,7 @@ class GetSkuByIdUseCaseTest {
     private SkuRepository skuRepository;
 
     @InjectMocks
-    private GetSkuByIdService getSkuByIdService;
+    private GetSkuService getSkuService;
 
     private SkuId skuId;
     private Sku sku;
@@ -67,7 +67,7 @@ class GetSkuByIdUseCaseTest {
         when(skuRepository.findById(skuId)).thenReturn(Optional.of(sku));
 
         // When
-        GetSkuByIdResponse response = getSkuByIdService.execute(query);
+        GetSkuByIdResponse response = getSkuService.execute(query);
 
         // Then
         assertThat(response).isNotNull();
@@ -88,7 +88,7 @@ class GetSkuByIdUseCaseTest {
         when(skuRepository.findById(SkuId.of(nonExistentId))).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> getSkuByIdService.execute(query))
+        assertThatThrownBy(() -> getSkuService.execute(query))
             .isInstanceOf(SkuNotFoundException.class)
             .hasMessageContaining(nonExistentId);
     }
