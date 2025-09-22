@@ -4,6 +4,7 @@ import com.commerce.product.api.adapter.in.web.dto.CreateProductRequest;
 import com.commerce.product.api.adapter.in.web.dto.ProductResponse;
 import com.commerce.product.api.adapter.in.web.dto.UpdateProductRequest;
 import com.commerce.product.api.adapter.in.web.dto.UpdateProductResponse;
+import com.commerce.product.api.mapper.ProductMapper;
 import com.commerce.product.application.usecase.CreateProductResponse;
 import com.commerce.product.application.usecase.CreateProductUseCase;
 import com.commerce.product.application.usecase.GetProductRequest;
@@ -38,6 +39,7 @@ public class ProductController {
     private final CreateProductUseCase createProductUseCase;
     private final GetProductUseCase getProductUseCase;
     private final UpdateProductUseCase updateProductUseCase;
+    private final ProductMapper productMapper;
     
     @Operation(summary = "상품 생성", description = "새로운 상품을 생성합니다.")
     @ApiResponses(value = {
@@ -49,10 +51,9 @@ public class ProductController {
     public ResponseEntity<ProductResponse> createProduct(
             @Valid @RequestBody CreateProductRequest request) {
         
-        CreateProductResponse useCaseResponse = createProductUseCase.createProduct(
-                request.toUseCaseRequest());
-        
-        ProductResponse response = ProductResponse.from(useCaseResponse);
+        com.commerce.product.application.usecase.CreateProductRequest useCaseRequest = productMapper.toCreateProductRequest(request);
+        CreateProductResponse useCaseResponse = createProductUseCase.createProduct(useCaseRequest);
+        ProductResponse response = productMapper.toProductResponse(useCaseResponse);
         
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -72,7 +73,7 @@ public class ProductController {
             throw new IllegalArgumentException("Product not found: " + id);
         }
         
-        ProductResponse response = ProductResponse.from(useCaseResponse);
+        ProductResponse response = productMapper.toProductResponse(useCaseResponse);
         return ResponseEntity.ok(response);
     }
     
@@ -89,10 +90,9 @@ public class ProductController {
             @PathVariable String id,
             @Valid @RequestBody UpdateProductRequest request) {
         
-        com.commerce.product.application.usecase.UpdateProductResponse useCaseResponse = 
-                updateProductUseCase.updateProduct(request.toUseCaseRequest(id));
-        
-        UpdateProductResponse response = UpdateProductResponse.from(useCaseResponse);
+        com.commerce.product.application.usecase.UpdateProductRequest useCaseRequest = productMapper.toUpdateProductRequest(request, id);
+        com.commerce.product.application.usecase.UpdateProductResponse useCaseResponse = updateProductUseCase.updateProduct(useCaseRequest);
+        UpdateProductResponse response = productMapper.toUpdateProductResponse(useCaseResponse);
         
         return ResponseEntity.ok(response);
     }

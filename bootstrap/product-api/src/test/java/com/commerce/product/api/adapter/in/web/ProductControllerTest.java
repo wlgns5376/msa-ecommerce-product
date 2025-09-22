@@ -3,6 +3,7 @@ package com.commerce.product.api.adapter.in.web;
 import com.commerce.product.api.adapter.in.web.dto.CreateProductRequest;
 import com.commerce.product.api.adapter.in.web.dto.ProductResponse;
 import com.commerce.product.api.adapter.in.web.dto.UpdateProductRequest;
+import com.commerce.product.api.mapper.ProductMapper;
 import com.commerce.product.application.usecase.CreateProductResponse;
 import com.commerce.product.application.usecase.CreateProductUseCase;
 import com.commerce.product.application.usecase.GetProductRequest;
@@ -55,6 +56,9 @@ class ProductControllerTest {
     
     @MockBean
     private UpdateProductUseCase updateProductUseCase;
+    
+    @MockBean
+    private ProductMapper productMapper;
 
     @Nested
     @DisplayName("POST /api/products - 상품 생성")
@@ -84,7 +88,9 @@ class ProductControllerTest {
         @DisplayName("상품 생성 성공")
         void createProduct_Success() throws Exception {
             // Given
+            when(productMapper.toCreateProductRequest(any())).thenReturn(createProductRequest.toUseCaseRequest());
             when(createProductUseCase.createProduct(any())).thenReturn(createProductResponse);
+            when(productMapper.toProductResponse(any(CreateProductResponse.class))).thenReturn(ProductResponse.from(createProductResponse));
 
             // When & Then
             mockMvc.perform(post("/api/products")
@@ -145,7 +151,9 @@ class ProductControllerTest {
                     .status(ProductStatus.ACTIVE)
                     .build();
 
+            when(productMapper.toCreateProductRequest(any())).thenReturn(bundleRequest.toUseCaseRequest());
             when(createProductUseCase.createProduct(any())).thenReturn(bundleResponse);
+            when(productMapper.toProductResponse(any(CreateProductResponse.class))).thenReturn(ProductResponse.from(bundleResponse));
 
             // When & Then
             mockMvc.perform(post("/api/products")
@@ -180,6 +188,7 @@ class ProductControllerTest {
             // Given
             String productId = "PROD-001";
             when(getProductUseCase.execute(any(GetProductRequest.class))).thenReturn(getProductResponse);
+            when(productMapper.toProductResponse(any(GetProductResponse.class))).thenReturn(ProductResponse.from(getProductResponse));
 
             // When & Then
             mockMvc.perform(get("/api/products/{id}", productId)
@@ -234,6 +243,7 @@ class ProductControllerTest {
                     .build();
             
             when(getProductUseCase.execute(any(GetProductRequest.class))).thenReturn(bundleResponse);
+            when(productMapper.toProductResponse(any(GetProductResponse.class))).thenReturn(ProductResponse.from(bundleResponse));
 
             // When & Then
             mockMvc.perform(get("/api/products/{id}", productId)
@@ -257,6 +267,7 @@ class ProductControllerTest {
                     .build();
             
             when(getProductUseCase.execute(any(GetProductRequest.class))).thenReturn(inactiveResponse);
+            when(productMapper.toProductResponse(any(GetProductResponse.class))).thenReturn(ProductResponse.from(inactiveResponse));
 
             // When & Then
             mockMvc.perform(get("/api/products/{id}", productId)
@@ -299,7 +310,9 @@ class ProductControllerTest {
         @DisplayName("상품 수정 성공")
         void updateProduct_Success() throws Exception {
             // Given
+            when(productMapper.toUpdateProductRequest(any(), anyString())).thenReturn(updateProductRequest.toUseCaseRequest(productId));
             when(updateProductUseCase.updateProduct(any())).thenReturn(updateProductResponse);
+            when(productMapper.toUpdateProductResponse(any())).thenReturn(com.commerce.product.api.adapter.in.web.dto.UpdateProductResponse.from(updateProductResponse));
             
             // When & Then
             mockMvc.perform(put("/api/products/{id}", productId)
@@ -394,7 +407,9 @@ class ProductControllerTest {
                     .version(2L)
                     .build();
                     
+            when(productMapper.toUpdateProductRequest(any(), anyString())).thenReturn(descriptionUpdateRequest.toUseCaseRequest(productId));
             when(updateProductUseCase.updateProduct(any())).thenReturn(descriptionUpdateResponse);
+            when(productMapper.toUpdateProductResponse(any())).thenReturn(com.commerce.product.api.adapter.in.web.dto.UpdateProductResponse.from(descriptionUpdateResponse));
             
             // When & Then
             mockMvc.perform(put("/api/products/{id}", productId)
