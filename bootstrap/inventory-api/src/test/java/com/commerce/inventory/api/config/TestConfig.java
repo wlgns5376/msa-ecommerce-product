@@ -2,6 +2,7 @@ package com.commerce.inventory.api.config;
 
 import com.commerce.common.event.DomainEventPublisher;
 import com.commerce.inventory.application.usecase.CreateSkuUseCase;
+import com.commerce.inventory.application.usecase.GetSkuByIdUseCase;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -18,6 +19,12 @@ public class TestConfig {
     @Primary
     public CreateSkuUseCase createSkuUseCase() {
         return mock(CreateSkuUseCase.class);
+    }
+    
+    @Bean
+    @Primary
+    public GetSkuByIdUseCase getSkuByIdUseCase() {
+        return mock(GetSkuByIdUseCase.class);
     }
     
     @Bean

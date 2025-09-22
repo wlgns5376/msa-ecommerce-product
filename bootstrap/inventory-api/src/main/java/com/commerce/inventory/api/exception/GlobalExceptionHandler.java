@@ -2,6 +2,7 @@ package com.commerce.inventory.api.exception;
 
 import com.commerce.inventory.domain.exception.DuplicateSkuCodeException;
 import com.commerce.inventory.domain.exception.InventoryDomainException;
+import com.commerce.inventory.domain.exception.SkuNotFoundException;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -61,6 +62,23 @@ public class GlobalExceptionHandler {
                 .build();
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    /**
+     * SKU를 찾을 수 없는 경우 예외 처리
+     */
+    @ExceptionHandler(SkuNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleSkuNotFoundException(SkuNotFoundException ex) {
+        log.error("SKU not found: {}", ex.getMessage());
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(HttpStatus.NOT_FOUND.value())
+                .error("SKU Not Found")
+                .message(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
     }
 
     /**
