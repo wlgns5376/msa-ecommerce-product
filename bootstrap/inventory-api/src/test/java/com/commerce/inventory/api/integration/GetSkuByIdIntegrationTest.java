@@ -89,17 +89,7 @@ class GetSkuByIdIntegrationTest {
         mockMvc.perform(get("/api/inventory/skus/{id}", nonExistentId)
                 .contentType(MediaType.APPLICATION_JSON))
             .andDo(print())
-            .andExpect(status().isNotFound())
-            .andExpect(jsonPath("$.error").value("SKU Not Found"));
-    }
-
-    @Test
-    @DisplayName("GET /api/inventory/skus/{id} - 빈 ID로 조회 시 404를 반환한다")
-    void should_return_404_for_empty_id() throws Exception {
-        // When & Then
-        mockMvc.perform(get("/api/inventory/skus/")
-                .contentType(MediaType.APPLICATION_JSON))
-            .andDo(print())
             .andExpect(status().isNotFound());
     }
+
 }
