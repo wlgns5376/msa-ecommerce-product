@@ -3,6 +3,7 @@ package com.commerce.inventory.api.controller;
 import com.commerce.inventory.api.dto.CreateSkuRequest;
 import com.commerce.inventory.api.dto.CreateSkuResponseDto;
 import com.commerce.inventory.api.dto.GetSkuByIdResponseDto;
+import com.commerce.inventory.api.dto.ReceiveStockRequest;
 import com.commerce.inventory.api.mapper.InventoryMapper;
 import com.commerce.inventory.application.usecase.CreateSkuCommand;
 import com.commerce.inventory.application.usecase.CreateSkuResponse;
@@ -10,6 +11,8 @@ import com.commerce.inventory.application.usecase.CreateSkuUseCase;
 import com.commerce.inventory.application.usecase.GetSkuByIdQuery;
 import com.commerce.inventory.application.usecase.GetSkuByIdResponse;
 import com.commerce.inventory.application.usecase.GetSkuByIdUseCase;
+import com.commerce.inventory.application.usecase.ReceiveStockCommand;
+import com.commerce.inventory.application.usecase.ReceiveStockUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -37,6 +40,7 @@ public class InventoryController {
 
     private final CreateSkuUseCase createSkuUseCase;
     private final GetSkuByIdUseCase getSkuByIdUseCase;
+    private final ReceiveStockUseCase receiveStockUseCase;
     private final InventoryMapper inventoryMapper;
 
     /**
@@ -82,5 +86,36 @@ public class InventoryController {
         GetSkuByIdResponseDto responseDto = inventoryMapper.toGetSkuByIdResponseDto(response);
         
         return ResponseEntity.ok(responseDto);
+    }
+
+    /**
+     * 재고 입고 엔드포인트
+     *
+     * @param id 입고할 SKU ID
+     * @param request 입고 정보 (수량, 참조번호)
+     * @return HTTP 200 OK
+     */
+    @Operation(summary = "재고 입고", description = "특정 SKU에 재고를 입고합니다")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "재고 입고 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청 (유효성 검증 실패)"),
+            @ApiResponse(responseCode = "404", description = "SKU를 찾을 수 없음"),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류")
+    })
+    @PostMapping("/skus/{id}/receive")
+    public ResponseEntity<Void> receiveStock(
+            @Parameter(description = "SKU ID", required = true)
+            @PathVariable("id") String id,
+            @Valid @RequestBody ReceiveStockRequest request) {
+        
+        ReceiveStockCommand command = ReceiveStockCommand.builder()
+                .skuId(id)
+                .quantity(request.getQuantity())
+                .reference(request.getReference())
+                .build();
+        
+        receiveStockUseCase.receive(command);
+        
+        return ResponseEntity.ok().build();
     }
 }
