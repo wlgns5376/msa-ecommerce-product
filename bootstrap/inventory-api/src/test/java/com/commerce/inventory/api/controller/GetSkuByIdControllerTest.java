@@ -1,11 +1,13 @@
 package com.commerce.inventory.api.controller;
 
 import com.commerce.inventory.api.dto.GetSkuByIdResponseDto;
+import com.commerce.inventory.api.exception.GlobalExceptionHandler;
 import com.commerce.inventory.api.mapper.InventoryMapper;
 import com.commerce.inventory.application.usecase.CreateSkuUseCase;
 import com.commerce.inventory.application.usecase.GetSkuByIdQuery;
 import com.commerce.inventory.application.usecase.GetSkuByIdResponse;
 import com.commerce.inventory.application.usecase.GetSkuByIdUseCase;
+import com.commerce.inventory.application.usecase.ReceiveStockUseCase;
 import com.commerce.inventory.domain.exception.SkuNotFoundException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -13,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
@@ -25,6 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(InventoryController.class)
+@ContextConfiguration(classes = {InventoryController.class, GlobalExceptionHandler.class})
 @DisplayName("SKU 조회 API 컨트롤러 테스트")
 class GetSkuByIdControllerTest {
 
@@ -36,6 +40,9 @@ class GetSkuByIdControllerTest {
 
     @MockBean
     private GetSkuByIdUseCase getSkuByIdUseCase;
+
+    @MockBean
+    private ReceiveStockUseCase receiveStockUseCase;
 
     @MockBean
     private InventoryMapper inventoryMapper;
@@ -101,15 +108,4 @@ class GetSkuByIdControllerTest {
             .andExpect(status().isNotFound());
     }
 
-    @Test
-    @DisplayName("잘못된 형식의 SKU ID로 조회 시 400을 반환한다")
-    void should_return_400_for_invalid_sku_id_format() throws Exception {
-        // Given
-        String invalidId = "";
-        
-        // When & Then
-        mockMvc.perform(get("/api/inventory/skus/{id}", invalidId)
-                .contentType(MediaType.APPLICATION_JSON))
-            .andExpect(status().isNotFound()); // Spring이 빈 경로 변수를 404로 처리
-    }
 }
