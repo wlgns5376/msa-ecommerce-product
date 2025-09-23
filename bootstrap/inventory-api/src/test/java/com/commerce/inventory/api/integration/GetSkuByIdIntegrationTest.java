@@ -1,7 +1,10 @@
 package com.commerce.inventory.api.integration;
 
-import com.commerce.inventory.domain.model.*;
-import com.commerce.inventory.domain.repository.SkuRepository;
+import com.commerce.inventory.api.mapper.InventoryMapper;
+import com.commerce.inventory.application.usecase.GetSkuByIdQuery;
+import com.commerce.inventory.application.usecase.GetSkuByIdResponse;
+import com.commerce.inventory.application.usecase.GetSkuByIdUseCase;
+import com.commerce.inventory.domain.exception.SkuNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -14,9 +17,10 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -36,25 +40,16 @@ class GetSkuByIdIntegrationTest {
     private ObjectMapper objectMapper;
 
     @MockBean
-    private SkuRepository skuRepository;
+    private GetSkuByIdUseCase getSkuByIdUseCase;
 
-    private Sku testSku;
+    @MockBean
+    private InventoryMapper inventoryMapper;
+
     private LocalDateTime currentTime;
 
     @BeforeEach
     void setUp() {
         currentTime = LocalDateTime.now();
-        testSku = Sku.restore(
-            SkuId.of("SKU-001"),
-            SkuCode.of("TEST-SKU-001"),
-            "테스트 SKU",
-            "테스트용 SKU 설명입니다",
-            Weight.of(1.5, WeightUnit.KILOGRAM),
-            Volume.of(10.0, VolumeUnit.CUBIC_M),
-            currentTime.minusDays(1),
-            currentTime.minusDays(1),
-            1L
-        );
     }
 
     @Test
@@ -62,7 +57,34 @@ class GetSkuByIdIntegrationTest {
     void should_get_sku_by_id_successfully() throws Exception {
         // Given
         String skuId = "SKU-001";
-        when(skuRepository.findById(SkuId.of(skuId))).thenReturn(Optional.of(testSku));
+        
+        GetSkuByIdResponse response = GetSkuByIdResponse.builder()
+            .id(skuId)
+            .code("TEST-SKU-001")
+            .name("테스트 SKU")
+            .description("테스트용 SKU 설명입니다")
+            .weight(BigDecimal.valueOf(1.5))
+            .volume(BigDecimal.valueOf(10.0))
+            .createdAt(currentTime)
+            .updatedAt(currentTime)
+            .version(1L)
+            .build();
+        
+        com.commerce.inventory.api.dto.GetSkuByIdResponseDto responseDto = 
+            com.commerce.inventory.api.dto.GetSkuByIdResponseDto.builder()
+                .id(skuId)
+                .code("TEST-SKU-001")
+                .name("테스트 SKU")
+                .description("테스트용 SKU 설명입니다")
+                .weight(BigDecimal.valueOf(1.5))
+                .volume(BigDecimal.valueOf(10.0))
+                .createdAt(currentTime)
+                .updatedAt(currentTime)
+                .version(1L)
+                .build();
+        
+        when(getSkuByIdUseCase.execute(any(GetSkuByIdQuery.class))).thenReturn(response);
+        when(inventoryMapper.toGetSkuByIdResponseDto(response)).thenReturn(responseDto);
 
         // When & Then
         mockMvc.perform(get("/api/inventory/skus/{id}", skuId)
@@ -83,7 +105,8 @@ class GetSkuByIdIntegrationTest {
     void should_return_404_when_sku_not_found() throws Exception {
         // Given
         String nonExistentId = "NON-EXISTENT-ID";
-        when(skuRepository.findById(SkuId.of(nonExistentId))).thenReturn(Optional.empty());
+        when(getSkuByIdUseCase.execute(any(GetSkuByIdQuery.class)))
+            .thenThrow(new SkuNotFoundException("SKU를 찾을 수 없습니다. ID: " + nonExistentId));
 
         // When & Then
         mockMvc.perform(get("/api/inventory/skus/{id}", nonExistentId)

@@ -27,7 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(InventoryController.class)
-@ContextConfiguration(classes = {InventoryController.class})
+@ContextConfiguration(classes = {InventoryController.class, com.commerce.inventory.api.exception.GlobalExceptionHandler.class})
 class ReceiveStockControllerTest {
 
     @Autowired
