@@ -1,10 +1,13 @@
 package com.commerce.product.api.adapter.in.web;
 
+import com.commerce.product.api.adapter.in.web.dto.AddProductOptionRequest;
+import com.commerce.product.api.adapter.in.web.dto.AddProductOptionResponse;
 import com.commerce.product.api.adapter.in.web.dto.CreateProductRequest;
 import com.commerce.product.api.adapter.in.web.dto.ProductResponse;
 import com.commerce.product.api.adapter.in.web.dto.UpdateProductRequest;
 import com.commerce.product.api.adapter.in.web.dto.UpdateProductResponse;
 import com.commerce.product.api.mapper.ProductMapper;
+import com.commerce.product.application.usecase.AddProductOptionUseCase;
 import com.commerce.product.application.usecase.CreateProductResponse;
 import com.commerce.product.application.usecase.CreateProductUseCase;
 import com.commerce.product.application.usecase.GetProductRequest;
@@ -39,6 +42,7 @@ public class ProductController {
     private final CreateProductUseCase createProductUseCase;
     private final GetProductUseCase getProductUseCase;
     private final UpdateProductUseCase updateProductUseCase;
+    private final AddProductOptionUseCase addProductOptionUseCase;
     private final ProductMapper productMapper;
     
     @Operation(summary = "상품 생성", description = "새로운 상품을 생성합니다.")
@@ -95,6 +99,25 @@ public class ProductController {
         UpdateProductResponse response = productMapper.toUpdateProductResponse(useCaseResponse);
         
         return ResponseEntity.ok(response);
+    }
+    
+    @Operation(summary = "상품 옵션 추가", description = "상품에 새로운 옵션을 추가합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "옵션 추가 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청"),
+            @ApiResponse(responseCode = "404", description = "상품을 찾을 수 없음"),
+            @ApiResponse(responseCode = "500", description = "서버 오류")
+    })
+    @PostMapping("/{id}/options")
+    public ResponseEntity<AddProductOptionResponse> addProductOption(
+            @PathVariable String id,
+            @Valid @RequestBody AddProductOptionRequest request) {
+        
+        com.commerce.product.application.usecase.AddProductOptionRequest useCaseRequest = productMapper.toAddProductOptionRequest(request, id);
+        com.commerce.product.application.usecase.AddProductOptionResponse useCaseResponse = addProductOptionUseCase.addProductOption(useCaseRequest);
+        AddProductOptionResponse response = productMapper.toAddProductOptionResponse(useCaseResponse);
+        
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
     
     @ExceptionHandler(IllegalArgumentException.class)
