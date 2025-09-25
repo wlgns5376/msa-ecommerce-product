@@ -2,6 +2,9 @@ package com.commerce.inventory.api.exception;
 
 import com.commerce.inventory.domain.exception.DuplicateSkuCodeException;
 import com.commerce.inventory.domain.exception.InventoryDomainException;
+import com.commerce.inventory.domain.exception.ReservationAlreadyReleasedException;
+import com.commerce.inventory.domain.exception.ReservationExpiredException;
+import com.commerce.inventory.domain.exception.ReservationNotFoundException;
 import com.commerce.inventory.domain.exception.SkuNotFoundException;
 import lombok.Builder;
 import lombok.Getter;
@@ -79,6 +82,57 @@ public class GlobalExceptionHandler {
                 .build();
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    /**
+     * 예약을 찾을 수 없는 경우 예외 처리
+     */
+    @ExceptionHandler(ReservationNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleReservationNotFoundException(ReservationNotFoundException ex) {
+        log.error("Reservation not found: {}", ex.getMessage());
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(HttpStatus.NOT_FOUND.value())
+                .error("Reservation Not Found")
+                .message(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    /**
+     * 이미 취소된 예약 예외 처리
+     */
+    @ExceptionHandler(ReservationAlreadyReleasedException.class)
+    public ResponseEntity<ErrorResponse> handleReservationAlreadyReleasedException(ReservationAlreadyReleasedException ex) {
+        log.error("Reservation already released: {}", ex.getMessage());
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(HttpStatus.CONFLICT.value())
+                .error("Reservation Already Released")
+                .message(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    /**
+     * 만료된 예약 예외 처리
+     */
+    @ExceptionHandler(ReservationExpiredException.class)
+    public ResponseEntity<ErrorResponse> handleReservationExpiredException(ReservationExpiredException ex) {
+        log.error("Reservation expired: {}", ex.getMessage());
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(HttpStatus.CONFLICT.value())
+                .error("Reservation Expired")
+                .message(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
     }
 
     /**

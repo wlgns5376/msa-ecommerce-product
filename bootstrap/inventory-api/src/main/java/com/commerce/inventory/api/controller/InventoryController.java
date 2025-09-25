@@ -15,6 +15,8 @@ import com.commerce.inventory.application.usecase.GetSkuByIdResponse;
 import com.commerce.inventory.application.usecase.GetSkuByIdUseCase;
 import com.commerce.inventory.application.usecase.ReceiveStockCommand;
 import com.commerce.inventory.application.usecase.ReceiveStockUseCase;
+import com.commerce.inventory.application.usecase.ReleaseReservationCommand;
+import com.commerce.inventory.application.usecase.ReleaseReservationUseCase;
 import com.commerce.inventory.application.usecase.ReserveStockCommand;
 import com.commerce.inventory.application.usecase.ReserveStockResponse;
 import com.commerce.inventory.application.usecase.ReserveStockUseCase;
@@ -27,6 +29,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -47,6 +50,7 @@ public class InventoryController {
     private final GetSkuByIdUseCase getSkuByIdUseCase;
     private final ReceiveStockUseCase receiveStockUseCase;
     private final ReserveStockUseCase reserveStockUseCase;
+    private final ReleaseReservationUseCase releaseReservationUseCase;
     private final InventoryMapper inventoryMapper;
 
     /**
@@ -146,5 +150,32 @@ public class InventoryController {
         ReserveStockResponseDto responseDto = inventoryMapper.toReserveStockResponseDto(response);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
+    }
+
+    /**
+     * 재고 예약 취소 엔드포인트
+     *
+     * @param id 취소할 예약 ID
+     * @return HTTP 204 No Content
+     */
+    @Operation(summary = "재고 예약 취소", description = "지정된 예약 ID의 재고 예약을 취소하고 재고를 해제합니다")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "재고 예약 취소 성공"),
+            @ApiResponse(responseCode = "404", description = "예약을 찾을 수 없음"),
+            @ApiResponse(responseCode = "409", description = "예약 상태 충돌 (이미 취소됨, 만료됨 등)"),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류")
+    })
+    @DeleteMapping("/reservations/{id}")
+    public ResponseEntity<Void> releaseReservation(
+            @Parameter(description = "예약 ID", required = true)
+            @PathVariable("id") String id) {
+        
+        ReleaseReservationCommand command = ReleaseReservationCommand.builder()
+                .reservationId(id)
+                .build();
+        
+        releaseReservationUseCase.release(command);
+        
+        return ResponseEntity.noContent().build();
     }
 }
