@@ -1,10 +1,9 @@
 package com.commerce.inventory.api.controller;
 
 import com.commerce.inventory.api.dto.CreateSkuRequest;
+import com.commerce.inventory.api.dto.ReserveStockRequest;
 import com.commerce.inventory.application.service.port.out.*;
-import com.commerce.inventory.application.usecase.CreateSkuCommand;
-import com.commerce.inventory.application.usecase.CreateSkuResponse;
-import com.commerce.inventory.application.usecase.CreateSkuUseCase;
+import com.commerce.inventory.application.usecase.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -53,6 +52,9 @@ class InventoryControllerTest {
 
     @MockBean
     private CreateSkuUseCase createSkuUseCase;
+    
+    @MockBean
+    private ReserveStockUseCase reserveStockUseCase;
     
     // CreateSkuService 의존성들을 Mock으로 추가
     @MockBean
@@ -295,6 +297,181 @@ class InventoryControllerTest {
             mockMvc.perform(post("/api/inventory/skus")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(invalidRequest)))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/inventory/reservations - 재고 예약")
+    class ReserveStock {
+
+        @Test
+        @DisplayName("유효한 요청으로 재고를 성공적으로 예약한다")
+        void shouldReserveStockSuccessfully() throws Exception {
+            // Given
+            ReserveStockRequest request = ReserveStockRequest.builder()
+                    .orderId("ORDER-001")
+                    .ttlSeconds(900)
+                    .item(ReserveStockRequest.ReservationItem.builder()
+                            .skuId("SKU-001")
+                            .quantity(2)
+                            .build())
+                    .item(ReserveStockRequest.ReservationItem.builder()
+                            .skuId("SKU-002")
+                            .quantity(1)
+                            .build())
+                    .build();
+
+            ReserveStockResponse response = ReserveStockResponse.builder()
+                    .reservations(java.util.List.of(
+                            ReserveStockResponse.ReservationResult.builder()
+                                    .reservationId("RES-001")
+                                    .skuId("SKU-001")
+                                    .quantity(2)
+                                    .expiresAt(LocalDateTime.now().plusSeconds(900))
+                                    .status("RESERVED")
+                                    .build(),
+                            ReserveStockResponse.ReservationResult.builder()
+                                    .reservationId("RES-002")
+                                    .skuId("SKU-002")
+                                    .quantity(1)
+                                    .expiresAt(LocalDateTime.now().plusSeconds(900))
+                                    .status("RESERVED")
+                                    .build()
+                    ))
+                    .build();
+
+            given(reserveStockUseCase.execute(any(ReserveStockCommand.class)))
+                    .willReturn(response);
+
+            // When & Then
+            mockMvc.perform(post("/api/inventory/reservations")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.reservations").isArray())
+                    .andExpect(jsonPath("$.reservations[0].reservationId").value("RES-001"))
+                    .andExpect(jsonPath("$.reservations[0].skuId").value("SKU-001"))
+                    .andExpect(jsonPath("$.reservations[0].quantity").value(2))
+                    .andExpect(jsonPath("$.reservations[0].status").value("RESERVED"))
+                    .andExpect(jsonPath("$.reservations[0].expiresAt").exists())
+                    .andExpect(jsonPath("$.reservations[1].reservationId").value("RES-002"))
+                    .andExpect(jsonPath("$.reservations[1].skuId").value("SKU-002"))
+                    .andExpect(jsonPath("$.reservations[1].quantity").value(1))
+                    .andExpect(jsonPath("$.reservations[1].status").value("RESERVED"));
+
+            verify(reserveStockUseCase).execute(any(ReserveStockCommand.class));
+        }
+
+        @Test
+        @DisplayName("주문 ID가 없으면 400 에러를 반환한다")
+        void shouldReturnBadRequestWhenOrderIdIsNull() throws Exception {
+            // Given
+            ReserveStockRequest request = ReserveStockRequest.builder()
+                    .orderId(null) // 주문 ID 누락
+                    .item(ReserveStockRequest.ReservationItem.builder()
+                            .skuId("SKU-001")
+                            .quantity(2)
+                            .build())
+                    .build();
+
+            // When & Then
+            mockMvc.perform(post("/api/inventory/reservations")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("예약 항목이 없으면 400 에러를 반환한다")
+        void shouldReturnBadRequestWhenItemsIsEmpty() throws Exception {
+            // Given
+            ReserveStockRequest request = ReserveStockRequest.builder()
+                    .orderId("ORDER-001")
+                    .build(); // items가 비어있음
+
+            // When & Then
+            mockMvc.perform(post("/api/inventory/reservations")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("SKU ID가 없으면 400 에러를 반환한다")
+        void shouldReturnBadRequestWhenSkuIdIsNull() throws Exception {
+            // Given
+            ReserveStockRequest request = ReserveStockRequest.builder()
+                    .orderId("ORDER-001")
+                    .item(ReserveStockRequest.ReservationItem.builder()
+                            .skuId(null) // SKU ID 누락
+                            .quantity(2)
+                            .build())
+                    .build();
+
+            // When & Then
+            mockMvc.perform(post("/api/inventory/reservations")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("수량이 0 이하이면 400 에러를 반환한다")
+        void shouldReturnBadRequestWhenQuantityIsZeroOrNegative() throws Exception {
+            // Given
+            ReserveStockRequest request = ReserveStockRequest.builder()
+                    .orderId("ORDER-001")
+                    .item(ReserveStockRequest.ReservationItem.builder()
+                            .skuId("SKU-001")
+                            .quantity(0) // 잘못된 수량
+                            .build())
+                    .build();
+
+            // When & Then
+            mockMvc.perform(post("/api/inventory/reservations")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("TTL이 음수이면 400 에러를 반환한다")
+        void shouldReturnBadRequestWhenTtlIsNegative() throws Exception {
+            // Given
+            ReserveStockRequest request = ReserveStockRequest.builder()
+                    .orderId("ORDER-001")
+                    .ttlSeconds(-1) // 음수 TTL
+                    .item(ReserveStockRequest.ReservationItem.builder()
+                            .skuId("SKU-001")
+                            .quantity(2)
+                            .build())
+                    .build();
+
+            // When & Then
+            mockMvc.perform(post("/api/inventory/reservations")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("TTL이 최대값을 초과하면 400 에러를 반환한다")
+        void shouldReturnBadRequestWhenTtlExceedsMaximum() throws Exception {
+            // Given
+            ReserveStockRequest request = ReserveStockRequest.builder()
+                    .orderId("ORDER-001")
+                    .ttlSeconds(86401) // 24시간 초과
+                    .item(ReserveStockRequest.ReservationItem.builder()
+                            .skuId("SKU-001")
+                            .quantity(2)
+                            .build())
+                    .build();
+
+            // When & Then
+            mockMvc.perform(post("/api/inventory/reservations")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest());
         }
     }

@@ -6,6 +6,7 @@ import com.commerce.inventory.application.usecase.CreateSkuUseCase;
 import com.commerce.inventory.application.usecase.GetSkuByIdUseCase;
 import com.commerce.inventory.application.usecase.ReceiveStockCommand;
 import com.commerce.inventory.application.usecase.ReceiveStockUseCase;
+import com.commerce.inventory.application.usecase.ReserveStockUseCase;
 import com.commerce.inventory.domain.exception.SkuNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -44,6 +45,9 @@ class ReceiveStockControllerTest {
 
     @MockBean
     private GetSkuByIdUseCase getSkuByIdUseCase;
+
+    @MockBean
+    private ReserveStockUseCase reserveStockUseCase;
 
     @MockBean
     private InventoryMapper inventoryMapper;

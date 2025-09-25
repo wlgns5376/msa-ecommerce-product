@@ -4,6 +4,8 @@ import com.commerce.inventory.api.dto.CreateSkuRequest;
 import com.commerce.inventory.api.dto.CreateSkuResponseDto;
 import com.commerce.inventory.api.dto.GetSkuByIdResponseDto;
 import com.commerce.inventory.api.dto.ReceiveStockRequest;
+import com.commerce.inventory.api.dto.ReserveStockRequest;
+import com.commerce.inventory.api.dto.ReserveStockResponseDto;
 import com.commerce.inventory.api.mapper.InventoryMapper;
 import com.commerce.inventory.application.usecase.CreateSkuCommand;
 import com.commerce.inventory.application.usecase.CreateSkuResponse;
@@ -13,6 +15,9 @@ import com.commerce.inventory.application.usecase.GetSkuByIdResponse;
 import com.commerce.inventory.application.usecase.GetSkuByIdUseCase;
 import com.commerce.inventory.application.usecase.ReceiveStockCommand;
 import com.commerce.inventory.application.usecase.ReceiveStockUseCase;
+import com.commerce.inventory.application.usecase.ReserveStockCommand;
+import com.commerce.inventory.application.usecase.ReserveStockResponse;
+import com.commerce.inventory.application.usecase.ReserveStockUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -41,6 +46,7 @@ public class InventoryController {
     private final CreateSkuUseCase createSkuUseCase;
     private final GetSkuByIdUseCase getSkuByIdUseCase;
     private final ReceiveStockUseCase receiveStockUseCase;
+    private final ReserveStockUseCase reserveStockUseCase;
     private final InventoryMapper inventoryMapper;
 
     /**
@@ -117,5 +123,28 @@ public class InventoryController {
         receiveStockUseCase.receive(command);
         
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * 재고 예약 엔드포인트
+     *
+     * @param request 재고 예약 요청 정보
+     * @return 예약 결과
+     */
+    @Operation(summary = "재고 예약", description = "지정된 SKU들의 재고를 예약합니다")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "재고 예약 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청 (유효성 검증 실패)"),
+            @ApiResponse(responseCode = "404", description = "SKU를 찾을 수 없음"),
+            @ApiResponse(responseCode = "409", description = "재고 부족"),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류")
+    })
+    @PostMapping("/reservations")
+    public ResponseEntity<ReserveStockResponseDto> reserveStock(@Valid @RequestBody ReserveStockRequest request) {
+        ReserveStockCommand command = inventoryMapper.toReserveStockCommand(request);
+        ReserveStockResponse response = reserveStockUseCase.execute(command);
+        ReserveStockResponseDto responseDto = inventoryMapper.toReserveStockResponseDto(response);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
 }

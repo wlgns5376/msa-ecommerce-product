@@ -179,7 +179,7 @@ Redis 기반 캐싱
 - [x] POST /api/inventory/skus ✅ 구현 완료
 - [x] GET /api/inventory/skus/{id} ✅ 구현 완료
 - [x] POST /api/inventory/skus/{id}/receive ✅ 구현 완료 (2025-09-22)
-- [ ] POST /api/inventory/reservations
+- [x] POST /api/inventory/reservations ✅ 구현 완료 (2025-09-23)
 - [ ] DELETE /api/inventory/reservations/{id}
 
 #### 10.3 Category API
