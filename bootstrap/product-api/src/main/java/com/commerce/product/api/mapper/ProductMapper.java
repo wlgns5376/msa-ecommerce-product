@@ -1,5 +1,7 @@
 package com.commerce.product.api.mapper;
 
+import com.commerce.product.api.adapter.in.web.dto.AddProductOptionRequest;
+import com.commerce.product.api.adapter.in.web.dto.AddProductOptionResponse;
 import com.commerce.product.api.adapter.in.web.dto.CreateProductRequest;
 import com.commerce.product.api.adapter.in.web.dto.ProductResponse;
 import com.commerce.product.api.adapter.in.web.dto.UpdateProductRequest;
@@ -84,5 +86,34 @@ public class ProductMapper {
         }
         
         return UpdateProductResponse.from(response);
+    }
+    
+    /**
+     * AddProductOptionRequest를 UseCase Request로 변환
+     *
+     * @param request 상품 옵션 추가 요청 DTO
+     * @param productId 상품 ID
+     * @return UseCase 요청 객체
+     */
+    public com.commerce.product.application.usecase.AddProductOptionRequest toAddProductOptionRequest(AddProductOptionRequest request, String productId) {
+        if (request == null) {
+            return null;
+        }
+        
+        return request.toUseCaseRequest(productId);
+    }
+    
+    /**
+     * AddProductOptionResponse(UseCase)를 AddProductOptionResponse(DTO)로 변환
+     *
+     * @param response UseCase 응답
+     * @return API 응답 DTO
+     */
+    public AddProductOptionResponse toAddProductOptionResponse(com.commerce.product.application.usecase.AddProductOptionResponse response) {
+        if (response == null) {
+            return null;
+        }
+        
+        return AddProductOptionResponse.from(response);
     }
 }

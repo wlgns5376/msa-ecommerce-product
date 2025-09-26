@@ -1,9 +1,12 @@
 package com.commerce.product.api.adapter.in.web;
 
+import com.commerce.product.api.adapter.in.web.dto.AddProductOptionRequest;
+import com.commerce.product.api.adapter.in.web.dto.AddProductOptionResponse;
 import com.commerce.product.api.adapter.in.web.dto.CreateProductRequest;
 import com.commerce.product.api.adapter.in.web.dto.ProductResponse;
 import com.commerce.product.api.adapter.in.web.dto.UpdateProductRequest;
 import com.commerce.product.api.mapper.ProductMapper;
+import com.commerce.product.application.usecase.AddProductOptionUseCase;
 import com.commerce.product.application.usecase.CreateProductResponse;
 import com.commerce.product.application.usecase.CreateProductUseCase;
 import com.commerce.product.application.usecase.GetProductRequest;
@@ -27,6 +30,10 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.security.test.context.support.WithMockUser;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -56,6 +63,9 @@ class ProductControllerTest {
     
     @MockBean
     private UpdateProductUseCase updateProductUseCase;
+    
+    @MockBean
+    private AddProductOptionUseCase addProductOptionUseCase;
     
     @MockBean
     private ProductMapper productMapper;
@@ -418,6 +428,159 @@ class ProductControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.description").value("새로운 설명"))
                     .andExpect(jsonPath("$.version").value(2L));
+        }
+    }
+    
+    @Nested
+    @DisplayName("POST /api/products/{id}/options - 상품 옵션 추가")
+    class AddProductOption {
+        
+        private AddProductOptionRequest addProductOptionRequest;
+        private com.commerce.product.application.usecase.AddProductOptionResponse addProductOptionResponse;
+        private String productId;
+        
+        @BeforeEach
+        void setUp() {
+            productId = "PROD-001";
+            
+            Map<String, Integer> skuMappings = new HashMap<>(); // key: SKU ID, value: 수량
+            skuMappings.put("SKU-001", 1); // SKU-001을 1개 포함
+            skuMappings.put("SKU-002", 2); // SKU-002를 2개 포함
+            
+            addProductOptionRequest = AddProductOptionRequest.builder()
+                    .optionName("기본 옵션")
+                    .price(new BigDecimal("10000"))
+                    .currency("KRW")
+                    .skuMappings(skuMappings)
+                    .build();
+                    
+            addProductOptionResponse = com.commerce.product.application.usecase.AddProductOptionResponse.builder()
+                    .productId(productId)
+                    .optionId("OPT-001")
+                    .optionName("기본 옵션")
+                    .build();
+        }
+        
+        @Test
+        @DisplayName("상품 옵션 추가 성공")
+        void addProductOption_Success() throws Exception {
+            // Given
+            when(productMapper.toAddProductOptionRequest(any(), anyString())).thenReturn(addProductOptionRequest.toUseCaseRequest(productId));
+            when(addProductOptionUseCase.addProductOption(any())).thenReturn(addProductOptionResponse);
+            when(productMapper.toAddProductOptionResponse(any())).thenReturn(AddProductOptionResponse.from(addProductOptionResponse));
+            
+            // When & Then
+            mockMvc.perform(post("/api/products/{id}/options", productId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(addProductOptionRequest)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.productId").value(productId))
+                    .andExpect(jsonPath("$.optionId").value("OPT-001"))
+                    .andExpect(jsonPath("$.optionName").value("기본 옵션"));
+        }
+        
+        @Test
+        @DisplayName("옵션명 없이 추가 시 400 에러")
+        void addProductOption_WithoutOptionName_ShouldReturn400() throws Exception {
+            // Given
+            AddProductOptionRequest invalidRequest = AddProductOptionRequest.builder()
+                    .price(new BigDecimal("10000"))
+                    .currency("KRW")
+                    .skuMappings(new HashMap<>())
+                    .build();
+            
+            // When & Then
+            mockMvc.perform(post("/api/products/{id}/options", productId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(invalidRequest)))
+                    .andExpect(status().isBadRequest());
+        }
+        
+        @Test
+        @DisplayName("가격 없이 추가 시 400 에러")
+        void addProductOption_WithoutPrice_ShouldReturn400() throws Exception {
+            // Given
+            AddProductOptionRequest invalidRequest = AddProductOptionRequest.builder()
+                    .optionName("기본 옵션")
+                    .currency("KRW")
+                    .skuMappings(new HashMap<>())
+                    .build();
+            
+            // When & Then
+            mockMvc.perform(post("/api/products/{id}/options", productId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(invalidRequest)))
+                    .andExpect(status().isBadRequest());
+        }
+        
+        @Test
+        @DisplayName("SKU 매핑 없이 추가 시 400 에러")
+        void addProductOption_WithoutSkuMappings_ShouldReturn400() throws Exception {
+            // Given
+            AddProductOptionRequest invalidRequest = AddProductOptionRequest.builder()
+                    .optionName("기본 옵션")
+                    .price(new BigDecimal("10000"))
+                    .currency("KRW")
+                    .build();
+            
+            // When & Then
+            mockMvc.perform(post("/api/products/{id}/options", productId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(invalidRequest)))
+                    .andExpect(status().isBadRequest());
+        }
+        
+        @Test
+        @DisplayName("존재하지 않는 상품에 옵션 추가 시 404 에러")
+        void addProductOption_ProductNotFound() throws Exception {
+            // Given
+            String nonExistentId = "NON-EXISTENT";
+            when(addProductOptionUseCase.addProductOption(any()))
+                    .thenThrow(new InvalidProductException("Product not found with id: " + nonExistentId));
+            
+            // When & Then
+            mockMvc.perform(post("/api/products/{id}/options", nonExistentId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(addProductOptionRequest)))
+                    .andExpect(status().isNotFound());
+        }
+        
+        @Test
+        @DisplayName("묶음 상품에 옵션 추가 성공")
+        void addProductOption_ToBundleProduct_Success() throws Exception {
+            // Given
+            String bundleProductId = "PROD-BUNDLE-001";
+            
+            Map<String, Integer> bundleSkuMappings = new HashMap<>(); // key: SKU ID, value: 수량
+            bundleSkuMappings.put("SKU-001", 2); // SKU-001을 2개 포함
+            bundleSkuMappings.put("SKU-002", 3); // SKU-002를 3개 포함
+            bundleSkuMappings.put("SKU-003", 1); // SKU-003을 1개 포함
+            
+            AddProductOptionRequest bundleOptionRequest = AddProductOptionRequest.builder()
+                    .optionName("묶음 옵션")
+                    .price(new BigDecimal("25000"))
+                    .currency("KRW")
+                    .skuMappings(bundleSkuMappings)
+                    .build();
+                    
+            com.commerce.product.application.usecase.AddProductOptionResponse bundleResponse = com.commerce.product.application.usecase.AddProductOptionResponse.builder()
+                    .productId(bundleProductId)
+                    .optionId("OPT-BUNDLE-001")
+                    .optionName("묶음 옵션")
+                    .build();
+            
+            when(productMapper.toAddProductOptionRequest(any(), anyString())).thenReturn(bundleOptionRequest.toUseCaseRequest(bundleProductId));
+            when(addProductOptionUseCase.addProductOption(any())).thenReturn(bundleResponse);
+            when(productMapper.toAddProductOptionResponse(any())).thenReturn(AddProductOptionResponse.from(bundleResponse));
+            
+            // When & Then
+            mockMvc.perform(post("/api/products/{id}/options", bundleProductId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(bundleOptionRequest)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.productId").value(bundleProductId))
+                    .andExpect(jsonPath("$.optionId").value("OPT-BUNDLE-001"))
+                    .andExpect(jsonPath("$.optionName").value("묶음 옵션"));
         }
     }
 }

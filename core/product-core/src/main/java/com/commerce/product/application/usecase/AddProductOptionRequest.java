@@ -27,5 +27,5 @@ public class AddProductOptionRequest {
     private final String currency;
     
     @NotEmpty(message = "SKU 매핑은 필수입니다.")
-    private final Map<String, Integer> skuMappings;
+    private final Map<String, Integer> skuMappings; // key: SKU ID, value: 해당 SKU 수량
 }

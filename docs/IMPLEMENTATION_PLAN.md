@@ -172,7 +172,7 @@ Redis 기반 캐싱
 - [x] POST /api/products
 - [x] GET /api/products/{id} ✅ 구현 완료
 - [x] PUT /api/products/{id} ✅ 구현 완료
-- [ ] POST /api/products/{id}/options
+- [x] POST /api/products/{id}/options ✅ 구현 완료 (2025-09-24)
 - [ ] GET /api/products (검색/필터)
 
 #### 10.2 Inventory API
