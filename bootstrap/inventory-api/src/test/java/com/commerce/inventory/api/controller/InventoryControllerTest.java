@@ -6,6 +6,7 @@ import com.commerce.inventory.application.service.port.out.*;
 import com.commerce.inventory.application.usecase.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
+import org.mockito.Mockito;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -25,7 +26,10 @@ import java.time.LocalDateTime;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -55,6 +59,9 @@ class InventoryControllerTest {
     
     @MockBean
     private ReserveStockUseCase reserveStockUseCase;
+    
+    @MockBean
+    private ReleaseReservationUseCase releaseReservationUseCase;
     
     // CreateSkuService 의존성들을 Mock으로 추가
     @MockBean
@@ -473,6 +480,78 @@ class InventoryControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest());
+        }
+    }
+    
+    @Nested
+    @DisplayName("DELETE /api/inventory/reservations/{id} - 재고 예약 취소")
+    class ReleaseReservation {
+
+        @BeforeEach
+        void setUp() {
+            // Reset mocks to ensure clean state
+            Mockito.reset(releaseReservationUseCase);
+        }
+
+        @Test
+        @DisplayName("유효한 예약 ID로 재고 예약을 성공적으로 취소한다")
+        void shouldReleaseReservationSuccessfully() throws Exception {
+            // Given
+            String reservationId = "RES-001";
+            doNothing().when(releaseReservationUseCase).release(any(ReleaseReservationCommand.class));
+
+            // When & Then
+            mockMvc.perform(delete("/api/inventory/reservations/{id}", reservationId))
+                    .andExpect(status().isNoContent());
+
+            verify(releaseReservationUseCase, Mockito.times(1)).release(any(ReleaseReservationCommand.class));
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 예약 ID로 요청하면 404 에러를 반환한다")
+        void shouldReturnNotFoundWhenReservationDoesNotExist() throws Exception {
+            // Given
+            String reservationId = "INVALID-RES";
+            doThrow(new com.commerce.inventory.domain.exception.ReservationNotFoundException("예약을 찾을 수 없습니다: " + reservationId))
+                    .when(releaseReservationUseCase).release(any(ReleaseReservationCommand.class));
+
+            // When & Then
+            mockMvc.perform(delete("/api/inventory/reservations/{id}", reservationId))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("빈 예약 ID로 요청하면 404 에러를 반환한다")
+        void shouldReturnNotFoundWhenReservationIdIsEmpty() throws Exception {
+            // When & Then
+            mockMvc.perform(delete("/api/inventory/reservations/ "))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("이미 취소된 예약을 재시도하면 409 에러를 반환한다")
+        void shouldReturnConflictWhenReservationAlreadyReleased() throws Exception {
+            // Given
+            String reservationId = "RES-001";
+            doThrow(new com.commerce.inventory.domain.exception.ReservationAlreadyReleasedException("이미 취소된 예약입니다: " + reservationId))
+                    .when(releaseReservationUseCase).release(any(ReleaseReservationCommand.class));
+
+            // When & Then
+            mockMvc.perform(delete("/api/inventory/reservations/{id}", reservationId))
+                    .andExpect(status().isConflict());
+        }
+
+        @Test
+        @DisplayName("만료된 예약을 취소하려하면 409 에러를 반환한다")
+        void shouldReturnConflictWhenReservationExpired() throws Exception {
+            // Given
+            String reservationId = "RES-001";
+            doThrow(new com.commerce.inventory.domain.exception.ReservationExpiredException("만료된 예약입니다: " + reservationId))
+                    .when(releaseReservationUseCase).release(any(ReleaseReservationCommand.class));
+
+            // When & Then
+            mockMvc.perform(delete("/api/inventory/reservations/{id}", reservationId))
+                    .andExpect(status().isConflict());
         }
     }
 }

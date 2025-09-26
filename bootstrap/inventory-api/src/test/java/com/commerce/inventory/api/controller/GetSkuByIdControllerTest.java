@@ -8,6 +8,7 @@ import com.commerce.inventory.application.usecase.GetSkuByIdQuery;
 import com.commerce.inventory.application.usecase.GetSkuByIdResponse;
 import com.commerce.inventory.application.usecase.GetSkuByIdUseCase;
 import com.commerce.inventory.application.usecase.ReceiveStockUseCase;
+import com.commerce.inventory.application.usecase.ReleaseReservationUseCase;
 import com.commerce.inventory.application.usecase.ReserveStockUseCase;
 import com.commerce.inventory.domain.exception.SkuNotFoundException;
 import org.junit.jupiter.api.DisplayName;
@@ -47,6 +48,9 @@ class GetSkuByIdControllerTest {
 
     @MockBean
     private ReserveStockUseCase reserveStockUseCase;
+
+    @MockBean
+    private ReleaseReservationUseCase releaseReservationUseCase;
 
     @MockBean
     private InventoryMapper inventoryMapper;
