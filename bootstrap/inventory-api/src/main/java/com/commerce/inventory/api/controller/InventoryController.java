@@ -170,8 +170,13 @@ public class InventoryController {
             @Parameter(description = "예약 ID", required = true)
             @PathVariable("id") String id) {
         
+        // ID가 비어있거나 공백만 있는 경우 예외 발생
+        if (id == null || id.trim().isEmpty()) {
+            throw new com.commerce.inventory.domain.exception.ReservationNotFoundException("예약 ID가 제공되지 않았습니다");
+        }
+        
         ReleaseReservationCommand command = ReleaseReservationCommand.builder()
-                .reservationId(id)
+                .reservationId(id.trim())
                 .build();
         
         releaseReservationUseCase.release(command);
