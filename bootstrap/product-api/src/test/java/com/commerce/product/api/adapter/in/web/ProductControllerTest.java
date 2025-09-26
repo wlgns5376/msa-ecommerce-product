@@ -443,9 +443,9 @@ class ProductControllerTest {
         void setUp() {
             productId = "PROD-001";
             
-            Map<String, Integer> skuMappings = new HashMap<>();
-            skuMappings.put("SKU-001", 1);
-            skuMappings.put("SKU-002", 2);
+            Map<String, Integer> skuMappings = new HashMap<>(); // key: SKU ID, value: 수량
+            skuMappings.put("SKU-001", 1); // SKU-001을 1개 포함
+            skuMappings.put("SKU-002", 2); // SKU-002를 2개 포함
             
             addProductOptionRequest = AddProductOptionRequest.builder()
                     .optionName("기본 옵션")
@@ -551,10 +551,10 @@ class ProductControllerTest {
             // Given
             String bundleProductId = "PROD-BUNDLE-001";
             
-            Map<String, Integer> bundleSkuMappings = new HashMap<>();
-            bundleSkuMappings.put("SKU-001", 2);
-            bundleSkuMappings.put("SKU-002", 3);
-            bundleSkuMappings.put("SKU-003", 1);
+            Map<String, Integer> bundleSkuMappings = new HashMap<>(); // key: SKU ID, value: 수량
+            bundleSkuMappings.put("SKU-001", 2); // SKU-001을 2개 포함
+            bundleSkuMappings.put("SKU-002", 3); // SKU-002를 3개 포함
+            bundleSkuMappings.put("SKU-003", 1); // SKU-003을 1개 포함
             
             AddProductOptionRequest bundleOptionRequest = AddProductOptionRequest.builder()
                     .optionName("묶음 옵션")

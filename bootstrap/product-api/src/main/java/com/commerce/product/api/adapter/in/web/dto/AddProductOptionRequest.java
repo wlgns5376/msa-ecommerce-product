@@ -29,7 +29,7 @@ public class AddProductOptionRequest {
     private String currency;
     
     @NotEmpty(message = "SKU 매핑은 필수입니다.")
-    private Map<String, Integer> skuMappings;
+    private Map<String, Integer> skuMappings; // key: SKU ID, value: 해당 SKU 수량
     
     public com.commerce.product.application.usecase.AddProductOptionRequest toUseCaseRequest(String productId) {
         return com.commerce.product.application.usecase.AddProductOptionRequest.builder()
@@ -37,7 +37,7 @@ public class AddProductOptionRequest {
                 .optionName(optionName)
                 .price(price)
                 .currency(currency)
-                .skuMappings(skuMappings)
+                .skuMappings(skuMappings) // SKU ID -> 수량 매핑
                 .build();
     }
 }

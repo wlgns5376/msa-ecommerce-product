@@ -41,7 +41,7 @@ class AddProductOptionUseCaseTest {
     }
 
     private AddProductOptionRequest createDefaultRequest(String productId) {
-        Map<String, Integer> skuMappings = Map.of("SKU001", 1);
+        Map<String, Integer> skuMappings = Map.of("SKU001", 1); // key: SKU ID, value: 수량
         return AddProductOptionRequest.builder()
                 .productId(productId)
                 .optionName("블랙 - L")
@@ -99,7 +99,7 @@ class AddProductOptionUseCaseTest {
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
         when(productRepository.save(any(Product.class))).thenReturn(product);
 
-        Map<String, Integer> skuMappings = Map.of("SKU001", 2, "SKU002", 1);
+        Map<String, Integer> skuMappings = Map.of("SKU001", 2, "SKU002", 1); // 묶음 상품 구성: SKU001 2개, SKU002 1개
 
         AddProductOptionRequest request = AddProductOptionRequest.builder()
             .productId(productId.value())
