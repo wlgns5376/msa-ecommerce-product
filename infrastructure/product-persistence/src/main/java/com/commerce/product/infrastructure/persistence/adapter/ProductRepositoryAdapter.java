@@ -190,4 +190,18 @@ public class ProductRepositoryAdapter implements ProductRepository {
                 .map(ProductJpaEntity::toDomainModel)
                 .collect(Collectors.toList());
     }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Product> findAll(Pageable pageable) {
+        return productJpaRepository.findAll(pageable)
+                .map(ProductJpaEntity::toDomainModel);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Product> findBySearchAndFilters(String search, ProductType type, ProductStatus status, Pageable pageable) {
+        return productJpaRepository.findBySearchAndFilters(search, type, status, pageable)
+                .map(ProductJpaEntity::toDomainModel);
+    }
 }

@@ -340,4 +340,68 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
         
         return typedQuery.getResultList();
     }
+    
+    @Override
+    public Page<ProductJpaEntity> findBySearchAndFilters(
+            String search,
+            ProductType type,
+            ProductStatus status,
+            Pageable pageable) {
+        
+        // Build query
+        StringBuilder queryBuilder = new StringBuilder("SELECT DISTINCT p FROM ProductJpaEntity p ");
+        queryBuilder.append("LEFT JOIN FETCH p.options ");
+        queryBuilder.append("LEFT JOIN FETCH p.categories ");
+        
+        List<String> conditions = new ArrayList<>();
+        Map<String, Object> parameters = new HashMap<>();
+        
+        // Always exclude deleted products
+        conditions.add("p.deletedAt IS NULL");
+        
+        // Add search condition
+        if (search != null && !search.trim().isEmpty()) {
+            conditions.add("(LOWER(p.name) LIKE LOWER(:search) OR LOWER(p.description) LIKE LOWER(:search))");
+            parameters.put("search", "%" + search.trim() + "%");
+        }
+        
+        // Add type filter
+        if (type != null) {
+            conditions.add("p.type = :type");
+            parameters.put("type", type);
+        }
+        
+        // Add status filter
+        if (status != null) {
+            conditions.add("p.status = :status");
+            parameters.put("status", status);
+        }
+        
+        // Build WHERE clause
+        if (!conditions.isEmpty()) {
+            queryBuilder.append("WHERE ");
+            queryBuilder.append(String.join(" AND ", conditions));
+        }
+        
+        // Create query for fetching products
+        TypedQuery<ProductJpaEntity> query = entityManager.createQuery(queryBuilder.toString(), ProductJpaEntity.class);
+        setQueryParameters(query, parameters);
+        query.setFirstResult((int) pageable.getOffset());
+        query.setMaxResults(pageable.getPageSize());
+        
+        List<ProductJpaEntity> products = query.getResultList();
+        
+        // Create count query
+        StringBuilder countBuilder = new StringBuilder("SELECT COUNT(DISTINCT p) FROM ProductJpaEntity p ");
+        if (!conditions.isEmpty()) {
+            countBuilder.append("WHERE ");
+            countBuilder.append(String.join(" AND ", conditions));
+        }
+        
+        TypedQuery<Long> countQuery = entityManager.createQuery(countBuilder.toString(), Long.class);
+        setQueryParameters(countQuery, parameters);
+        Long total = countQuery.getSingleResult();
+        
+        return new PageImpl<>(products, pageable, total);
+    }
 }

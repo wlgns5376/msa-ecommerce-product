@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Value;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -18,6 +19,8 @@ public class GetProductResponse {
     ProductType type;
     ProductStatus status;
     List<ProductOptionResponse> options;
+    LocalDateTime createdAt;
+    LocalDateTime updatedAt;
     
     @Value
     @Builder
