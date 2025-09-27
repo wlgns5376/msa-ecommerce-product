@@ -3,11 +3,13 @@ package com.commerce.product.api.mapper;
 import com.commerce.product.api.adapter.in.web.dto.AddProductOptionRequest;
 import com.commerce.product.api.adapter.in.web.dto.AddProductOptionResponse;
 import com.commerce.product.api.adapter.in.web.dto.CreateProductRequest;
+import com.commerce.product.api.adapter.in.web.dto.PaginatedProductsResponse;
 import com.commerce.product.api.adapter.in.web.dto.ProductResponse;
 import com.commerce.product.api.adapter.in.web.dto.UpdateProductRequest;
 import com.commerce.product.api.adapter.in.web.dto.UpdateProductResponse;
 import com.commerce.product.application.usecase.CreateProductResponse;
 import com.commerce.product.application.usecase.GetProductResponse;
+import com.commerce.product.application.usecase.GetProductsResponse;
 import org.springframework.stereotype.Component;
 
 /**
@@ -115,5 +117,19 @@ public class ProductMapper {
         }
         
         return AddProductOptionResponse.from(response);
+    }
+    
+    /**
+     * GetProductsResponse를 PaginatedProductsResponse로 변환
+     *
+     * @param response UseCase 응답
+     * @return API 응답 DTO
+     */
+    public PaginatedProductsResponse toPaginatedProductsResponse(GetProductsResponse response) {
+        if (response == null) {
+            return null;
+        }
+        
+        return PaginatedProductsResponse.from(response);
     }
 }

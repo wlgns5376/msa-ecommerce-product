@@ -73,4 +73,20 @@ public interface ProductRepository extends Repository<Product, ProductId> {
      * 해당 SKU를 옵션으로 가지고 있는 모든 상품을 반환합니다.
      */
     List<Product> findProductsBySkuId(String skuId);
+    
+    /**
+     * 전체 상품을 페이지네이션하여 조회합니다.
+     */
+    Page<Product> findAll(Pageable pageable);
+    
+    /**
+     * 검색어와 필터 조건으로 상품을 검색합니다.
+     * 
+     * @param search 검색어 (상품명, 설명에서 검색)
+     * @param type 상품 타입 필터
+     * @param status 상품 상태 필터
+     * @param pageable 페이지네이션 정보
+     * @return 검색된 상품 페이지
+     */
+    Page<Product> findBySearchAndFilters(String search, ProductType type, ProductStatus status, Pageable pageable);
 }

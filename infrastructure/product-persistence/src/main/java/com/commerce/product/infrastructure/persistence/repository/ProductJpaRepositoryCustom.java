@@ -1,6 +1,7 @@
 package com.commerce.product.infrastructure.persistence.repository;
 
 import com.commerce.product.domain.model.ProductStatus;
+import com.commerce.product.domain.model.ProductType;
 import com.commerce.product.infrastructure.persistence.dto.ProductSearchResultDto;
 import com.commerce.product.infrastructure.persistence.entity.ProductJpaEntity;
 import org.springframework.data.domain.Page;
@@ -25,6 +26,13 @@ public interface ProductJpaRepositoryCustom {
         BigDecimal minPrice,
         BigDecimal maxPrice,
         Set<ProductStatus> statuses,
+        Pageable pageable
+    );
+    
+    Page<ProductJpaEntity> findBySearchAndFilters(
+        String search,
+        ProductType type,
+        ProductStatus status,
         Pageable pageable
     );
 }

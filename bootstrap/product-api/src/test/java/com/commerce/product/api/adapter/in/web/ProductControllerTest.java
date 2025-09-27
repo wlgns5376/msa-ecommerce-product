@@ -14,6 +14,10 @@ import com.commerce.product.application.usecase.GetProductResponse;
 import com.commerce.product.application.usecase.GetProductUseCase;
 import com.commerce.product.application.usecase.UpdateProductResponse;
 import com.commerce.product.application.usecase.UpdateProductUseCase;
+import com.commerce.product.application.usecase.GetProductsUseCase;
+import com.commerce.product.application.usecase.GetProductsRequest;
+import com.commerce.product.application.usecase.GetProductsResponse;
+import com.commerce.product.api.adapter.in.web.dto.PaginatedProductsResponse;
 import com.commerce.product.domain.exception.InvalidProductException;
 import com.commerce.product.domain.exception.ProductConflictException;
 import com.commerce.product.domain.model.ProductStatus;
@@ -32,7 +36,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.security.test.context.support.WithMockUser;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -66,6 +74,9 @@ class ProductControllerTest {
     
     @MockBean
     private AddProductOptionUseCase addProductOptionUseCase;
+    
+    @MockBean
+    private GetProductsUseCase getProductsUseCase;
     
     @MockBean
     private ProductMapper productMapper;
@@ -581,6 +592,275 @@ class ProductControllerTest {
                     .andExpect(jsonPath("$.productId").value(bundleProductId))
                     .andExpect(jsonPath("$.optionId").value("OPT-BUNDLE-001"))
                     .andExpect(jsonPath("$.optionName").value("묶음 옵션"));
+        }
+    }
+    
+    @Nested
+    @DisplayName("GET /api/products - 상품 목록 조회")
+    class GetProducts {
+        
+        private GetProductsResponse getProductsResponse;
+        private List<GetProductResponse> products;
+        
+        @BeforeEach
+        void setUp() {
+            products = Arrays.asList(
+                GetProductResponse.builder()
+                    .productId("PROD-001")
+                    .name("상품1")
+                    .description("상품1 설명")
+                    .type(ProductType.NORMAL)
+                    .status(ProductStatus.ACTIVE)
+                    .build(),
+                GetProductResponse.builder()
+                    .productId("PROD-002")
+                    .name("상품2")
+                    .description("상품2 설명")
+                    .type(ProductType.BUNDLE)
+                    .status(ProductStatus.ACTIVE)
+                    .build()
+            );
+            
+            getProductsResponse = GetProductsResponse.builder()
+                .products(products)
+                .totalElements(2L)
+                .totalPages(1)
+                .pageNumber(0)
+                .pageSize(10)
+                .build();
+        }
+        
+        @Test
+        @DisplayName("전체 상품 목록 조회 성공")
+        void getProducts_Success() throws Exception {
+            // Given
+            when(getProductsUseCase.execute(any(GetProductsRequest.class)))
+                .thenReturn(getProductsResponse);
+            when(productMapper.toPaginatedProductsResponse(any(GetProductsResponse.class)))
+                .thenReturn(PaginatedProductsResponse.from(getProductsResponse));
+            
+            // When & Then
+            mockMvc.perform(get("/api/products")
+                    .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.products").isArray())
+                .andExpect(jsonPath("$.products.length()").value(2))
+                .andExpect(jsonPath("$.products[0].productId").value("PROD-001"))
+                .andExpect(jsonPath("$.products[0].name").value("상품1"))
+                .andExpect(jsonPath("$.products[1].productId").value("PROD-002"))
+                .andExpect(jsonPath("$.products[1].name").value("상품2"))
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.totalPages").value(1))
+                .andExpect(jsonPath("$.pageNumber").value(0))
+                .andExpect(jsonPath("$.pageSize").value(10));
+        }
+        
+        @Test
+        @DisplayName("검색 키워드로 상품 목록 조회 성공")
+        void getProducts_WithSearch_Success() throws Exception {
+            // Given
+            List<GetProductResponse> searchResults = Collections.singletonList(
+                GetProductResponse.builder()
+                    .productId("PROD-001")
+                    .name("상품1")
+                    .description("상품1 설명")
+                    .type(ProductType.NORMAL)
+                    .status(ProductStatus.ACTIVE)
+                    .build()
+            );
+            
+            GetProductsResponse searchResponse = GetProductsResponse.builder()
+                .products(searchResults)
+                .totalElements(1L)
+                .totalPages(1)
+                .pageNumber(0)
+                .pageSize(10)
+                .build();
+            
+            when(getProductsUseCase.execute(any(GetProductsRequest.class)))
+                .thenReturn(searchResponse);
+            when(productMapper.toPaginatedProductsResponse(any(GetProductsResponse.class)))
+                .thenReturn(PaginatedProductsResponse.from(searchResponse));
+            
+            // When & Then
+            mockMvc.perform(get("/api/products")
+                    .param("search", "상품1")
+                    .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.products.length()").value(1))
+                .andExpect(jsonPath("$.products[0].name").value("상품1"))
+                .andExpect(jsonPath("$.totalElements").value(1));
+        }
+        
+        @Test
+        @DisplayName("상품 타입으로 필터링 조회 성공")
+        void getProducts_WithTypeFilter_Success() throws Exception {
+            // Given
+            List<GetProductResponse> bundleProducts = Collections.singletonList(
+                GetProductResponse.builder()
+                    .productId("PROD-002")
+                    .name("상품2")
+                    .description("상품2 설명")
+                    .type(ProductType.BUNDLE)
+                    .status(ProductStatus.ACTIVE)
+                    .build()
+            );
+            
+            GetProductsResponse filterResponse = GetProductsResponse.builder()
+                .products(bundleProducts)
+                .totalElements(1L)
+                .totalPages(1)
+                .pageNumber(0)
+                .pageSize(10)
+                .build();
+            
+            when(getProductsUseCase.execute(any(GetProductsRequest.class)))
+                .thenReturn(filterResponse);
+            when(productMapper.toPaginatedProductsResponse(any(GetProductsResponse.class)))
+                .thenReturn(PaginatedProductsResponse.from(filterResponse));
+            
+            // When & Then
+            mockMvc.perform(get("/api/products")
+                    .param("type", "BUNDLE")
+                    .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.products.length()").value(1))
+                .andExpect(jsonPath("$.products[0].type").value("BUNDLE"))
+                .andExpect(jsonPath("$.totalElements").value(1));
+        }
+        
+        @Test
+        @DisplayName("상품 상태로 필터링 조회 성공")
+        void getProducts_WithStatusFilter_Success() throws Exception {
+            // Given
+            when(getProductsUseCase.execute(any(GetProductsRequest.class)))
+                .thenReturn(getProductsResponse);
+            when(productMapper.toPaginatedProductsResponse(any(GetProductsResponse.class)))
+                .thenReturn(PaginatedProductsResponse.from(getProductsResponse));
+            
+            // When & Then
+            mockMvc.perform(get("/api/products")
+                    .param("status", "ACTIVE")
+                    .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.products").isArray())
+                .andExpect(jsonPath("$.products[0].status").value("ACTIVE"))
+                .andExpect(jsonPath("$.products[1].status").value("ACTIVE"));
+        }
+        
+        @Test
+        @DisplayName("페이지네이션 조회 성공")
+        void getProducts_WithPagination_Success() throws Exception {
+            // Given
+            GetProductsResponse paginatedResponse = GetProductsResponse.builder()
+                .products(products)
+                .totalElements(50L)
+                .totalPages(5)
+                .pageNumber(1)
+                .pageSize(10)
+                .build();
+            
+            when(getProductsUseCase.execute(any(GetProductsRequest.class)))
+                .thenReturn(paginatedResponse);
+            when(productMapper.toPaginatedProductsResponse(any(GetProductsResponse.class)))
+                .thenReturn(PaginatedProductsResponse.from(paginatedResponse));
+            
+            // When & Then
+            mockMvc.perform(get("/api/products")
+                    .param("page", "1")
+                    .param("size", "10")
+                    .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pageNumber").value(1))
+                .andExpect(jsonPath("$.pageSize").value(10))
+                .andExpect(jsonPath("$.totalPages").value(5))
+                .andExpect(jsonPath("$.totalElements").value(50));
+        }
+        
+        @Test
+        @DisplayName("정렬 조건으로 조회 성공")
+        void getProducts_WithSort_Success() throws Exception {
+            // Given
+            when(getProductsUseCase.execute(any(GetProductsRequest.class)))
+                .thenReturn(getProductsResponse);
+            when(productMapper.toPaginatedProductsResponse(any(GetProductsResponse.class)))
+                .thenReturn(PaginatedProductsResponse.from(getProductsResponse));
+            
+            // When & Then
+            mockMvc.perform(get("/api/products")
+                    .param("sort", "name,asc")
+                    .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.products").isArray());
+        }
+        
+        @Test
+        @DisplayName("복합 조건 조회 성공")
+        void getProducts_WithMultipleConditions_Success() throws Exception {
+            // Given
+            when(getProductsUseCase.execute(any(GetProductsRequest.class)))
+                .thenReturn(getProductsResponse);
+            when(productMapper.toPaginatedProductsResponse(any(GetProductsResponse.class)))
+                .thenReturn(PaginatedProductsResponse.from(getProductsResponse));
+            
+            // When & Then
+            mockMvc.perform(get("/api/products")
+                    .param("search", "상품")
+                    .param("type", "NORMAL")
+                    .param("status", "ACTIVE")
+                    .param("page", "0")
+                    .param("size", "20")
+                    .param("sort", "createdAt,desc")
+                    .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.products").isArray());
+        }
+        
+        @Test
+        @DisplayName("빈 결과 조회 성공")
+        void getProducts_EmptyResult_Success() throws Exception {
+            // Given
+            GetProductsResponse emptyResponse = GetProductsResponse.builder()
+                .products(Collections.emptyList())
+                .totalElements(0L)
+                .totalPages(0)
+                .pageNumber(0)
+                .pageSize(10)
+                .build();
+            
+            when(getProductsUseCase.execute(any(GetProductsRequest.class)))
+                .thenReturn(emptyResponse);
+            when(productMapper.toPaginatedProductsResponse(any(GetProductsResponse.class)))
+                .thenReturn(PaginatedProductsResponse.from(emptyResponse));
+            
+            // When & Then
+            mockMvc.perform(get("/api/products")
+                    .param("search", "존재하지않는상품")
+                    .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.products").isArray())
+                .andExpect(jsonPath("$.products.length()").value(0))
+                .andExpect(jsonPath("$.totalElements").value(0));
+        }
+        
+        @Test
+        @DisplayName("잘못된 페이지 번호 요청 시 400 에러")
+        void getProducts_InvalidPageNumber_ShouldReturn400() throws Exception {
+            // When & Then
+            mockMvc.perform(get("/api/products")
+                    .param("page", "-1")
+                    .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+        }
+        
+        @Test
+        @DisplayName("잘못된 페이지 크기 요청 시 400 에러")
+        void getProducts_InvalidPageSize_ShouldReturn400() throws Exception {
+            // When & Then
+            mockMvc.perform(get("/api/products")
+                    .param("size", "0")
+                    .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
         }
     }
 }
