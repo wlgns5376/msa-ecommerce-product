@@ -183,7 +183,7 @@ Redis 기반 캐싱
 - [x] DELETE /api/inventory/reservations/{id} ✅ 구현 완료 (2025-09-25)
 
 #### 10.3 Category API
-- [ ] POST /api/categories
+- [x] POST /api/categories ✅ 구현 완료 (2025-09-26)
 - [ ] GET /api/categories/tree
 - [ ] GET /api/categories/{id}/products
 - [ ] PATCH /api/products/{id} (카테고리 할당을 위한 부분 업데이트)
