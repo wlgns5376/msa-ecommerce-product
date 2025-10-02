@@ -167,7 +167,11 @@ public class ProductController {
     
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<String> handleIllegalArgumentException(IllegalArgumentException e) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        String message = e.getMessage();
+        if (message != null && (message.contains("Page") || message.contains("size"))) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(message);
+        }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(message);
     }
     
     @ExceptionHandler(InvalidProductException.class)
