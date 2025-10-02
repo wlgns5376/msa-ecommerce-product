@@ -3,6 +3,7 @@ package com.commerce.product.api.adapter.in.web;
 import com.commerce.product.api.adapter.in.web.dto.AddProductOptionRequest;
 import com.commerce.product.api.adapter.in.web.dto.AddProductOptionResponse;
 import com.commerce.product.api.adapter.in.web.dto.CreateProductRequest;
+import com.commerce.product.api.adapter.in.web.dto.PaginatedProductsResponse;
 import com.commerce.product.api.adapter.in.web.dto.ProductResponse;
 import com.commerce.product.api.adapter.in.web.dto.UpdateProductRequest;
 import com.commerce.product.api.adapter.in.web.dto.UpdateProductResponse;
@@ -13,9 +14,14 @@ import com.commerce.product.application.usecase.CreateProductUseCase;
 import com.commerce.product.application.usecase.GetProductRequest;
 import com.commerce.product.application.usecase.GetProductResponse;
 import com.commerce.product.application.usecase.GetProductUseCase;
+import com.commerce.product.application.usecase.GetProductsRequest;
+import com.commerce.product.application.usecase.GetProductsResponse;
+import com.commerce.product.application.usecase.GetProductsUseCase;
 import com.commerce.product.application.usecase.UpdateProductUseCase;
 import com.commerce.product.domain.exception.InvalidProductException;
 import com.commerce.product.domain.exception.ProductConflictException;
+import com.commerce.product.domain.model.ProductStatus;
+import com.commerce.product.domain.model.ProductType;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -31,6 +37,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Product", description = "상품 관리 API")
@@ -41,6 +48,7 @@ public class ProductController {
     
     private final CreateProductUseCase createProductUseCase;
     private final GetProductUseCase getProductUseCase;
+    private final GetProductsUseCase getProductsUseCase;
     private final UpdateProductUseCase updateProductUseCase;
     private final AddProductOptionUseCase addProductOptionUseCase;
     private final ProductMapper productMapper;
@@ -60,6 +68,43 @@ public class ProductController {
         ProductResponse response = productMapper.toProductResponse(useCaseResponse);
         
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+    
+    @Operation(summary = "상품 목록 조회", description = "상품 목록을 조회합니다. 검색, 필터링, 페이지네이션을 지원합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "상품 목록 조회 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청 파라미터"),
+            @ApiResponse(responseCode = "500", description = "서버 오류")
+    })
+    @GetMapping
+    public ResponseEntity<PaginatedProductsResponse> getProducts(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) ProductType type,
+            @RequestParam(required = false) ProductStatus status,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(required = false) String sort) {
+        
+        if (page < 0) {
+            throw new IllegalArgumentException("Page number cannot be negative");
+        }
+        if (size <= 0) {
+            throw new IllegalArgumentException("Page size must be greater than 0");
+        }
+        
+        GetProductsRequest request = GetProductsRequest.builder()
+                .search(search)
+                .type(type)
+                .status(status)
+                .page(page)
+                .size(size)
+                .sort(sort)
+                .build();
+        
+        GetProductsResponse useCaseResponse = getProductsUseCase.execute(request);
+        PaginatedProductsResponse response = productMapper.toPaginatedProductsResponse(useCaseResponse);
+        
+        return ResponseEntity.ok(response);
     }
     
     @Operation(summary = "상품 조회", description = "상품 ID로 상품 정보를 조회합니다.")
@@ -122,7 +167,11 @@ public class ProductController {
     
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<String> handleIllegalArgumentException(IllegalArgumentException e) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        String message = e.getMessage();
+        if (message != null && (message.contains("Page") || message.contains("size"))) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(message);
+        }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(message);
     }
     
     @ExceptionHandler(InvalidProductException.class)
